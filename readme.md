@@ -2,7 +2,7 @@
 
 
 Directory Tree:
-
+```
 .
 ├── docker
 │   ├── app.py
@@ -25,7 +25,7 @@ Directory Tree:
    ├── templates.py
    ├── thumbnail.py
    └── training.py
-
+```
 This project contains several front-ends, written in dash.
 thumbnail.py is a simple thumbnail display for images, allowing the user to label
 the images according to some predefined class
