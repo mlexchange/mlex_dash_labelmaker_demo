@@ -24,7 +24,7 @@ build_docker:
 	docker build -t ${IMG_WEB_SVC} ./docker
 
 run_docker:
-	docker run --shm-size=1g --user="${ID_USER}:${ID_GROUP}" --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it -v ${PWD}:/work/ -p 8051:8050 ${IMG_WEB_SVC}
+	docker run --shm-size=1g --user="${ID_USER}:${ID_GROUP}" --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it -v ${PWD}:/work/ -p 8052:8050 ${IMG_WEB_SVC} /bin/bash
 
 clean: 
 	find -name "*~" -delete
