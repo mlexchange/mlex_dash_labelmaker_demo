@@ -20,15 +20,6 @@ services:
             - "./front/src:/app/work/src"
         ports:
             - '8052:8050'
-    data-service:
-        restart: 'unless-stopped'
-        container_name: 'data_service'
-        #user: "${UID}:${GID}"
-        build:
-            context: "data_service"
-        volumes:
-            - "data-m:/working/data"
-        command: "sleep 5000"
     rabbit:
         restart: "unless-stopped"
         image: 'rabbitmq:3-management'
