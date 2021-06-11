@@ -71,13 +71,14 @@ def launch_container(channel, delivery_tag, body):
         except Exception as e:
             print('process failed {}'.format(e))
     # read logs and print them to see what happened
+    print('(multiprocess: container finished with logs:)')
     with open(log_name, 'r') as fin:
-        print(logs)
         logs = fin.read()
         print(logs)
 
-    awk_back = functools.partial(ack_message, channel, delivery_tag)
-    connection.add_callback_threadsafe(cb)
+    print('finished training')
+    channel.basic_ack(delivery_tag = delivery_tag)
+    print('finished ack')
     return logs
 
 if __name__ == '__main__':

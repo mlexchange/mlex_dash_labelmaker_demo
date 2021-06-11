@@ -80,7 +80,8 @@ the knowledge contained within was hard won)
 └── README.md
 ```
 
-
+# 2021-06-11
+I have the heartbeat issue fixed now. You can run a really long training model and it will return nicely.
 # 2021-06-09
 Just figured out that subprocess is blocking! This is annoying, I thought that it would be non-blocking (fork a process off), but I guess it makes sense-- python blocks until the sub process returns. I am going to use a multiprocessing.process to launch this. Hopefully it works.  
 # 2021-06-08
