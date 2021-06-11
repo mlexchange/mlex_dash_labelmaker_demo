@@ -46,9 +46,11 @@ do that task, they work on some subset of the original task and then report back
                |- thread1-|
 main program ->|- thread2-|-> main program
                |- thread3-|
+        thread.start()  thread.join()
 ------time-------------------------->
 ```
-Where we don't want to do this. We explicitly don't want any blocking code, so our heartbeat can go out.
+so, thread.join is blocking-- the program won't advance until all the threads finish and 'join' back together. 
+We don't want to do this. We explicitly don't want any blocking code, so our heartbeat can go out.
 Instead of using threads, I'm using multiprocesses. So the code will get launched on a seperate CPU, and we'll get
 true concurrency. 
 
