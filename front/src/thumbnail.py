@@ -330,9 +330,34 @@ additional_options_html = html.Div(
                 dbc.Row(html.P('')),
                 dbc.Row(dbc.Col(dbc.Button('Hide', id='button-hide', outline='True', color='primary'))),
                 dbc.Row(html.P('')),
-                dbc.Row(dbc.Col(dbc.Button('Train', id='button-train', outline='True', color='primary'))),
+                dbc.Row(dbc.Col(dbc.Button('Save to Disk', id='button-save-disk', outline='True', color='primary'))),
         ]
 )
+@app.callback(
+    Output('save-results-buffer', 'value'),
+    Input('button-save-disk', 'n_clicks'),
+    State('labels-name', 'data'),
+)
+def save_labels_disk(
+button_save_disk_n_clicks,
+):
+    """
+    Creates a directory tree corresponding to the labels, and saves
+    the images in the appropriate directory. This prepares the program to launch an
+    ml training task, which is expecting the files to be in the classic
+    ml classification orgainziation (folder name as semantic label for images)
+
+    Args:
+        button_save_disk_n_clicks: int, number of times button has been clicked
+        labels_name_data: dict, keys are class index (int), values are list of filenames
+            corresponding that have been labelled as part of that class
+
+    Returns:
+        a true or false value to a hidden buffer indicting successful labelling 
+        set completion
+    """
+
+
 
 #app.callback(
 #    Output({'type': 'thumbnail-image', 'index': ALL})
@@ -343,6 +368,7 @@ browser_cache =html.Div(
             dcc.Store(id='selected', data=''),
             dcc.Store(id='labels', data={}),
             dcc.Store(id='labels-name', data={}),
+            dcc.Store(id='save-results-buffer', value=[])
         ],
     )
 """

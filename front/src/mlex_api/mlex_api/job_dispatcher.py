@@ -85,6 +85,9 @@ class workQueue():
         self.results_queue = results.method.queue
         # register callback for basic consume
 
+    def close(self):
+        self.connection.close()
+
     def _on_response(self, ch, method, props, body):
         print('calling')
         print(method.delivery_tag)
@@ -135,6 +138,19 @@ class simpleJob():
                  GPU=False,
                  corr_id=str(uuid.uuid4()),  # if no id, create
                  ):
+        """
+        Args:
+            job_description, str: description of job for logs
+            job_type, str: type of job (training/deploying) for logs
+            deploy_location, str: local, vaughan, nersc for logs (eventually add ability to switch where job is deployed based on this)
+            docker_uri, str: docker hub reference (aasgreen/docker_image)
+            docker_cmd, str: command to feed into docker container as entrypoint (python Train.py)
+            kw_args, str: arguments to give to docker entrypoint (python Train.py "arg1 arg2 arg3")
+            gpu, bool: True to use the gpu
+            queue: work_queue object that connects to rabbitmq
+            corr_id, str: unique identifier of job (used to send response back to the correct user, used to tag output)
+
+        """
         self.job_description = job_description
         self.job_type = job_type
         self.deploy_location = deploy_location

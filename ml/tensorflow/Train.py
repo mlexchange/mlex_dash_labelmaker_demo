@@ -13,6 +13,7 @@ import glob2
 import ml_label_maker
 import matplotlib.pyplot as plt
 import numpy as np
+import argparse
 
 # Initialize Libraries/Variables
 img_width, img_height = 223, 223
@@ -23,16 +24,34 @@ batch = 16
 input_shape = (img_width, img_height, 3)
 target_shape = (img_width, img_height)
 
-train_data_dir = './data/train/'
-test_data_dir = './data/test/'
-valid_data_dir = './data/valid/'
-output_data_dir = './data/output/'
+parser = argparse.ArgumentParser(
+    description='Train a tensorflow model given the test/train directory path, labelled with imagenet specifications')
+parser.add_argument('input_dir', help='directory containing raw labels')
+parser.add_argument('output_dir', help='path to output directory')
+parser.add_argument('model_name', help='tensorflow model to run, case sensitive')
+parser.add_argument('pooling', help='pooling option (None, Max, Avg)')
+parser.add_argument('batch_size', help='number of images to load into GPU at once')
+parser.add_argument('epochs', help='number of epochs to train')
+parser.add_argument('stepoch', help='number of steps per epoch')
+
+args = parser.parse_args()
+input_dir = args.input_dir
+output_data_dir = args.output_dir
+train_data_dir = output_data_dir+'/train/'
+test_data_dir = output_data_dir+'/test/'
+valid_data_dir = output_data_dir+'/val/'
+batch = int(args.batch_size)
+model_name = args.model_name
+pooling = args.pooling
+epochs = int(args.epochs)
+stepoch = int(args.stepoch)
+
 
 # Model Params
-model_name = "ResNet50"
-pooling = 'None'
-epochs = 10
-stepoch = 10
+# model_name = "ResNet50"
+# pooling = 'None'
+# epochs = 10
+# stepoch = 10
 
 # Read in data
 
@@ -60,7 +79,8 @@ class fit_myCallback(tf.keras.callbacks.Callback):
         self.accuracy_list.append(logs.get('accuracy'))
         self.loss_list.append(logs.get('loss'))
         output_metrics = np.c_[self.accuracy_list, self.loss_list]
-        np.savetxt('./data/logs/output.csv', output_metrics)
+        print(output_metrics)
+        np.savetxt('/data/labelmaker_temp/exp/output/logs/output.csv', output_metrics)
         pass
 
 class eval_myCallback(tf.keras.callbacks.Callback):
@@ -92,16 +112,16 @@ model = ml_label_maker.create_model(
 classes = train_generator.class_indices
 
 # save model
-ml_label_maker.save_File(model, 'test.h5')
+ml_label_maker.save_File(model, '/data/labelmaker_temp/exp/output/test.h5')
 plt.plot(accuracy)
 plt.xlabel('epochs')
 plt.ylabel('accuracy')
-plt.savefig('./data/logs/accuracy.png')
+plt.savefig('/data/labelmaker_temp/exp/output/logs/accuracy.png')
 plt.clf()
 plt.plot(loss)
 plt.xlabel('epochs')
 plt.ylabel('loss')
-plt.savefig('./data/logs/loss.png')
+plt.savefig('/data/labelmaker_temp/exp/output/logs/loss.png')
 
-output_metrics= np.c_[accuracy, loss]
-np.savetxt('./data/logs/output.csv', output_metrics)
+output_metrics = np.c_[accuracy, loss]
+np.savetxt('/data/labelmaker_temp/exp/output/logs/output.csv', output_metrics)

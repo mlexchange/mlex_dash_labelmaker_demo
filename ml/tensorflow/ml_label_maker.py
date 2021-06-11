@@ -1,4 +1,3 @@
-
 import config as cfg
 import tensorflow as tf
 import config as cfg
@@ -7,7 +6,9 @@ import PIL
 import os
 import glob
 import glob2
-
+import pathlib
+import random
+import numpy as np
 
 
 # dimensions of our images.
@@ -39,8 +40,47 @@ def test_train_classify_split(root_dir: str, train_fraction= .8):
     test and train, containing the split
     """
     root_path = pathlib.Path(root_dir)
-    all_files = root_dir.glob('**/*', recusive=True)
-    print(all_files)
+    train_path = root_path / 'train'
+    train_path.mkdir(exist_ok = True)
+    test_path = root_path / 'test'
+    test_path.mkdir(exist_ok = True)
+    all_things = list(root_path.glob('**/*', ))
+    all_labels = [x for x in all_things if x.is_dir()]
+    for label_path in all_labels:
+        label = label_path.stem
+        if ('test' in str(label_path)) or ('train' in str(label_path)):
+            # picking up previous test/train split, skip these
+            continue
+        label_files = list(label_path.glob('*'))
+        # generate test train split
+        print('\nthere are {} files in label {}'.format(len(label_files), label))
+        n_train = int(len(label_files)*train_fraction)
+        print('n_train: {}, n_test: {}'.format(n_train, len(label_files)-n_train))
+        called_index = {-1:-1}
+        for i in range(n_train):
+            train_index = -1
+            cont = True
+            while (cont):
+                train_index = random.randint(0, len(label_files)-1)
+                if train_index not in called_index:
+                    called_index[train_index] = i
+                    cont = False
+            assert(train_index != -1)
+
+        for i, file_n in enumerate(label_files):
+            if i in called_index:
+                file_path = root_path / 'train' / label
+                file_path.mkdir(exist_ok=True)
+            else:
+                file_path = root_path / 'test' / label
+                file_path.mkdir(exist_ok=True)
+            print('moving file {} to {}'.format(str(file_n), str(file_path/file_n.name)))
+            file_n.replace(file_path/file_n.name)
+
+
+
+
+
 
 # Takes in the randomization options for images and a path to the image file
 # that you want used for model.evaluate.  Batch size can be changed for use in
@@ -98,11 +138,15 @@ def data_processing(rotation_angle, horizontal_flip, vertical_flip, batch_size, 
             vertical_flip=vertical_flip)
 
     
-    first_data = glob.glob(train_data_dir+'/**/*.*', recursive=True)
-    data_type = os.path.splitext(first_data[1])[-1]
+    first_data = list(pathlib.Path(train_data_dir).glob("**/*.*"))
+    #print(pathlib.Path(train_data_dir))
+    #print(first_data)
+    data_type = first_data[0].suffix
     print('generating text')
-    print(first_data)
+    print('datatype {}'.format(data_type))
+    #print(first_data)
     if(data_type == '.jpeg') or (data_type=='.jpg'):
+        print('data is jpg')
         train_generator = train_datagen.flow_from_directory(
                 train_data_dir,
                 target_size=input_shape,
@@ -122,7 +166,7 @@ def data_processing(rotation_angle, horizontal_flip, vertical_flip, batch_size, 
                 test_data_dir,
                 target_size= input_shape,
                 color_mode="rgb",
-                batch_size=1,
+                batch_size=batch_size,
                 class_mode='categorical',
                 shuffle=False)
     elif(data_type == '.npy'):
@@ -248,8 +292,8 @@ def create_model(
     #fit model while also keeping track of data for streamlit plots.
     print('Fitting model...')
     model.fit(
-            train_generator, steps_per_epoch = stepoch, validation_steps = stepoch, epochs=epochs,
-            verbose=1, validation_data=valid_generator,
+            train_generator, steps_per_epoch=stepoch, validation_steps=stepoch, epochs=epochs,
+            verbose=1, validation_data=test_generator,
             callbacks=[fit_callbacks])  
     print('Model is fit!')
     return model  
@@ -306,7 +350,7 @@ def retrain(loaded_model, start: int,  epochs: int,
 
     loaded_model.fit(
             train_generator, steps_per_epoch = 10, epochs=epochs, verbose=1,
-            validation_data=valid_generator, callbacks=[fit_callbacks])  
+            validation_data=test_generator, callbacks=[fit_callbacks])  
     save_File(loaded_model)
 
 

@@ -10,6 +10,10 @@ import plotly.express as px
 from flask import Flask
 import templates
 import itertools
+import pathlib
+import io
+import PIL
+import base64
 
 from app import app
 
@@ -354,9 +358,72 @@ additional_options_html = html.Div(
                 dbc.Row(html.P('')),
                 dbc.Row(dbc.Col(dbc.Button('Hide', id='button-hide', outline='True', color='primary'))),
                 dbc.Row(html.P('')),
-                dbc.Row(dbc.Col(dbc.Button('Train', id='button-train', outline='True', color='primary'))),
+                dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk', outline='True', color='primary'))),
         ]
 )
+@app.callback(
+    Output('save-results-buffer', 'data'),
+    Input('button-save-disk', 'n_clicks'),
+    State('labels-name', 'data'),
+    State('image-cache-content', 'data'),
+    State('image-cache-filename', 'data'),
+)
+def save_labels_disk(
+    button_save_disk_n_clicks,
+    labels_name_data,
+    image_cache_content,
+    image_cache_filename,
+):
+    """
+    Creates a directory tree corresponding to the labels, and saves
+    the images in the appropriate directory. This prepares the program to launch an
+    ml training task, which is expecting the files to be in the classic
+    ml classification orgainziation (folder name as semantic label for images)
+
+    Args:
+        button_save_disk_n_clicks: int, number of times button has been clicked
+        labels_name_data: dict, keys are class index (int), values are list of filenames
+            corresponding that have been labelled as part of that class
+        image_cache_content: list, binary64 encoded images
+        image_cache_filename: list, filename strings
+
+    Returns:
+        a true or false value to a hidden buffer indicting successful labelling 
+        set completion
+    """
+    print('in save labels')
+    print('\n\n\n')
+    if labels_name_data is not None:
+        for label_index in labels_name_data:
+            filename_list = labels_name_data[label_index]
+            print(label_index, filename_list)
+
+            # create root directory
+            root = pathlib.Path('data/labelmaker_temp')
+            label_dir =root / pathlib.Path(LABEL_LIST[int(label_index)])
+            label_dir.mkdir(parents=True, exist_ok=True)
+
+            # save all files under the current label into the directory
+            for filename in filename_list:
+                filename_index = image_cache_filename.index(filename)
+                file_contents = image_cache_content[filename_index]
+                print(len(file_contents), type(file_contents))
+                print(file_contents[0:100])
+                file_contents_data = file_contents.split(',')[1]
+                im_decode = base64.b64decode(file_contents_data)
+                im_bytes = io.BytesIO(im_decode)
+                im = PIL.Image.open(im_bytes)
+                im_fname = label_dir / pathlib.Path(filename)
+                print(im_fname)
+                im.save(im_fname)
+                print(list(pathlib.Path('data').glob('**/*')))
+
+        return []
+    else:
+        return []
+
+        # create directory entry in /data/
+
 
 #app.callback(
 #    Output({'type': 'thumbnail-image', 'index': ALL})
@@ -373,6 +440,7 @@ browser_cache =html.Div(
             dcc.Store(id='test-value1', data=[]),
             dcc.Store(id='test-value2', data=[]),
             dcc.Store(id='test-value3', data=[]),
+            dcc.Store(id='save-results-buffer', data=[]),
         ],
     )
 """

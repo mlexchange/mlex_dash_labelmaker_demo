@@ -59,3 +59,14 @@ class DataTools():
             _
         pass
         
+class Classification():
+
+    @staticmethod
+    def create_labeled_directory_from_memory(
+            binary_file_contents,
+            binary_file_names,
+            labeled_file_names
+    ):
+
+        pass
+
