@@ -1,2 +1,11 @@
 *~
 .bash_history
+tags
+*.h*5
+*.png
+*.jpg
+*.tiff
+old_streamlit/__pycache__
+*/**pycache
+*pycache*
+*.log

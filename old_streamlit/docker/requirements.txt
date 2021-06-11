@@ -1,0 +1,10 @@
+glob2
+pydot
+h5py == 2.10.0
+scipy
+pillow
+streamlit
+numpy
+config
+protobuf
+matplotlib
