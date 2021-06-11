@@ -20,7 +20,29 @@ class dockerLaunch():
     """
     def __init__(self, launchSchema):
         pass
+def log_message(channel, properties, logs):
+    if channel.is_open:
+        payload_back = {
+                'job_status':'complete', 
+                'logs':logs}
+        payload_back = json.dumps(payload_back)
+        channel.basic_publish(exchange='',
+                routing_key = properties.reply_to,
+                properties = pika.BasicProperties(correlation_id = properties.correlation_id),
+                body=payload_back,
+                )
+    else:
+        print('channel closed')
 
+
+def ack_message(channel, properties, delivery_tag):
+    """
+    channel must be the same channel where the job was recieved from
+    """
+    if channel.is_open:
+        channel.basic_ack(delivery_tag)
+    else:
+        print('channel closed')
 
 def launch_container(channel, delivery_tag, body):
     """
@@ -51,9 +73,11 @@ def launch_container(channel, delivery_tag, body):
     # read logs and print them to see what happened
     with open(log_name, 'r') as fin:
         print(logs)
-        print(fin.read())
+        logs = fin.read()
+        print(logs)
 
-    channel.basic_ack(delivery_tag=delivery_tag)
+    awk_back = functools.partial(ack_message, channel, delivery_tag)
+    connection.add_callback_threadsafe(cb)
     return logs
 
 if __name__ == '__main__':
@@ -85,24 +109,11 @@ if __name__ == '__main__':
             logging.info('launching container')
           #  logs = subprocess.run(['docker', 'run', *cmds.split(), '--rm', '-v', '{}:/data'.format(DATA_DIR), payload['docker_uri'], *payload['docker_cmd'].split(), *payload['kw_args'].split() ], text=True, check=True, stdout=subprocess.PIPE)
             #logs = launch_container(ch, method.delivery_tag, body)
-            p = Process(launch_container,ch, method.delivery_tag, body)
+            p = Process(target=launch_container,args=(ch, method.delivery_tag, body))
             p.start()
             logging.info('container_launched')
 
-#            print(logs)
-            ch.basic_ack(delivery_tag = method.delivery_tag)
 
-        #now send message back
-            payload_back = {
-                    'job_type': payload['job_type'],
-                    'job_status':'complete', 
-                    'logs':'done'} #str(logs.stdout)}
-            payload_back = json.dumps(payload)
-            ch.basic_publish(exchange='',
-                    routing_key = properties.reply_to,
-                    properties = pika.BasicProperties(correlation_id = properties.correlation_id),
-                    body=payload_back,
-                    )
             print('send logs back')
         except Exception as e:
             print('task failed, check logs')

@@ -63,16 +63,33 @@ So how do we get the ml container to communicate the following:
 1. it has started (nice to know it actually launched)
 2. it has finished (or broke)
 3. Any log files
+But it needs to communicate this WITHOUT BLOCKING the heartbeat.
 
 I can think of two ways of doing this:
 1. communicate through files. We are in a sandboxed folder, so we could just save log files and the model file to the sandboxed directory. When the model file is saved, that is the signal that we are done and the model is trained.
 
 This has the disadvantage of not really using the good properties of a job queue. Say the container gets shut down, or can't finish? Because we haven't included the job queue in the loop here, it would have no way of knowing and being able to relaunch the job on failure.
 
+2. Change the Paradigm
+We could use pika in an async mode, where you use callback functions that are triggered on messages. I am staying away from this because I can't easily grasp how complex this is. You need to inject the pika callbacks into the main IO loop. Actually, this might not be so bad. No, this wouldn't work. Even if the rabbitmq is async, it will still block on the ml training task (unless we made the ml training task an async function as well).
+
 2. Communicate through the job queue.
 I see two options, both have pros and cons:
 ![job_finished_choice](https://user-images.githubusercontent.com/990372/121726353-4881a980-ca9f-11eb-8cfc-3d68fe4afe88.png)
 
+So, the right way to do it is v2 (I guess).
+https://stackoverflow.com/questions/51752890/how-to-disable-heartbeats-with-pika-and-rabbitmq
+What you do is define an ack function, inject that into the do_work function, and then call it directly when the process is finished. You injet it weirdly with functools.partial, which does:
+```
+y(a,b) = a+b
+
+functools.partial(y, 1) := y(1,b) = 1+b
+```
+The official (shown in the code above is to use partial to define a constant)
+```
+functools.partial(y,1,1) := y(1,1) = 1+1
+```
+and then evaluate that function in a threadsafe context (I don't know what connection.add_callback_threadsafe does, but something about how sending a ack back from a different thread would cause a crash (not completely sure why, or how without the add_callback_threadsafe the ack would be sent from a different thread). I just do what I'm told.
 
 
 
