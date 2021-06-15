@@ -15,8 +15,8 @@ make build_docker
 Then execute:
 ```
 cd ../../
+docker-compose build
 docker-compose up
-docker-compose buil
 ```
 ## Outline of Project
 docker-compose contains the build instructions for the docker containers
