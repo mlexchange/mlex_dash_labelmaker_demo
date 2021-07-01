@@ -26,6 +26,8 @@ text_color = {"dark": "#95969A", "light": "#595959"}
 card_color = {"dark": "#2D3038", "light": "#FFFFFF"}
 LABEL_LIST = ['Arc', 'Peaks', 'Rings', 'Rods']
 COLOR_CYCLE = px.colors.qualitative.Plotly
+
+
 def get_color_from_label(label, color_cycle):
     return color_cycle[int(label)]
 # UPLOAD COMPONENT
@@ -57,7 +59,9 @@ upload_html = html.Div(
 
 
 # LABEL COMPONENT
-def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, example_img=None):
+def create_label_component(labels,
+                           color_cycle=px.colors.qualitative.Plotly,
+                           example_img=None):
     comp_list = []
     for i, label in enumerate(labels):
         comp_row = dbc.Row(
@@ -108,6 +112,7 @@ def parse_contents(contents, filename, date, index):
                         )
 
     return img_card
+
 @app.callback([
     Output('image-cache-filename', 'data'),
     Output('image-cache-content', 'data'),
@@ -119,6 +124,15 @@ def parse_contents(contents, filename, date, index):
   prevent_initial_call=True
               )
 def upload_image_to_cache(list_of_contents, list_of_names, list_of_dates):
+    """
+    This function takes images from the drag and drop and uploads them to local
+    browser cache
+
+    Args:
+        list_of_contents, list: list of byte strings corresponding to images
+        list_of_names: list: list of strings, filenames of images
+        list_of_dates, list: list of dates with file creation
+    """
     print(list_of_names)
     if list_of_names is not None:
         return list_of_names, list_of_contents, list_of_dates
