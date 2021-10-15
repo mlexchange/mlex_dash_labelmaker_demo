@@ -82,7 +82,8 @@ def create_label_component(labels,
 
 
 label_html = html.Div(
-    create_label_component(LABEL_LIST)
+    id='label_buttons',
+    children=create_label_component(LABEL_LIST)
 )
 
 
@@ -361,6 +362,13 @@ def label_selected_thumbnails(label_button_n_clicks,
 # HTML FOR ADDITIONAL OPTIONS
 additional_options_html = html.Div(
         [
+            dbc.Label('Manage Labels'),
+            dcc.Input(id='label_name'),
+            dbc.Row([dbc.Col(dbc.Button('ADD', {'type': 'modify-list', 'action': 'add'},
+                                        outline="True", color='primary', n_clicks=0)),
+                     dbc.Col(dbc.Button('DELETE', {'type': 'modify-list', 'action': 'delete'},
+                                        outline="True", color='primary', n_clicks=0))
+                     ]),
             dbc.FormGroup(
                 [
                     dbc.Label('Number of Thumbnail Columns'),
@@ -375,6 +383,26 @@ additional_options_html = html.Div(
                 dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk', outline='True', color='primary'))),
         ]
 )
+
+
+@app.callback(
+    [Output('label_buttons', 'children'),
+     Output({'type': 'modify-list', 'action': ALL}, 'n_clicks')],
+    Input({'type': 'modify-list', 'action': ALL}, 'n_clicks'),
+    State('label_name', 'value'))
+def update_list(n_clicks, label_name):
+    add_clicks = n_clicks[0]
+    delete_clicks = n_clicks[1]
+    if add_clicks > 0:
+        LABEL_LIST.append(label_name)
+    if delete_clicks > 0:
+        try:
+            LABEL_LIST.remove(label_name)
+        except Error as e:
+            print(e)
+    return [create_label_component(LABEL_LIST), [0, 0]]
+
+
 @app.callback(
     Output('save-results-buffer', 'data'),
     Input('button-save-disk', 'n_clicks'),
