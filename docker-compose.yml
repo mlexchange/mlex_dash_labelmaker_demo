@@ -50,7 +50,7 @@ volumes: #create named dir and link it to the data folder, so all services can u
         driver: local
         driver_opts:
             type: "none"
-            device: "${PWD}/../data/"
+            device: "${PWD}/data/"
             o: "bind"
         
 
