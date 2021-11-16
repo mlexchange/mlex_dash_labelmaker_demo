@@ -20,31 +20,7 @@ services:
             - "./front/src:/app/work/src"
         ports:
             - '8052:8050'
-    rabbit:
-        restart: "unless-stopped"
-        image: 'rabbitmq:3-management'
-        ports:
-            - "5672:5672"
-            - "15672:15672"
 
-    consumer:
-        #        user: "${UID}:${GID}" #from .env file
-        restart: "unless-stopped"
-        container_name: "compute_launcher"
-        build:
-            context: "compute_launcher"
-            #allow this container to launch sister containers
-        volumes:
-            - "/var/run/docker.sock:/var/run/docker.sock"
-            - "./compute_launcher:/app"
-              #- "./dash-seg/data:/data"
-            - "data-m:/data"
-        environment:
-            AMQP_URL: 'amqp://rabbit?connection_attempts=5&retry_delay=5'
-            #AMQP_URL: 'amqp://guest:guest@rabbit'
-            DATA_DIR: "${COMPOSE_PROJECT_NAME}_data-m"
-        depends_on:
-            - "rabbit"
 volumes: #create named dir and link it to the data folder, so all services can use
     data-m:
         driver: local
