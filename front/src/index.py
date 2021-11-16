@@ -3,7 +3,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 
 from app import app
-from apps import welcome, thumbnail_tab, training
+from apps import welcome, thumbnail_tab#, training
 
 url_bar_and_contents = html.Div([
     dcc.Location(id='url', refresh=False),
@@ -19,7 +19,7 @@ app.validation_layout = html.Div([
     welcome.layout,
     thumbnail_tab.layout,
     thumbnail_tab.t_cache,
-    training.layout
+    #training.layout
 ])
 @app.callback(Output('page-content', 'children'),
               Input('url', 'pathname'))
@@ -29,8 +29,8 @@ def display_age(pathname):
         return welcome.layout
     elif pathname == '/data':
         return thumbnail_tab.layout
-    elif pathname == '/training':
-        return training.layout
+    # elif pathname == '/training':
+    #     return training.layout
     else:
         return '404'
 
