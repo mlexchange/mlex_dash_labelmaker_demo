@@ -320,7 +320,7 @@ def label_selected_thumbnails(label_button_n_clicks,
 # HTML FOR ADDITIONAL OPTIONS
 additional_options_html = html.Div(
         [
-            dbc.Label('Add a Label'),
+            dbc.Label('Add a New Label Below'),
             dcc.Input(id='label_name', style={'width': '95%'}),
             dbc.Row(dbc.Col(dbc.Button('ADD', id='modify-list',
                                outline="True", color='primary', n_clicks=0, style={'width': '95%'}))),
