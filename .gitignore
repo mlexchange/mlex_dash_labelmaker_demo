@@ -1,4 +1,5 @@
 *~
+.DS_Store
 .bash_history
 tags
 *.h*5
@@ -11,3 +12,4 @@ old_streamlit/__pycache__
 *.log
 *.cache
 *.pyc
+data/*
