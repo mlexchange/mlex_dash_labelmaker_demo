@@ -1,8 +1,5 @@
 import dash_html_components as html
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-import numpy as np
-
 
 
 button_github = dbc.Button(
@@ -13,23 +10,6 @@ button_github = dbc.Button(
     id="gh-link",
     style={"text-transform": "none"},
 )
-button_session_data = dbc.Button(
-    "Session Data",
-    outline=True,
-    href="/data",
-    id="session-data-tab",
-    style={"text-transform": "none"},
-)
-button_session_training = dbc.Button(
-    "Session Training",
-    outline=True,
-    href="/training",
-    id="session-data-tab",
-    style={"text-transform": "none"},
-)
-
-
-
 
 
 def header():
@@ -70,9 +50,6 @@ def header():
                                 dbc.Collapse(
                                     dbc.Nav(
                                         [
-                                            #dbc.NavItem(button_howto),
-                                            dbc.NavItem(button_session_data),
-                                            dbc.NavItem(button_session_training),
                                             dbc.NavItem(button_github),
                                         ],
                                         navbar=True,
@@ -94,7 +71,3 @@ def header():
         sticky="top",
     )
     return header
-
-
-
-
