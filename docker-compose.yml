@@ -1,25 +1,15 @@
 version: '3'
 
-#env file is ./.env
 services:
     front-end:
         restart: "unless-stopped"
         container_name: "dash-label"
-        user: "${UID}:${GID}" #from .env file
         build: 
             context: 'front/'
             dockerfile: 'docker/Dockerfile'
-        command: 'python src/index.py'
-        volumes: #relative to where docker-compose is run, NOT context
-            - "data-m:/app/work/data"
+        command: 'python src/labelmaker.py'
+        volumes:
+            - "${PWD}/data:/app/work/data"
             - "./front/src:/app/work/src"
         ports:
-            - '8052:8050'
-
-volumes: #create named dir and link it to the data folder, so all services can use
-    data-m:
-        driver: local
-        driver_opts:
-            type: "none"
-            device: "${PWD}/data/"
-            o: "bind"
+            - '8050:8050'
