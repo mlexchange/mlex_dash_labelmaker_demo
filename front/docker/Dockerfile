@@ -1,5 +1,5 @@
 FROM python:3.8-slim-buster as builder
-MAINTAINER ADAM GREEN
+MAINTAINER MLEXCHANGE-TEAM
 
 
 RUN apt-get update && apt-get install -y \
@@ -28,6 +28,4 @@ ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR /app/work
 ENV HOME /app/work
 ENV PYTHONUNBUFFERED=1
-RUN useradd aasgreen
-USER aasgreen
 CMD ["/bin/bash"]
