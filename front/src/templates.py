@@ -30,7 +30,7 @@ def header():
                             [
                                 html.Div(
                                     [
-                                        html.H3("MLExchange | Labelling"),
+                                        html.H3("MLExchange | Label Maker"),
                                         html.P("Scattering Data"),
                                     ],
                                     id="app-title",
