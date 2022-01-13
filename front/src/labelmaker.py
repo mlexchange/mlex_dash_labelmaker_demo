@@ -1,11 +1,14 @@
 import io
 import pathlib
 import base64
+import math
 
 import dash
+from dash import dcc
+from dash import html
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-import dash_html_components as html
+# import dash_core_components as dcc
+# import dash_html_components as html
 
 from dash.dependencies import Input, Output, State, MATCH, ALL
 from flask import Flask
@@ -58,13 +61,14 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly):
     return comp_list
 
 
-def draw_rows(list_of_contents, list_of_names, list_of_dates, n_cols):
+def draw_rows(list_of_contents, list_of_names, list_of_dates, n_cols, start):
     n_images = len(list_of_contents)
     n_cols = n_cols
-    n_rows = (n_images // n_cols) + 1
+    n_rows = 10
+    # n_rows = (n_images // n_cols) + 1
     children = []
     visible = []
-    for j in range(n_rows):
+    for j in range(start*n_rows, start*n_rows+n_rows):
         row_child = []
         for i in range(n_cols):
             index = j * n_cols + i
@@ -138,89 +142,137 @@ def upload_image_to_cache(list_of_contents, list_of_names, list_of_dates):
 
 
 @app.callback(
-    [Output('output-image-upload', 'children')],
+    [Output('output-image-upload', 'children'),
+     Output('prev-page', 'disabled'),
+     Output('next-page', 'disabled'),
+     Output('current-page', 'data'),
+     Output('image-order','data')],
     Input('image-cache-content', 'data'),
     Input('button-hide', 'n_clicks'),
     Input('button-sort', 'n_clicks'),
     Input('thumbnail-slider', 'value'),
+    Input('prev-page', 'n_clicks'),
+    Input('next-page', 'n_clicks'),
     State('image-cache-filename', 'data'),
     State('image-cache-date', 'data'),
     State({'type': 'thumbnail-src', 'index': ALL}, 'src'),
     State('labels', 'data'),
     State('labels-name', 'data'),
-    State('label-list', 'data')
+    State('label-list', 'data'),
+    State('current-page', 'data'),
+    State('image-order','data')
               )
 def update_output(list_of_contents, button_hide_n_clicks, button_sort_n_clicks,
-                  thumbnail_slider_value, list_of_names, list_of_dates,
-                  thumbnail_src_index, labels_data, labels_name_data, label_list):
+                  thumbnail_slider_value, prev_page, next_page, list_of_names, list_of_dates,
+                  thumbnail_src_index, labels_data, labels_name_data, label_list, current_page, image_order):
     """
     1. Initial upload (parsing from upload)
     2. redraw of thumbnails (when sort or hide button is pressed)
     """
     if len(list_of_contents) == 0:
-        return [dash.no_update]
+        return [dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update]
     trigger = dash.callback_context
 
     if (trigger.triggered[0]['prop_id'] == 'image-cache-content.data' or \
         trigger.triggered[0]['prop_id'] == 'thumbnail-slider.value' or \
+        trigger.triggered[0]['prop_id'] == 'prev-page.n_clicks' or \
+        trigger.triggered[0]['prop_id'] == 'next-page.n_clicks' or \
         trigger.triggered[0]['prop_id'] == '.') and list_of_contents is not None:
-        children = draw_rows(list_of_contents, list_of_names, list_of_dates,
-                             n_cols=thumbnail_slider_value)
-        print('upload-contents: length of images: {}'.format(len(children)))
-        return [children]
+
+        if trigger.triggered[0]['prop_id'] == 'image-cache-content.data':
+            image_order = list(range(len(list_of_contents)))
+
+        if trigger.triggered[0]['prop_id'] == 'prev-page.n_clicks':
+            current_page = current_page - 1
+
+        if trigger.triggered[0]['prop_id'] == 'next-page.n_clicks':
+            current_page = current_page + 1
+
+        if image_order is not list(range(len(list_of_contents))):
+            new_list_of_contents = []
+            new_list_of_names = []
+            new_list_of_dates = []
+            for i in image_order:
+                new_list_of_contents.append(list_of_contents[i])
+                new_list_of_names.append(list_of_names[i])
+                new_list_of_dates.append(list_of_dates[i])
+
+        children = draw_rows(new_list_of_contents, new_list_of_names, new_list_of_dates,
+                             thumbnail_slider_value, current_page)
+        # print('upload-contents: length of images: {}'.format(len(children)))
+        # print((len(list_of_contents) // thumbnail_slider_value))
+        return [children,
+                current_page==0,
+                math.ceil((len(list_of_contents) // thumbnail_slider_value) / 10) <= current_page+1,
+                current_page,
+                image_order]
 
     elif trigger.triggered[0]['prop_id'] == 'button-hide.n_clicks':
+        current_page = 0
         if button_hide_n_clicks % 2 == 1:
             labeled_names = list(itertools.chain(*labels_name_data.values()))
-            unlabled_name_lists = []
-            unlabled_src_lists = []
-            unlabled_date_lists = []
-            for thumb_name, content, date in zip(list_of_names,
-                                                 list_of_contents, list_of_dates):
+            unlabeled_name_lists = []
+            unlabeled_src_lists = []
+            unlabeled_date_lists = []
+            unlabeled_indx = []
+            for indx, (thumb_name, content, date) in enumerate(zip(list_of_names,list_of_contents, list_of_dates)):
                 if thumb_name not in labeled_names:
-                    unlabled_name_lists.append(thumb_name)
-                    unlabled_src_lists.append(content)
-                    unlabled_date_lists.append(date)
-            children = draw_rows(unlabled_src_lists, unlabled_name_lists, unlabled_date_lists,
-                                 n_cols=thumbnail_slider_value)
+                    unlabeled_indx.append(indx)
+                    unlabeled_name_lists.append(thumb_name)
+                    unlabeled_src_lists.append(content)
+                    unlabeled_date_lists.append(date)
+            image_order = unlabeled_indx
+            children = draw_rows(unlabeled_src_lists, unlabeled_name_lists, unlabeled_date_lists,
+                                 thumbnail_slider_value, current_page)
         else:
+            image_order = list(range(len(list_of_contents)))
             children = draw_rows(list_of_contents, list_of_names, list_of_dates,
-                                 n_cols=thumbnail_slider_value)
-        return [children]
+                                 thumbnail_slider_value, current_page)
+        return [children,
+                current_page==0,
+                math.ceil((len(list_of_contents) // thumbnail_slider_value) / 10) <= current_page+1,
+                current_page,
+                image_order]
     
     elif trigger.triggered[0]['prop_id'] == 'button-sort.n_clicks':
+        current_page = 0
         # do not show those thumbnails which already have a label.
         n_images = len(list_of_contents)
         print('Number of images ', n_images)
         new_name_lists = [[] for i in range(len(label_list)+1)]
         new_src_lists = [[] for i in range(len(label_list)+1)]
         new_date_lists = [[] for i in range(len(label_list)+1)]
-        for name, content, date in zip(list_of_names, 
-                                       list_of_contents, list_of_dates):
-            unlabled=True
+        new_indx = [[] for i in range(len(label_list) + 1)]
+        for indx, (name, content, date) in enumerate(zip(list_of_names, list_of_contents, list_of_dates)):
+            unlabeled=True
             for key_label in labels_name_data:
-            
                 if name in labels_name_data[key_label]:
                     new_name_lists[int(key_label)].append(name)
                     new_src_lists[int(key_label)].append(content)
                     new_date_lists[int(key_label)].append(date)
-                    unlabled=False
-            if unlabled == True:
+                    new_indx[int(key_label)].append(indx)
+                    unlabeled=False
+            if unlabeled == True:
                 new_name_lists[-1].append(name)
                 new_src_lists[-1].append(content)
                 new_date_lists[-1].append(date)
+                new_indx[-1].append(indx)
         new_name = list(itertools.chain(*new_name_lists))
         new_src = list(itertools.chain(*new_src_lists))
         new_date = list(itertools.chain(*new_date_lists))
+        image_order = list(itertools.chain(*new_indx))
 
-
-        print('name lists old: {}'.format(new_name_lists))
-        print('name lists: {}'.format(new_name))
+        # print('name lists old: {}'.format(new_name_lists))
+        # print('name lists: {}'.format(new_name))
         children = draw_rows(new_src, new_name, new_date,
-                             n_cols=thumbnail_slider_value)
-        print('button-sort: length of images: {}'.format(len(children)))
+                             thumbnail_slider_value, current_page)
+        # print('button-sort: length of images: {}'.format(len(children)))
 
-        return [children]
+        return [children,
+                current_page==0,
+                math.ceil((len(list_of_contents) // thumbnail_slider_value) / 10) <= current_page+1,
+                current_page,
+                image_order]
 
 
 @app.callback(
@@ -238,19 +290,19 @@ def select_thumbnail( value, id_name, thumbnail_name_children, labels_data, labe
     # find background color according to label class if thumb is labelled
     color = ''
     for label_key in labels_name_data:
-        print('for: {} {}'.format(label_key, labels_name_data[label_key]))
+        # print('for: {} {}'.format(label_key, labels_name_data[label_key]))
         if name in labels_name_data[label_key]:
             color = get_color_from_label(label_key, COLOR_CYCLE)
-            print('if: {} in {} then color: {}'.format(name, labels_name_data[label_key],color ))
+            # print('if: {} in {} then color: {}'.format(name, labels_name_data[label_key],color ))
 
     if value is None:
-        print('index: {}, Not selected'.format(index))
+        # print('index: {}, Not selected'.format(index))
         return ''
     if value % 2 == 1:
-        print('index: {}, Selected'.format(index))
+        # print('index: {}, Selected'.format(index))
         return 'primary'
     elif value % 2 == 0:
-        print('index: {}, Not selected/labeled color: {}'.format(name, color))
+        # print('index: {}, Not selected/labeled color: {}'.format(name, color))
         return color
 
 
@@ -358,7 +410,6 @@ def update_list(n_clicks, n_clicks2, label_name, label_list):
     Update the labels list
     """
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    print(changed_id)
     add_clicks = n_clicks
     if 'delete-label-button' in changed_id and any(n_clicks2):
         rem = changed_id[changed_id.find('index')+7:]
@@ -448,7 +499,15 @@ upload_html = html.Div(
                 multiple=True,
             ),
             html.Div(id='output-image-upload'),
-            ]
+            dbc.Row(
+                [
+                    dbc.Button('<', id='prev-page', disabled=True),
+                    #dbc.Label('Pages'),
+                    dbc.Button('>', id='next-page', disabled=True)
+                ],
+                justify='center'
+            )
+        ]
 )
 
 
@@ -471,7 +530,9 @@ browser_cache =html.Div(
             dcc.Store(id='test-value2', data=[]),
             dcc.Store(id='test-value3', data=[]),
             dcc.Store(id='save-results-buffer', data=[]),
-            dcc.Store(id='label-list', data=LABEL_LIST)
+            dcc.Store(id='label-list', data=LABEL_LIST),
+            dcc.Store(id='current-page', data=0),
+            dcc.Store(id='image-order', data=[])
         ],
     )
 
