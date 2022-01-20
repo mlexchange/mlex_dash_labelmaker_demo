@@ -17,6 +17,3 @@ Assigning a new label:
 Removing an assigned label (un-label):
 1. Select all the images to be unlabeled
 2. Click the "un-label" button
-
-## Outline of Project
-docker-compose contains the build instructions for the docker containers
