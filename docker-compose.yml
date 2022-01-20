@@ -9,6 +9,7 @@ services:
             dockerfile: 'docker/Dockerfile'
         command: 'python src/labelmaker.py'
         volumes:
+            - "/Users/tanchavez/Documents/Dataset/born/train/Box:/app/work/fixed_dir"
             - "${PWD}/data:/app/work/data"
             - "./front/src:/app/work/src"
         ports:
