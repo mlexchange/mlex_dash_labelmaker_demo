@@ -730,7 +730,7 @@ def save_labels_disk(button_save_disk_n_clicks, rows, file_paths, labels_name_da
                 filename_list = labels_name_data[label_index]
                 if len(filename_list)>0:
                     # create root directory
-                    root = pathlib.Path('data/labelmaker_temp')
+                    root = pathlib.Path('data/labelmaker_outputs')
                     label_dir = root / pathlib.Path(label_list[int(label_index)])
                     label_dir.mkdir(parents=True, exist_ok=True)
                     # save all files under the current label into the directory
