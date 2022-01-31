@@ -8,7 +8,7 @@ cd ../../
 docker-compose up --build
 ```
 
-## How to use file explorer
+## How to ingest data?
 Put your dataset inside the data folder which is mounted to the working directory in the container. Then go to the webpage and click on `Open File Explorer` which allows:  
 
 1. Uploading images from `Drag and Drop`  
