@@ -34,7 +34,7 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly):
                     dbc.Button(label,
                                id={'type': 'label-button', 'index': i},
                                style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
-                                      'color':'white', 'width': '100%'}
+                                      'color':'white', 'width': '100%', 'margin-bottom': '5px'}
                                ),
                     width=8
                 ),
@@ -42,7 +42,7 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly):
                     dbc.Button('\u2716',
                                id={'type': 'delete-label-button', 'index': i},
                                style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
-                                      'color':'white', 'width': '100%'}),
+                                      'color':'white', 'width': '100%', 'margin-bottom': '5px'}),
                     width=4
                 ),
             ],
@@ -53,7 +53,7 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly):
             dbc.Col(
                 dbc.Button('Un-label',
                            id='un-label',
-                           style={'color':'white', 'width': '100%'})
+                           style={'color':'white', 'width': '100%', 'margin-bottom': '10px', 'margin-top': '10px'})
             )
         )
     )
