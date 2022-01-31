@@ -7,6 +7,7 @@ import os
 import dash
 from dash import dcc
 from dash import html
+from dash import dash_table
 import dash_bootstrap_components as dbc
 
 from dash.dependencies import Input, Output, State, MATCH, ALL
@@ -19,11 +20,13 @@ import templates
 from helper_utils import get_color_from_label, create_label_component, draw_rows
 
 
+
 external_stylesheets = [dbc.themes.BOOTSTRAP]
 server = Flask(__name__)
 app = dash.Dash(__name__, external_stylesheets = external_stylesheets, suppress_callback_exceptions=True)
 
 header = templates.header()
+
 
 # Font and background colors associated with each theme
 text_color = {"dark": "#95969A", "light": "#595959"}
@@ -32,7 +35,263 @@ card_color = {"dark": "#2D3038", "light": "#FFFFFF"}
 LABEL_LIST = ['Arc', 'Peaks', 'Rings', 'Rods']
 COLOR_CYCLE = px.colors.qualitative.Plotly
 NUMBER_OF_ROWS = 4
-DATA_DIR = 'fixed_dir'
+
+# REACTIVE COMPONENTS FOR ADDITIONAL OPTIONS : SORT, HIDE, ETC
+additional_options_html = html.Div(
+        [
+            dcc.Input(id='add-label-name', placeholder="Input New Label Name", style={'width': '95%', 'margin-bottom': '10px'}),
+            dbc.Row(dbc.Col(dbc.Button('Add New Label', id='modify-list',
+                               outline="True", color='primary', n_clicks=0, style={'width': '95%', 'margin-bottom': '20px'}))),
+            dbc.Row(dbc.Col([
+                    dbc.Label('Number of Thumbnail Columns'),
+                    dcc.Slider(id='thumbnail-slider', min=1, max=5, value=4,
+                               marks = {str(n):str(n) for n in range(5+1)})
+            ])),
+                dbc.Row(dbc.Col(dbc.Button('Sort', id='button-sort', outline="True",
+                                           color='primary', style={'width': '95%', 'margin-top': '20px'}))),
+                dbc.Row(html.P('')),
+                dbc.Row(dbc.Col(dbc.Button('Hide', id='button-hide', outline='True',
+                                           color='primary', style={'width': '95%'}))),
+                dbc.Row(html.P('')),
+                dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk',
+                                           outline='True', color='primary', style={'width': '95%'}))),
+        ]
+)
+
+
+# files display
+file_paths_table = html.Div(
+        children=[
+            dash_table.DataTable(
+                id='files-table',
+                columns=[
+                    {'name': 'type', 'id': 'file_type'},
+                    {'name': 'Item', 'id': 'file_path'},
+                ],
+                data = [],
+                hidden_columns = ['file_type'],
+                row_selectable='multi',
+                style_cell={'padding': '0.5rem', 'textAlign': 'left'},
+                fixed_rows={'headers': False},
+                css=[{"selector": ".show-hide", "rule": "display: none"}],
+                style_data_conditional=[
+                    {'if': {'filter_query': '{file_type} = dir'},
+                     'color': 'blue'},
+                 ],
+                style_table={'height':'18rem', 'overflowY': 'auto'}
+            )
+        ]
+    )
+
+
+# UPLOAD DATASET OR USE PRE-DEFINED DIRECTORY
+data_access = html.Div([
+    dbc.Card([
+        dbc.CardBody(id='data-body',
+                      children=[
+                          dbc.Label('Upload a new dataset:', className='mr-2'),
+                          dcc.Upload(id='upload-image',
+                                     children=html.Div(['Drag and Drop or ',
+                                                        html.A('Select Files')]),
+                                     style={'width': '97%',
+                                            'height': '60px',
+                                            'lineHeight': '60px',
+                                            'borderWidth': '1px',
+                                            'borderStyle': 'dashed',
+                                            'borderRadius': '5px',
+                                            'textAlign': 'center',
+                                            'margin': '10px',
+                                            'margin-bottom': '50px'},
+                                     multiple=True),
+                          dbc.Label('Or choose files/directories:', className='mr-2'),
+                          html.Div(
+                                  [dbc.Button("Browse Files or Directories",
+                                             id="browse-dir",
+                                             className="ms-auto",
+                                             color="secondary",
+                                             outline=True,
+                                             n_clicks=0,
+                                             style={'width': '32%', 'margin': '8px'}),
+                                   html.Div([
+                                        dcc.Dropdown(
+                                                id='browse-format',
+                                                options=[
+                                                    {'label': 'dir', 'value': 'dir'},
+                                                    {'label': 'all (*)', 'value': '*'},
+                                                    {'label': '.png', 'value': '*.png'},
+                                                    {'label': '.jpg/jpeg', 'value': '*.jpg,*.jpeg'},
+                                                    {'label': '.tif/tiff', 'value': '*.tif,*.tiff'},
+                                                    {'label': '.txt', 'value': '*.txt'},
+                                                    {'label': '.csv', 'value': '*.csv'},
+                                                ],
+                                                value='*')
+                                            ],
+                                            style={"width": "15%", 'margin-right': '50px'}
+                                    ),
+                                    dbc.Button("Import Selected Files or Directories",
+                                             id="import-dir",
+                                             className="ms-auto",
+                                             color="secondary",
+                                             outline=True,
+                                             n_clicks=0,
+                                             style={'width': '32%', 'margin': '8px'}),
+                                   html.Div([
+                                        dcc.Dropdown(
+                                                id='import-format',
+                                                options=[
+                                                    {'label': 'all files (*)', 'value': '*'},
+                                                    {'label': '.png', 'value': '*.png'},
+                                                    {'label': '.jpg/jpeg', 'value': '*.jpg,*.jpeg'},
+                                                    {'label': '.tif/tiff', 'value': '*.tif,*.tiff'},
+                                                    {'label': '.txt', 'value': '*.txt'},
+                                                    {'label': '.csv', 'value': '*.csv'},
+                                                ],
+                                                value='*')
+                                            ],
+                                            style={"width": "15%"}
+                                    ),
+                                 ],
+                                style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'},
+                                ),
+                        file_paths_table,
+                        ]),
+    ],
+    id="data-access",
+    #is_open=True
+    )
+])
+
+
+file_explorer = html.Div(
+    [
+        dbc.Button(
+            "Open File Explorer",
+            id="collapse-button",
+            size="lg",
+            className="mb-3",
+            color="secondary",
+            outline=True,
+            n_clicks=0,
+        ),
+        dbc.Collapse(
+            data_access,
+            id="collapse",
+            is_open=False,
+        ),
+    ]
+)
+
+
+# DISPLAY DATASET
+display = html.Div(
+    [
+        file_explorer,
+        html.Div(id='output-image-upload'),
+        dbc.Row([
+            dbc.Col(dbc.Row(dbc.Button('<', id='prev-page', style={'width': '10%'}, disabled=True), justify='end')),
+            dbc.Col(dbc.Row(dbc.Button('>', id='next-page', style={'width': '10%'}, disabled=True), justify='start'))
+        ],justify='center'
+        )
+    ]
+)
+
+
+label_html = html.Div(
+    id='label_buttons',
+    children=create_label_component(LABEL_LIST)
+)
+
+
+browser_cache =html.Div(
+        id="no-display",
+        children=[
+            dcc.Store(id='labels', data={}),
+            dcc.Store(id='labels-name', data={}),
+            dcc.Store(id='file-paths', data=[]),
+            dcc.Store(id='image-cache-filename', data=[]),
+            dcc.Store(id='image-cache-content', data=[]),
+            dcc.Store(id='image-cache-date', data=[]),
+            dcc.Store(id='save-results-buffer', data=[]),
+            dcc.Store(id='label-list', data=LABEL_LIST),
+            dcc.Store(id='current-page', data=0),
+            dcc.Store(id='image-order', data=[]),
+            dcc.Store(id='del-label', data=-1)
+        ],
+    )
+
+
+#APP LAYOUT
+layout = html.Div(
+    [
+        header,
+        dbc.Container(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(display, width=8),
+                        dbc.Col(
+                            dbc.Card(
+                                dbc.CardBody([
+                                    label_html,
+                                    html.Hr(),
+                                    additional_options_html
+                                ]
+                                )), width='auto', align='top'),
+                    ],
+                    justify='center'
+                ),
+            ],
+            fluid=True
+        ),
+        html.Div(browser_cache)
+    ]
+)
+
+
+app.layout = layout
+
+
+
+@app.callback(
+    Output("collapse", "is_open"),
+    [Input("collapse-button", "n_clicks")],
+    [State("collapse", "is_open")],
+)
+def toggle_collapse(n, is_open):
+    if n:
+        return not is_open
+    return is_open
+
+
+@app.callback(
+    Output('files-table', 'data'),
+    Output('file-paths', 'data'),
+    Input('files-table', 'selected_rows'),
+    Input('browse-format', 'value'),
+    Input('browse-dir', 'n_clicks'),
+)
+def file_explorer(rows, browse_format, n_clicks):
+    files = []
+    if n_clicks > 0:
+        if browse_format == 'dir':
+            for filepath in pathlib.Path(path='.').glob('**/*'):
+                if os.path.isdir(filepath):
+                    files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
+        else:
+            browse_format = browse_format.split(',')
+            for ext in browse_format:
+                for filepath in pathlib.Path(path='.').glob('**/{}'.format(ext)):
+                    if os.path.isdir(filepath):
+                        files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
+                    else:
+                        files.append({'file_path': str(filepath.absolute()), 'file_type': 'file'})
+    
+    import_files = []
+    if rows is not None:
+        for row in rows:
+            import_files.append(files[row])
+        
+    return files, import_files
 
 
 @app.callback([
@@ -62,17 +321,19 @@ def upload_image_to_cache(list_of_contents, list_of_names, list_of_dates):
 @app.callback(
     [
         Output('image-order','data'),
-        Output('data-access', 'is_open')
     ],
+    Input('file-paths','data'),
     Input('image-cache-filename', 'data'),
-    Input('image-dir', 'n_clicks'),
+    Input('import-dir', 'n_clicks'),
+    Input('import-format', 'value'),
+    Input('files-table', 'selected_rows'),
     Input('button-hide', 'n_clicks'),
     Input('button-sort', 'n_clicks'),
     State('labels-name', 'data'),
     State('label-list', 'data'),
     State('image-order','data'),
     prevent_initial_call=True)
-def display_index(list_filename_cache, dir_n_clicks, button_hide_n_clicks, button_sort_n_clicks,
+def display_index(file_paths, list_filename_cache, import_n_clicks, import_format, rows, button_hide_n_clicks, button_sort_n_clicks,
                   labels_name_data, label_list, image_order):
     '''
     This callback arranges the image order according to the following actions:
@@ -91,17 +352,32 @@ def display_index(list_filename_cache, dir_n_clicks, button_hide_n_clicks, butto
         image_order:            Order of the images according to the selected action (sort, hide, new data, etc)
         data_access_open:       Closes the reactive component to select the data access (upload vs. directory)
     '''
+    supported_formats = []
+    import_format = import_format.split(',')
+    if import_format[0] == '*':
+        supported_formats = ['tiff', 'tif', 'jpg', 'jpeg', 'png']
+    else:
+        for ext in import_format:
+            supported_formats.append(ext.split('.')[1])
+
     changed_id = dash.callback_context.triggered[0]['prop_id']
-    if dir_n_clicks>0:
-        list_path, list_dirs, filenames = next(os.walk(DATA_DIR))
+    if import_n_clicks>0 and bool(rows):
         list_filename = []
-        for filename in filenames:
-            if filename.split('.')[-1] in ['tiff', 'tif', 'jpg', 'jpeg', 'png']:
-                list_filename.append(filename)
+        for file_path in file_paths:
+            if file_path['file_type'] == 'dir':
+                list_path, list_dirs, filenames = next(os.walk(file_path['file_path']))
+                for filename in filenames:
+                    if filename.split('.')[-1] in supported_formats:
+                        filename = file_path['file_path'] + '/' + filename
+                        list_filename.append(filename)
+            else:
+                list_filename.append(file_path['file_path'])
     else:
         list_filename = list_filename_cache
+    
+    
     num_imgs = len(list_filename)
-    if changed_id == 'image-cache-filename.data' or changed_id == 'image-dir.n_clicks':
+    if changed_id == 'image-cache-filename.data' or changed_id == 'import-dir.n_clicks':
         image_order = list(range(num_imgs))
     if changed_id == 'button-hide.n_clicks':
         if button_hide_n_clicks % 2 == 1:
@@ -124,8 +400,9 @@ def display_index(list_filename_cache, dir_n_clicks, button_hide_n_clicks, butto
             if unlabeled:
                 new_indx[-1].append(i)
         image_order = list(itertools.chain(*new_indx))
-    return [image_order, False]
+    return [image_order]
 
+    
 
 @app.callback([
     Output('output-image-upload', 'children'),
@@ -137,15 +414,18 @@ def display_index(list_filename_cache, dir_n_clicks, button_hide_n_clicks, butto
     Input('thumbnail-slider', 'value'),
     Input('prev-page', 'n_clicks'),
     Input('next-page', 'n_clicks'),
+    Input('files-table', 'selected_rows'),
+    Input('import-format', 'value'),
 
+    Input('file-paths','data'),
     State('image-cache-content', 'data'),
     State('image-cache-filename', 'data'),
     State('image-cache-date', 'data'),
     State('current-page', 'data'),
-    State('image-dir', 'n_clicks')],
+    State('import-dir', 'n_clicks')],
     prevent_initial_call=True)
-def update_output(image_order, thumbnail_slider_value, button_prev_page, button_next_page, list_contents_cache,
-                  list_filenames_cache, list_dates_cache, current_page, dir_n_clicks):
+def update_output(image_order, thumbnail_slider_value, button_prev_page, button_next_page, rows, import_format, file_paths, list_contents_cache,
+                  list_filenames_cache, list_dates_cache, current_page, import_n_clicks):
     '''
     This callback displays images in the front-end
     Args:
@@ -164,6 +444,14 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         next_page:              Enable/Disable next page button if current_page==max_page
         current_page:           Update current page index if previous or next page buttons were selected
     '''
+    supported_formats = []
+    import_format = import_format.split(',')
+    if import_format[0] == '*':
+        supported_formats = ['tiff', 'tif', 'jpg', 'jpeg', 'png']
+    else:
+        for ext in import_format:
+            supported_formats.append(ext.split('.')[1])
+    
     changed_id = dash.callback_context.triggered[0]['prop_id']
     # update current page if necessary
     if changed_id == 'image-order.data':
@@ -172,17 +460,23 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         current_page = current_page - 1
     if changed_id == 'next-page.n_clicks':
         current_page = current_page + 1
-    # check data access (upload vs directory)
-    if dir_n_clicks > 0:
-        list_path, list_dirs, filenames = next(os.walk(DATA_DIR))
+        
+    if import_n_clicks > 0 and bool(rows):
         list_filename = []
-        for filename in filenames:
-            if filename.split('.')[-1] in ['tiff', 'tif', 'jpg', 'jpeg', 'png']:
-                list_filename.append(filename)
+        for file_path in file_paths:
+            if file_path['file_type'] == 'dir':
+                list_path, list_dirs, filenames = next(os.walk(file_path['file_path']))
+                for filename in filenames:
+                    if filename.split('.')[-1] in supported_formats:
+                        filename = file_path['file_path'] + '/' + filename
+                        list_filename.append(filename)
+            else:
+                list_filename.append(file_path['file_path'])
     else:
         list_filename = list_filenames_cache
+    
     # plot images according to current page index and number of columns
-    num_imgs = len(image_order)
+    num_imgs = len(list_filename)
     if num_imgs>0:
         start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
         max_indx = start_indx + NUMBER_OF_ROWS * thumbnail_slider_value
@@ -191,9 +485,10 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         new_contents = []
         new_filenames = []
         new_dates = []
-        if dir_n_clicks>0:
+        if import_n_clicks>0 and bool(rows):
             for i in range(start_indx, max_indx):
-                filename = DATA_DIR+'/'+list_filename[image_order[i]]
+                filename = list_filename[image_order[i]]
+                print(f'import filename {filename}')
                 with open(filename, "rb") as file:
                     img = base64.b64encode(file.read())
                     file_ext = filename[filename.find('.')+1:]
@@ -401,14 +696,16 @@ def update_list(n_clicks, n_clicks2, add_label_name, label_list, labels_name_dat
 @app.callback(
     Output('save-results-buffer', 'data'),
     Input('button-save-disk', 'n_clicks'),
+    Input('files-table', 'selected_rows'),
+    State('file-paths','data'),
     State('labels-name', 'data'),
     State('image-cache-content', 'data'),
     State('image-cache-filename', 'data'),
     State('label-list', 'data'),
-    State('image-dir', 'n_clicks')
+    State('import-dir', 'n_clicks'),
 )
-def save_labels_disk(button_save_disk_n_clicks, labels_name_data, list_contents_cache, list_filenames_cache,
-                     label_list, dir_n_clicks):
+def save_labels_disk(button_save_disk_n_clicks, rows, file_paths, labels_name_data, list_contents_cache, list_filenames_cache,
+                     label_list, import_n_clicks):
     '''
     This callback saves the labels to disk
     Args:
@@ -424,10 +721,11 @@ def save_labels_disk(button_save_disk_n_clicks, labels_name_data, list_contents_
     if labels_name_data is not None:
         if len(labels_name_data)>0:
             print('Saving labels')
-            if dir_n_clicks > 0:
-                list_path, list_dirs, list_filename = next(os.walk(DATA_DIR))
+            if import_n_clicks > 0 and bool(rows):
+                for file_path in file_paths:
+                    list_path, list_dirs, list_filename = next(os.walk(file_path['file_path']))
             else:
-                list_filename = list_filenames_cache
+                list_filename = list_filenames_cache ##
             for label_index in labels_name_data:
                 filename_list = labels_name_data[label_index]
                 if len(filename_list)>0:
@@ -436,142 +734,27 @@ def save_labels_disk(button_save_disk_n_clicks, labels_name_data, list_contents_
                     label_dir = root / pathlib.Path(label_list[int(label_index)])
                     label_dir.mkdir(parents=True, exist_ok=True)
                     # save all files under the current label into the directory
-                    for filename in filename_list:
-                        filename_index = list_filename.index(filename)
-                        if dir_n_clicks > 0:
-                            im_bytes = DATA_DIR + '/' + list_filename[filename_index]
+                    print(f'filename_list\n{filename_list}')
+                    for i,filename in enumerate(filename_list):
+                        if import_n_clicks > 0:
+                            print(f'filename {filename}')
+                            im_bytes = filename
+                            im = PIL.Image.open(im_bytes)
+                            filename = im_bytes.split("/")[-1]
                         else:
-                            file_contents = list_contents_cache[filename_index]
+                            file_contents = list_contents_cache[i]
                             file_contents_data = file_contents.split(',')[1]
                             im_decode = base64.b64decode(file_contents_data)
                             im_bytes = io.BytesIO(im_decode)
-                        im = PIL.Image.open(im_bytes)
+                            im = PIL.Image.open(im_bytes)
+
                         im_fname = label_dir / pathlib.Path(filename)
                         im.save(im_fname)
     return []
 
 
-# REACTIVE COMPONENTS FOR ADDITIONAL OPTIONS : SORT, HIDE, ETC
-additional_options_html = html.Div(
-        [
-            dbc.Label('Add a New Label Below'),
-            dcc.Input(id='add-label-name', style={'width': '95%'}),
-            dbc.Row(dbc.Col(dbc.Button('ADD', id='modify-list',
-                               outline="True", color='primary', n_clicks=0, style={'width': '95%'}))),
-            dbc.Row(dbc.Col([
-                    dbc.Label('Number of Thumbnail Columns'),
-                    dcc.Slider(id='thumbnail-slider', min=1, max=5, value=4,
-                               marks = {str(n):str(n) for n in range(5+1)})
-            ])),
-                dbc.Row(dbc.Col(dbc.Button('Sort', id='button-sort', outline="True",
-                                           color='primary', style={'width': '95%'}))),
-                dbc.Row(html.P('')),
-                dbc.Row(dbc.Col(dbc.Button('Hide', id='button-hide', outline='True',
-                                           color='primary', style={'width': '95%'}))),
-                dbc.Row(html.P('')),
-                dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk',
-                                           outline='True', color='primary', style={'width': '95%'}))),
-        ]
-)
-
-# UPLOAD DATASET OR USE PRE-DEFINED DIRECTORY
-data_access = html.Div([
-    dbc.Modal([
-        dbc.ModalBody(id='data-body',
-                      children=[
-                          dbc.Label('Upload a new dataset:', className='mr-2'),
-                          dcc.Upload(id='upload-image',
-                                     children=html.Div(['Drag and Drop or ',
-                                                        html.A('Select Files')]),
-                                     style={'width': '97%',
-                                            'height': '60px',
-                                            'lineHeight': '60px',
-                                            'borderWidth': '1px',
-                                            'borderStyle': 'dashed',
-                                            'borderRadius': '5px',
-                                            'textAlign': 'center',
-                                            'margin': '10px'},
-                                     multiple=True),
-                          dbc.Label('Or use directory:', className='mr-2'),
-                          dbc.Button("Use Pre-defined Directory",
-                                     id="image-dir",
-                                     className="ms-auto",
-                                     n_clicks=0,
-                                     style={'width': '100%', 'margin': '10px'})
-                      ])
-    ],
-    id="data-access",
-    centered=True,
-    is_open=True)
-])
-
-
-# DISPLAY DATASET
-display = html.Div(
-    [
-        data_access,
-        html.Div(id='output-image-upload'),
-        dbc.Row([
-            dbc.Col(dbc.Row(dbc.Button('<', id='prev-page', style={'width': '10%'}, disabled=True), justify='end')),
-            dbc.Col(dbc.Row(dbc.Button('>', id='next-page', style={'width': '10%'}, disabled=True), justify='start'))
-        ],justify='center'
-        )
-    ]
-)
-
-
-label_html = html.Div(
-    id='label_buttons',
-    children=create_label_component(LABEL_LIST)
-)
-
-
-browser_cache =html.Div(
-        id="no-display",
-        children=[
-            dcc.Store(id='labels', data={}),
-            dcc.Store(id='labels-name', data={}),
-            dcc.Store(id='image-cache-filename', data=[]),
-            dcc.Store(id='image-cache-content', data=[]),
-            dcc.Store(id='image-cache-date', data=[]),
-            dcc.Store(id='save-results-buffer', data=[]),
-            dcc.Store(id='label-list', data=LABEL_LIST),
-            dcc.Store(id='current-page', data=0),
-            dcc.Store(id='image-order', data=[]),
-            dcc.Store(id='del-label', data=-1)
-        ],
-    )
-
-
-#APP LAYOUT
-app.layout = html.Div(
-    [
-        header,
-        dbc.Container(
-            [
-                dbc.Row(
-                    [
-                        dbc.Col(display, width=8),
-                        dbc.Col(
-                            dbc.Card(
-                                dbc.CardBody([
-                                    label_html,
-                                    html.Hr(),
-                                    additional_options_html
-                                ]
-                                )), width='auto', align='top'),
-                    ],
-                    justify='center'
-                ),
-            ],
-            fluid=True
-        ),
-        html.Div(browser_cache)
-    ]
-)
-
-
 if __name__ == '__main__':
-    # host option so docker container listens on all container ports for
-    # browser (lets you view the page from outside)
     app.run_server(debug=True, host='0.0.0.0')
+
+
+
