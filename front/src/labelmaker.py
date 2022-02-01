@@ -1,9 +1,4 @@
-import io
-import pathlib
-import base64
-import math
-import os
-import shutil
+import os, io, shutil, pathlib, base64, math
 
 import dash
 from dash import dcc, html, dash_table
@@ -17,7 +12,7 @@ import PIL
 import plotly.express as px
 
 import templates
-from helper_utils import get_color_from_label, create_label_component, draw_rows
+from helper_utils import files_list, get_color_from_label, create_label_component, draw_rows
 
 
 
@@ -291,26 +286,6 @@ def toggle_collapse(n, is_open):
     if n:
         return not is_open
     return is_open
-
-
-def files_list(dir, format):
-    '''
-    Return a list of absolute file path (filtered by file formats) in a directory. 
-    '''
-    files = []
-    if format == 'dir':
-        for filepath in pathlib.Path(dir).glob('**/*'):
-            if os.path.isdir(filepath):
-                files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
-    else:
-        format = format.split(',')
-        for ext in format:
-            for filepath in pathlib.Path(dir).glob('**/{}'.format(ext)):
-                if os.path.isdir(filepath):
-                    files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
-                else:
-                    files.append({'file_path': str(filepath.absolute()), 'file_type': 'file'})
-    return files
 
 
 @app.callback(
