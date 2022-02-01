@@ -3,14 +3,14 @@ import pathlib
 import base64
 import math
 import os
+import shutil
 
 import dash
-from dash import dcc
-from dash import html
-from dash import dash_table
+from dash import dcc, html, dash_table
 import dash_bootstrap_components as dbc
-
+import dash_uploader as du
 from dash.dependencies import Input, Output, State, MATCH, ALL
+
 from flask import Flask
 import itertools
 import PIL
@@ -35,6 +35,12 @@ card_color = {"dark": "#2D3038", "light": "#FFFFFF"}
 LABEL_LIST = ['Arc', 'Peaks', 'Rings', 'Rods']
 COLOR_CYCLE = px.colors.qualitative.Plotly
 NUMBER_OF_ROWS = 4
+
+HOME_DATA = pathlib.Path.home() / 'data'
+
+UPLOAD_FOLDER_ROOT = HOME_DATA / 'upload'
+du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
+
 
 # REACTIVE COMPONENTS FOR ADDITIONAL OPTIONS : SORT, HIDE, ETC
 additional_options_html = html.Div(
@@ -89,7 +95,7 @@ data_access = html.Div([
     dbc.Card([
         dbc.CardBody(id='data-body',
                       children=[
-                          dbc.Label('Upload a new dataset:', className='mr-2'),
+                          dbc.Label('Upload a new dataset to cache:', className='mr-2'),
                           dcc.Upload(id='upload-image',
                                      children=html.Div(['Drag and Drop or ',
                                                         html.A('Select Files')]),
@@ -101,17 +107,32 @@ data_access = html.Div([
                                             'borderRadius': '5px',
                                             'textAlign': 'center',
                                             'margin': '10px',
-                                            'margin-bottom': '50px'},
+                                            'margin-bottom': '30px'},
                                      multiple=True),
+                          dbc.Label('Upload a new dataset to work dir:', className='mr-2'),
+                          html.Div([ du.Upload(
+                                        id="dash-uploader",
+                                        max_file_size=1800,  # 1800 Mb
+                                        cancel_button=True,
+                                        pause_button=True,
+                                        )],
+                                    style={  # wrapper div style
+                                        'textAlign': 'center',
+                                        'width': '500px',
+                                        'padding': '5px',
+                                        'display': 'inline-block',
+                                        'margin-bottom': '30px'
+                                    }
+                          ),
                           dbc.Label('Or choose files/directories:', className='mr-2'),
                           html.Div(
-                                  [dbc.Button("Browse Files or Directories",
+                                  [dbc.Button("Browse",
                                              id="browse-dir",
                                              className="ms-auto",
                                              color="secondary",
                                              outline=True,
                                              n_clicks=0,
-                                             style={'width': '32%', 'margin': '8px'}),
+                                             style={'width': '15%', 'margin': '5px'}),
                                    html.Div([
                                         dcc.Dropdown(
                                                 id='browse-format',
@@ -126,15 +147,24 @@ data_access = html.Div([
                                                 ],
                                                 value='*')
                                             ],
-                                            style={"width": "15%", 'margin-right': '50px'}
+                                            style={"width": "15%", 'margin-right': '60px'}
                                     ),
-                                    dbc.Button("Import Selected Files or Directories",
+                                  dbc.Button("Delete the Selected",
+                                             id="delete-files",
+                                             className="ms-auto",
+                                             color="danger",
+                                             outline=True,
+                                             n_clicks=0,
+                                             style={'width': '22%', 'margin-right': '10px'}
+                                    ),
+                                   dbc.Button("Import",
                                              id="import-dir",
                                              className="ms-auto",
                                              color="secondary",
                                              outline=True,
                                              n_clicks=0,
-                                             style={'width': '32%', 'margin': '8px'}),
+                                             style={'width': '22%', 'margin': '5px'}
+                                   ),
                                    html.Div([
                                         dcc.Dropdown(
                                                 id='import-format',
@@ -263,35 +293,54 @@ def toggle_collapse(n, is_open):
     return is_open
 
 
+def files_list(dir, format):
+    '''
+    Return a list of absolute file path (filtered by file formats) in a directory. 
+    '''
+    files = []
+    if format == 'dir':
+        for filepath in pathlib.Path(dir).glob('**/*'):
+            if os.path.isdir(filepath):
+                files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
+    else:
+        format = format.split(',')
+        for ext in format:
+            for filepath in pathlib.Path(dir).glob('**/{}'.format(ext)):
+                if os.path.isdir(filepath):
+                    files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
+                else:
+                    files.append({'file_path': str(filepath.absolute()), 'file_type': 'file'})
+    return files
+
+
 @app.callback(
     Output('files-table', 'data'),
     Output('file-paths', 'data'),
     Input('files-table', 'selected_rows'),
     Input('browse-format', 'value'),
     Input('browse-dir', 'n_clicks'),
+    Input('delete-files','n_clicks'),
+    Input('files-table', 'data'),
 )
-def file_explorer(rows, browse_format, n_clicks):
-    files = []
-    if n_clicks > 0:
-        if browse_format == 'dir':
-            for filepath in pathlib.Path(path='.').glob('**/*'):
-                if os.path.isdir(filepath):
-                    files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
-        else:
-            browse_format = browse_format.split(',')
-            for ext in browse_format:
-                for filepath in pathlib.Path(path='.').glob('**/{}'.format(ext)):
-                    if os.path.isdir(filepath):
-                        files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
-                    else:
-                        files.append({'file_path': str(filepath.absolute()), 'file_type': 'file'})
+def file_explorer(rows, browse_format, browse_n_clicks, delete_n_clicks, files_data):
+    files = files_list(HOME_DATA, browse_format)
+    #if browse_n_clicks:
     
-    import_files = []
+    selected_files = []
     if rows is not None:
         for row in rows:
-            import_files.append(files[row])
+            selected_files.append(files[row])
+            
+    if delete_n_clicks:
+        for filepath in selected_files:
+            if os.path.isdir(filepath['file_path']):
+               shutil.rmtree(filepath['file_path'])
+            else:
+                os.remove(filepath['file_path'])
+        selected_files = []
+        files = files_list(HOME_DATA, browse_format)
         
-    return files, import_files
+    return files, selected_files
 
 
 @app.callback([
@@ -730,7 +779,7 @@ def save_labels_disk(button_save_disk_n_clicks, rows, file_paths, labels_name_da
                 filename_list = labels_name_data[label_index]
                 if len(filename_list)>0:
                     # create root directory
-                    root = pathlib.Path('data/labelmaker_outputs')
+                    root = pathlib.Path(HOME_DATA / 'labelmaker_outputs')
                     label_dir = root / pathlib.Path(label_list[int(label_index)])
                     label_dir.mkdir(parents=True, exist_ok=True)
                     # save all files under the current label into the directory
