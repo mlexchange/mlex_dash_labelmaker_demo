@@ -1,4 +1,5 @@
-import os, io, shutil, pathlib, base64, math
+import os
+import io, shutil, pathlib, base64, math
 
 import dash
 from dash import dcc, html, dash_table
@@ -13,7 +14,6 @@ import plotly.express as px
 
 import templates
 from helper_utils import files_list, get_color_from_label, create_label_component, draw_rows
-
 
 
 external_stylesheets = [dbc.themes.BOOTSTRAP]
@@ -291,22 +291,24 @@ def toggle_collapse(n, is_open):
 @app.callback(
     Output('files-table', 'data'),
     Output('file-paths', 'data'),
-    Input('files-table', 'selected_rows'),
     Input('browse-format', 'value'),
     Input('browse-dir', 'n_clicks'),
+    Input('import-dir', 'n_clicks'),
     Input('delete-files','n_clicks'),
-    Input('files-table', 'data'),
+    Input('files-table', 'selected_rows')
 )
-def file_explorer(rows, browse_format, browse_n_clicks, delete_n_clicks, files_data):
-    files = files_list(HOME_DATA, browse_format)
-    #if browse_n_clicks:
-    
+def file_explorer(browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, rows):
+    files = []
+    if browse_n_clicks or import_n_clicks:
+        files = files_list(HOME_DATA, browse_format)
+        
     selected_files = []
-    if rows is not None:
+    if bool(rows):
         for row in rows:
             selected_files.append(files[row])
-            
-    if delete_n_clicks:
+    
+    changed_id = dash.callback_context.triggered[0]['prop_id']
+    if changed_id == 'delete-files.n_clicks':
         for filepath in selected_files:
             if os.path.isdir(filepath['file_path']):
                shutil.rmtree(filepath['file_path'])
@@ -314,6 +316,7 @@ def file_explorer(rows, browse_format, browse_n_clicks, delete_n_clicks, files_d
                 os.remove(filepath['file_path'])
         selected_files = []
         files = files_list(HOME_DATA, browse_format)
+        row = None
         
     return files, selected_files
 
@@ -343,9 +346,7 @@ def upload_image_to_cache(list_of_contents, list_of_names, list_of_dates):
 
 
 @app.callback(
-    [
-        Output('image-order','data'),
-    ],
+    Output('image-order','data'),
     Input('file-paths','data'),
     Input('image-cache-filename', 'data'),
     Input('import-dir', 'n_clicks'),
@@ -353,21 +354,26 @@ def upload_image_to_cache(list_of_contents, list_of_names, list_of_dates):
     Input('files-table', 'selected_rows'),
     Input('button-hide', 'n_clicks'),
     Input('button-sort', 'n_clicks'),
+    Input('delete-files','n_clicks'),
     State('labels-name', 'data'),
     State('label-list', 'data'),
     State('image-order','data'),
     prevent_initial_call=True)
-def display_index(file_paths, list_filename_cache, import_n_clicks, import_format, rows, button_hide_n_clicks, button_sort_n_clicks,
-                  labels_name_data, label_list, image_order):
+def display_index(file_paths, list_filenames_cache, import_n_clicks, import_format, rows, button_hide_n_clicks,
+                  button_sort_n_clicks, delete_n_clicks, labels_name_data, label_list, image_order):
     '''
     This callback arranges the image order according to the following actions:
         - New content is uploaded
         - Buttons sort or hidden are selected
     Args:
-        list_filename_cache:    Filenames of the images saved in cache (data access: upload option)
-        dir_n_clicks:           User selected the directory option (data access)
+        file_paths :            Absolute file paths selected from path table  
+        list_filenames_cache:   Filenames of the images saved in cache (data access: upload option)
+        import_n_clicks:        Button for importing selected paths
+        import_format:          File format for import
+        rows:                   Rows of the selected file paths from path table
         button_hide_n_clicks:   Hide button
         button_sort_n_clicks:   Sort button
+        delete_n_clicks:        Button for deleting selected file paths
         labels_name_data:       Dictionary of labeled images, as follows: {label: list of image filenames}
         label_list:             List of label names (tag name)
         image_order:            Order of the images according to the selected action (sort, hide, new data, etc)
@@ -385,7 +391,7 @@ def display_index(file_paths, list_filename_cache, import_n_clicks, import_forma
             supported_formats.append(ext.split('.')[1])
 
     changed_id = dash.callback_context.triggered[0]['prop_id']
-    if import_n_clicks>0 and bool(rows):
+    if import_n_clicks and bool(rows):
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
@@ -397,12 +403,15 @@ def display_index(file_paths, list_filename_cache, import_n_clicks, import_forma
             else:
                 list_filename.append(file_path['file_path'])
     else:
-        list_filename = list_filename_cache
-    
+        list_filename = list_filenames_cache
     
     num_imgs = len(list_filename)
-    if changed_id == 'image-cache-filename.data' or changed_id == 'import-dir.n_clicks':
+    if  changed_id == 'image-cache-filename.data' or \
+        changed_id == 'import-dir.n_clicks' or \
+        changed_id == 'delete-files.n_clicks' or \
+        changed_id == 'files-table.selected_rows':
         image_order = list(range(num_imgs))
+    
     if changed_id == 'button-hide.n_clicks':
         if button_hide_n_clicks % 2 == 1:
             labeled_names = list(itertools.chain(*labels_name_data.values()))
@@ -413,6 +422,7 @@ def display_index(file_paths, list_filename_cache, import_n_clicks, import_forma
             image_order = unlabeled_indx
         else:
             image_order = list(range(num_imgs))
+
     if changed_id == 'button-sort.n_clicks':
         new_indx = [[] for i in range(len(label_list) + 1)]
         for i in range(num_imgs):
@@ -423,10 +433,11 @@ def display_index(file_paths, list_filename_cache, import_n_clicks, import_forma
                     unlabeled = False
             if unlabeled:
                 new_indx[-1].append(i)
-        image_order = list(itertools.chain(*new_indx))
-    return [image_order]
 
-    
+        image_order = list(itertools.chain(*new_indx))
+
+    return image_order
+
 
 @app.callback([
     Output('output-image-upload', 'children'),
@@ -440,16 +451,16 @@ def display_index(file_paths, list_filename_cache, import_n_clicks, import_forma
     Input('next-page', 'n_clicks'),
     Input('files-table', 'selected_rows'),
     Input('import-format', 'value'),
-
     Input('file-paths','data'),
+    
     State('image-cache-content', 'data'),
     State('image-cache-filename', 'data'),
     State('image-cache-date', 'data'),
     State('current-page', 'data'),
     State('import-dir', 'n_clicks')],
     prevent_initial_call=True)
-def update_output(image_order, thumbnail_slider_value, button_prev_page, button_next_page, rows, import_format, file_paths, list_contents_cache,
-                  list_filenames_cache, list_dates_cache, current_page, import_n_clicks):
+def update_output(image_order, thumbnail_slider_value, button_prev_page, button_next_page, rows, import_format, file_paths,
+                  list_contents_cache, list_filenames_cache, list_dates_cache, current_page, import_n_clicks):
     '''
     This callback displays images in the front-end
     Args:
@@ -457,11 +468,14 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         thumbnail_slider_value: Number of images per row
         button_prev_page:       Go to previous page
         button_next_page:       Go to next page
+        rows:                   Rows of the selected file paths from path table
+        import_format:          File format for import
+        file_paths:             Absolute file paths selected from path table
         list_contents_cache:    Contents of the images saved in cache (data access: upload option)
         list_filenames_cache:   Filenames of the images saved in cache (data access: upload option)
         list_dates_cache:       Dates of the images saved in cache (data access: upload option)
         current_page:           Index of the current page
-        dir_n_clicks:           User selected the directory option (data access)
+        import_n_clicks:        Button for importing the selected paths
     Returns:
         children:               Images to be displayed in front-end according to the current page index and # of columns
         prev_page:              Enable/Disable previous page button if current_page==0
@@ -484,8 +498,8 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         current_page = current_page - 1
     if changed_id == 'next-page.n_clicks':
         current_page = current_page + 1
-        
-    if import_n_clicks > 0 and bool(rows):
+    
+    if import_n_clicks and bool(rows):
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
@@ -512,7 +526,6 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         if import_n_clicks>0 and bool(rows):
             for i in range(start_indx, max_indx):
                 filename = list_filename[image_order[i]]
-                print(f'import filename {filename}')
                 with open(filename, "rb") as file:
                     img = base64.b64encode(file.read())
                     file_ext = filename[filename.find('.')+1:]
@@ -720,7 +733,6 @@ def update_list(n_clicks, n_clicks2, add_label_name, label_list, labels_name_dat
 @app.callback(
     Output('save-results-buffer', 'data'),
     Input('button-save-disk', 'n_clicks'),
-    Input('files-table', 'selected_rows'),
     State('file-paths','data'),
     State('labels-name', 'data'),
     State('image-cache-content', 'data'),
@@ -728,24 +740,25 @@ def update_list(n_clicks, n_clicks2, add_label_name, label_list, labels_name_dat
     State('label-list', 'data'),
     State('import-dir', 'n_clicks'),
 )
-def save_labels_disk(button_save_disk_n_clicks, rows, file_paths, labels_name_data, list_contents_cache, list_filenames_cache,
+def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data, list_contents_cache, list_filenames_cache,
                      label_list, import_n_clicks):
     '''
     This callback saves the labels to disk
     Args:
         button_save_disk_n_clicks:  Button save to disk
+        file_paths:                 Absolute file paths selected from path table
         labels_name_data:           Dictionary of labeled images, as follows: {label: list of image filenames}
         list_contents_cache:        Contents of the images saved in cache (data access: upload option)
         list_filenames_cache:       Filenames of the images saved in cache (data access: upload option)
         label_list:                 List of label names (tag name)
-        dir_n_clicks:               User selected the directory option (data access)
+        import_n_clicks:            Button for importing selected paths
     Returns:
         The data is saved in the output directory
     '''
     if labels_name_data is not None:
         if len(labels_name_data)>0:
             print('Saving labels')
-            if import_n_clicks > 0 and bool(rows):
+            if import_n_clicks:
                 for file_path in file_paths:
                     list_path, list_dirs, list_filename = next(os.walk(file_path['file_path']))
             else:
@@ -758,10 +771,8 @@ def save_labels_disk(button_save_disk_n_clicks, rows, file_paths, labels_name_da
                     label_dir = root / pathlib.Path(label_list[int(label_index)])
                     label_dir.mkdir(parents=True, exist_ok=True)
                     # save all files under the current label into the directory
-                    print(f'filename_list\n{filename_list}')
                     for i,filename in enumerate(filename_list):
-                        if import_n_clicks > 0:
-                            print(f'filename {filename}')
+                        if import_n_clicks:
                             im_bytes = filename
                             im = PIL.Image.open(im_bytes)
                             filename = im_bytes.split("/")[-1]
