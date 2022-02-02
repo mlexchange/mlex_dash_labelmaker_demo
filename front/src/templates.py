@@ -6,7 +6,7 @@ button_github = dbc.Button(
     "View Code on github",
     outline=True,
     color="primary",
-    href="https://github.com/als-computing/dash-labelmaker",
+    href="https://github.com/mlexchange/mlex_dash_labelmaker_demo",
     id="gh-link",
     style={"text-transform": "none"},
 )

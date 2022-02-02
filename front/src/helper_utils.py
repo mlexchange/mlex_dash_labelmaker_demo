@@ -1,6 +1,29 @@
+import os, pathlib
 from dash import html
 import dash_bootstrap_components as dbc
 import plotly.express as px
+
+
+def files_list(directory, format):
+    '''
+    Return a list of absolute file path (filtered by file formats) in a directory. 
+    '''
+    files = []
+    if format == 'dir':
+        if os.path.exists(directory):
+            for filepath in pathlib.Path(directory).glob('**/*'):
+                if os.path.isdir(filepath):
+                    files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
+    else:
+        format = format.split(',')
+        for ext in format:
+            if os.path.exists(directory):
+                for filepath in pathlib.Path(directory).glob('**/{}'.format(ext)):
+                    if os.path.isdir(filepath):
+                        files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
+                    else:
+                        files.append({'file_path': str(filepath.absolute()), 'file_type': 'file'})
+    return files
 
 
 def get_color_from_label(label, color_cycle):
@@ -34,7 +57,7 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly):
                     dbc.Button(label,
                                id={'type': 'label-button', 'index': i},
                                style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
-                                      'color':'white', 'width': '100%'}
+                                      'color':'white', 'width': '100%', 'margin-bottom': '5px'}
                                ),
                     width=8
                 ),
@@ -42,7 +65,7 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly):
                     dbc.Button('\u2716',
                                id={'type': 'delete-label-button', 'index': i},
                                style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
-                                      'color':'white', 'width': '100%'}),
+                                      'color':'white', 'width': '100%', 'margin-bottom': '5px'}),
                     width=4
                 ),
             ],
@@ -53,7 +76,7 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly):
             dbc.Col(
                 dbc.Button('Un-label',
                            id='un-label',
-                           style={'color':'white', 'width': '100%'})
+                           style={'color':'white', 'width': '100%', 'margin-bottom': '10px', 'margin-top': '10px'})
             )
         )
     )
