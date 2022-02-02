@@ -67,7 +67,7 @@ file_paths_table = html.Div(
                 id='files-table',
                 columns=[
                     {'name': 'type', 'id': 'file_type'},
-                    {'name': 'Item', 'id': 'file_path'},
+                    {'name': 'File Path Table', 'id': 'file_path'},
                 ],
                 data = [],
                 hidden_columns = ['file_type'],
