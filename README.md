@@ -17,7 +17,7 @@ Put your dataset inside the data folder or use **MLExchange data connector** to 
 
 3. Move data to a new directory:  
 Input the destination directory (relative to root path) and select the files/folder from **File Table**. Then click on **Move** button. The selected files/dirs will be moved into the new directory and the original dirs will be automatically deleted.
-**Please note that folders of the same name will be merged**.  
+**Please note that folders of the same name (from different dirs) will be merged**.  
 
 4. Browse files or directories in the **work dir** and import the selected files:   
 After selecting which files or directories and filtering the display by format, click on **Import Selected Files or Directories** button on the right side. When importing a directory, you can import **only** files of a specific format by using the rightmost dropdown menu.  
