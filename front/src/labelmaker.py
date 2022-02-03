@@ -120,12 +120,12 @@ data_access = html.Div([
                                                     'margin-right': '20px'}),
                                     html.Div([
                                         dbc.Col([
-                                            dbc.Label("Dataset is by default saved to '{}'. \
-                                                       You can move all files inside this folder or \
-                                                       the selected files/folders (from File Table) to a new directory (dir).".format(UPLOAD_FOLDER_ROOT), className='mr-5'),
+                                            dbc.Label("Dataset is by default uploaded to '{}'. \
+                                                       You can move the selected files or dirs (from File Table) \
+                                                       into a new dir.".format(UPLOAD_FOLDER_ROOT), className='mr-5'),
                                             dbc.Label("Root dir (data): '{}'".format(HOME_DATA), className='mr-5'),
                                             html.Div([
-                                                dbc.Label('Move data to dir:'.format(HOME_DATA), className='mr-5'),
+                                                dbc.Label('Move data into dir:'.format(HOME_DATA), className='mr-5'),
                                                 dcc.Input(id='dest-dir-name', placeholder="Input dir relative to root", 
                                                                 style={'width': '40%', 'margin-bottom': '10px'}),
                                                 dbc.Button("Move",
@@ -185,10 +185,6 @@ data_access = html.Div([
                                                     "Delete", id="confirm-delete", color='danger', outline=False, 
                                                     className="ms-auto", n_clicks=0
                                                 ),
-                                                # dbc.Button(
-#                                                     "Close", id="close", color='primary', outline=False, 
-#                                                     className="ms-auto", n_clicks=0
-#                                                 )
                                             ]),
                                         ],
                                         id="modal",

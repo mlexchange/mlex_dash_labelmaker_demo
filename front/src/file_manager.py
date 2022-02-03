@@ -18,8 +18,10 @@ def move_dir(source, destination):
         source, str:          full path of source directory
         destination, str:     full path of destination directory 
     '''
-    pathlib.Path(destination).mkdir(parents=True, exist_ok=True)
     dir_path, list_dirs, filenames = next(os.walk(source))
+    original_dir_name = dir_path.split('/')[-1]
+    destination = destination + '/' + original_dir_name
+    pathlib.Path(destination).mkdir(parents=True, exist_ok=True)
     for filename in filenames:
         file_source = dir_path + '/' + filename  
         move_a_file(file_source, destination)
