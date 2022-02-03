@@ -13,7 +13,8 @@ import PIL
 import plotly.express as px
 
 import templates
-from helper_utils import files_list, get_color_from_label, create_label_component, draw_rows
+from helper_utils import get_color_from_label, create_label_component, draw_rows
+from file_manager import files_list, move_a_file, move_dir, add_files_from_dir
 
 
 external_stylesheets = [dbc.themes.BOOTSTRAP]
@@ -40,7 +41,7 @@ du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 # REACTIVE COMPONENTS FOR ADDITIONAL OPTIONS : SORT, HIDE, ETC
 additional_options_html = html.Div(
         [
-            dcc.Input(id='add-label-name', placeholder="Input New Label Name", style={'width': '95%', 'margin-bottom': '10px'}),
+            dcc.Input(id='add-label-name', placeholder="Input new label name", style={'width': '95%', 'margin-bottom': '10px'}),
             dbc.Row(dbc.Col(dbc.Button('Add New Label', id='modify-list',
                                outline="True", color='primary', n_clicks=0, style={'width': '95%', 'margin-bottom': '20px'}))),
             dbc.Row(dbc.Col([
@@ -90,7 +91,7 @@ data_access = html.Div([
     dbc.Card([
         dbc.CardBody(id='data-body',
                       children=[
-                          dbc.Label('Upload a new dataset to cache:', className='mr-2'),
+                          dbc.Label('Upload new file(s) to browser cache:', className='mr-2'),
                           dcc.Upload(id='upload-image',
                                      children=html.Div(['Drag and Drop or ',
                                                         html.A('Select Files')]),
@@ -104,20 +105,43 @@ data_access = html.Div([
                                             'margin': '10px',
                                             'margin-bottom': '30px'},
                                      multiple=True),
-                          dbc.Label('Upload a new dataset to work dir:', className='mr-2'),
-                          html.Div([ du.Upload(
-                                        id="dash-uploader",
-                                        max_file_size=1800,  # 1800 Mb
-                                        cancel_button=True,
-                                        pause_button=True,
-                                        )],
-                                    style={  # wrapper div style
-                                        'textAlign': 'center',
-                                        'width': '500px',
-                                        'padding': '5px',
-                                        'display': 'inline-block',
-                                        'margin-bottom': '30px'
-                                    }
+                          dbc.Label('Or upload a new file or folder (zip) to work dir:', className='mr-2'),
+                          html.Div([html.Div([ du.Upload(
+                                                    id="dash-uploader",
+                                                    max_file_size=1800,  # 1800 Mb
+                                                    cancel_button=True,
+                                                    pause_button=True)],
+                                                style={  # wrapper div style
+                                                    'textAlign': 'center',
+                                                    'width': '300px',
+                                                    'padding': '5px',
+                                                    'display': 'inline-block',
+                                                    'margin-bottom': '30px',
+                                                    'margin-right': '20px'}),
+                                    html.Div([
+                                        dbc.Col([
+                                            dbc.Label("Dataset is by default saved to '{}'. \
+                                                       You can move all files inside this folder or \
+                                                       the selected files/folders (from File Table) to a new directory (dir).".format(UPLOAD_FOLDER_ROOT), className='mr-5'),
+                                            dbc.Label("Root dir (data): '{}'".format(HOME_DATA), className='mr-5'),
+                                            html.Div([
+                                                dbc.Label('Move data to dir:'.format(HOME_DATA), className='mr-5'),
+                                                dcc.Input(id='dest-dir-name', placeholder="Input dir relative to root", 
+                                                                style={'width': '40%', 'margin-bottom': '10px'}),
+                                                dbc.Button("Move",
+                                                     id="move-dir",
+                                                     className="ms-auto",
+                                                     color="secondary",
+                                                     outline=True,
+                                                     n_clicks=0,
+                                                     style={'width': '22%', 'margin': '5px'}),
+                                            ],
+                                            style = {'width': '100%', 'display': 'flex', 'align-items': 'center'},
+                                            )
+                                        ])
+                                    ])
+                                    ],
+                            style = {'width': '100%', 'display': 'flex', 'align-items': 'center'}
                           ),
                           dbc.Label('Or choose files/directories:', className='mr-2'),
                           html.Div(
@@ -152,6 +176,25 @@ data_access = html.Div([
                                              n_clicks=0,
                                              style={'width': '22%', 'margin-right': '10px'}
                                     ),
+                                   dbc.Modal(
+                                        [
+                                            dbc.ModalHeader(dbc.ModalTitle("Warning")),
+                                            dbc.ModalBody("Files cannot be recovered after deletion. Do you still want to proceed?"),
+                                            dbc.ModalFooter([
+                                                dbc.Button(
+                                                    "Delete", id="confirm-delete", color='danger', outline=False, 
+                                                    className="ms-auto", n_clicks=0
+                                                ),
+                                                # dbc.Button(
+#                                                     "Close", id="close", color='primary', outline=False, 
+#                                                     className="ms-auto", n_clicks=0
+#                                                 )
+                                            ]),
+                                        ],
+                                        id="modal",
+                                        is_open=False,
+                                        style = {'color': 'red'}
+                                    ), 
                                    dbc.Button("Import",
                                              id="import-dir",
                                              className="ms-auto",
@@ -176,7 +219,7 @@ data_access = html.Div([
                                             style={"width": "15%"}
                                     ),
                                  ],
-                                style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'},
+                                style = {'width': '100%', 'display': 'flex', 'align-items': 'center'},
                                 ),
                         file_paths_table,
                         ]),
@@ -190,7 +233,7 @@ data_access = html.Div([
 file_explorer = html.Div(
     [
         dbc.Button(
-            "Open File Explorer",
+            "Open File Manager",
             id="collapse-button",
             size="lg",
             className="mb-3",
@@ -201,6 +244,29 @@ file_explorer = html.Div(
         dbc.Collapse(
             data_access,
             id="collapse",
+            is_open=False,
+        ),
+    ]
+)
+
+
+modal_delete = html.Div(
+    [
+        dbc.Button("Open modal", id="open", n_clicks=0),
+        dbc.Modal(
+            [
+                dbc.ModalHeader(dbc.ModalTitle("Header")),
+                dbc.ModalBody("Files cannot be recovered after deletion. Do you still want to proceed?"),
+                dbc.ModalFooter([
+                    dbc.Button(
+                        "Delete", id="confirm-delete", className="ms-auto", n_clicks=0
+                    ),
+                    dbc.Button(
+                        "Close", id="close", className="ms-auto", n_clicks=0
+                    )
+                ]),
+            ],
+            id="modal",
             is_open=False,
         ),
     ]
@@ -240,7 +306,8 @@ browser_cache =html.Div(
             dcc.Store(id='label-list', data=LABEL_LIST),
             dcc.Store(id='current-page', data=0),
             dcc.Store(id='image-order', data=[]),
-            dcc.Store(id='del-label', data=-1)
+            dcc.Store(id='del-label', data=-1),
+            dcc.Store(id='nothing', data=0)
         ],
     )
 
@@ -275,15 +342,27 @@ layout = html.Div(
 
 app.layout = layout
 
-
+#================================== callback functions ===================================
 
 @app.callback(
     Output("collapse", "is_open"),
-    [Input("collapse-button", "n_clicks")],
-    [State("collapse", "is_open")],
+    Input("collapse-button", "n_clicks"),
+    State("collapse", "is_open")
 )
 def toggle_collapse(n, is_open):
     if n:
+        return not is_open
+    return is_open
+
+
+@app.callback(
+    Output("modal", "is_open"),
+    Input("delete-files", "n_clicks"),
+    Input("confirm-delete", "n_clicks"),  
+    State("modal", "is_open")
+)
+def toggle_modal(n1, n2, is_open):
+    if n1 or n2:
         return not is_open
     return is_open
 
@@ -294,10 +373,15 @@ def toggle_collapse(n, is_open):
     Input('browse-format', 'value'),
     Input('browse-dir', 'n_clicks'),
     Input('import-dir', 'n_clicks'),
-    Input('delete-files','n_clicks'),
-    Input('files-table', 'selected_rows')
+    Input('confirm-delete','n_clicks'),
+    Input('move-dir', 'n_clicks'),
+    Input('files-table', 'selected_rows'),
+    Input('file-paths', 'data'),
+    State('dest-dir-name', 'value')
 )
-def file_explorer(browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, rows):
+def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, \
+                  move_dir_n_clicks, rows, selected_paths, dest):
+    changed_id = dash.callback_context.triggered[0]['prop_id']
     files = []
     if browse_n_clicks or import_n_clicks:
         files = files_list(HOME_DATA, browse_format)
@@ -307,8 +391,7 @@ def file_explorer(browse_format, browse_n_clicks, import_n_clicks, delete_n_clic
         for row in rows:
             selected_files.append(files[row])
     
-    changed_id = dash.callback_context.triggered[0]['prop_id']
-    if changed_id == 'delete-files.n_clicks':
+    if browse_n_clicks and changed_id == 'confirm-delete.n_clicks':
         for filepath in selected_files:
             if os.path.isdir(filepath['file_path']):
                shutil.rmtree(filepath['file_path'])
@@ -316,8 +399,25 @@ def file_explorer(browse_format, browse_n_clicks, import_n_clicks, delete_n_clic
                 os.remove(filepath['file_path'])
         selected_files = []
         files = files_list(HOME_DATA, browse_format)
-        row = None
-        
+    
+    if browse_n_clicks and changed_id == 'move-dir.n_clicks' and dest is not None:
+        destination = HOME_DATA / dest
+        destination.mkdir(parents=True, exist_ok=True)
+        if bool(rows):
+            sources = selected_paths
+        else:
+            sources = [{'file_path': str(UPLOAD_FOLDER_ROOT)}]
+    
+        for source in sources:
+            if os.path.isdir(source['file_path']):
+                move_dir(source['file_path'], str(destination))
+                shutil.rmtree(source['file_path'])
+            else:
+                move_a_file(source['file_path'], str(destination))
+                
+        selected_files = []
+        files = files_list(HOME_DATA, browse_format)
+
     return files, selected_files
 
 
@@ -354,13 +454,14 @@ def upload_image_to_cache(list_of_contents, list_of_names, list_of_dates):
     Input('files-table', 'selected_rows'),
     Input('button-hide', 'n_clicks'),
     Input('button-sort', 'n_clicks'),
-    Input('delete-files','n_clicks'),
+    Input('confirm-delete','n_clicks'),
+    Input('move-dir', 'n_clicks'),
     State('labels-name', 'data'),
     State('label-list', 'data'),
     State('image-order','data'),
     prevent_initial_call=True)
 def display_index(file_paths, list_filenames_cache, import_n_clicks, import_format, rows, button_hide_n_clicks,
-                  button_sort_n_clicks, delete_n_clicks, labels_name_data, label_list, image_order):
+                  button_sort_n_clicks, delete_n_clicks, move_dir_n_clicks, labels_name_data, label_list, image_order):
     '''
     This callback arranges the image order according to the following actions:
         - New content is uploaded
@@ -395,11 +496,7 @@ def display_index(file_paths, list_filenames_cache, import_n_clicks, import_form
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_path, list_dirs, filenames = next(os.walk(file_path['file_path']))
-                for filename in filenames:
-                    if filename.split('.')[-1] in supported_formats:
-                        filename = file_path['file_path'] + '/' + filename
-                        list_filename.append(filename)
+                list_filename = add_files_from_dir(file_path['file_path'], supported_formats, list_filename)
             else:
                 list_filename.append(file_path['file_path'])
     else:
@@ -408,8 +505,9 @@ def display_index(file_paths, list_filenames_cache, import_n_clicks, import_form
     num_imgs = len(list_filename)
     if  changed_id == 'image-cache-filename.data' or \
         changed_id == 'import-dir.n_clicks' or \
-        changed_id == 'delete-files.n_clicks' or \
-        changed_id == 'files-table.selected_rows':
+        changed_id == 'confirm-delete.n_clicks' or \
+        changed_id == 'files-table.selected_rows' or \
+        changed_id == 'move_dir_n_clicks':
         image_order = list(range(num_imgs))
     
     if changed_id == 'button-hide.n_clicks':
@@ -503,11 +601,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_path, list_dirs, filenames = next(os.walk(file_path['file_path']))
-                for filename in filenames:
-                    if filename.split('.')[-1] in supported_formats:
-                        filename = file_path['file_path'] + '/' + filename
-                        list_filename.append(filename)
+                list_filename = add_files_from_dir(file_path['file_path'], supported_formats, list_filename)
             else:
                 list_filename.append(file_path['file_path'])
     else:
