@@ -123,10 +123,10 @@ data_access = html.Div([
                                             dbc.Label("Dataset is by default uploaded to '{}'. \
                                                        You can move the selected files or dirs (from File Table) \
                                                        into a new dir.".format(UPLOAD_FOLDER_ROOT), className='mr-5'),
-                                            dbc.Label("Home dir (data): '{}'".format(HOME_DATA), className='mr-5'),
+                                            dbc.Label("Home data dir (HOME) is '{}'.".format(HOME_DATA), className='mr-5'),
                                             html.Div([
                                                 dbc.Label('Move data into dir:'.format(HOME_DATA), className='mr-5'),
-                                                dcc.Input(id='dest-dir-name', placeholder="Input dir relative to HOME", 
+                                                dcc.Input(id='dest-dir-name', placeholder="Input relative path to HOME", 
                                                                 style={'width': '40%', 'margin-bottom': '10px'}),
                                                 dbc.Button("Move",
                                                      id="move-dir",
