@@ -31,7 +31,7 @@ def move_dir(source, destination):
         move_dir(dir_source, destination)
 
 
-def add_files_from_dir(dir_path, supported_formats, list_filename):
+def add_filenames_from_dir(dir_path, supported_formats, list_filename):
     '''
     Args:
         dir_path, str:                 full path of a directory
@@ -56,7 +56,7 @@ def add_files_from_dir(dir_path, supported_formats, list_filename):
     return list_filename
 
 
-def files_list(directory, format):
+def filename_list(directory, format):
     '''
     Return a list of absolute file path (filtered by file formats) in a directory. 
     '''

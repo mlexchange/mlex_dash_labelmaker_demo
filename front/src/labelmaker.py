@@ -14,7 +14,7 @@ import plotly.express as px
 
 import templates
 from helper_utils import get_color_from_label, create_label_component, draw_rows
-from file_manager import files_list, move_a_file, move_dir, add_files_from_dir
+from file_manager import filename_list, move_a_file, move_dir, add_filenames_from_dir
 
 
 external_stylesheets = [dbc.themes.BOOTSTRAP]
@@ -123,10 +123,10 @@ data_access = html.Div([
                                             dbc.Label("Dataset is by default uploaded to '{}'. \
                                                        You can move the selected files or dirs (from File Table) \
                                                        into a new dir.".format(UPLOAD_FOLDER_ROOT), className='mr-5'),
-                                            dbc.Label("Root dir (data): '{}'".format(HOME_DATA), className='mr-5'),
+                                            dbc.Label("Home dir (data): '{}'".format(HOME_DATA), className='mr-5'),
                                             html.Div([
                                                 dbc.Label('Move data into dir:'.format(HOME_DATA), className='mr-5'),
-                                                dcc.Input(id='dest-dir-name', placeholder="Input dir relative to root", 
+                                                dcc.Input(id='dest-dir-name', placeholder="Input dir relative to HOME", 
                                                                 style={'width': '40%', 'margin-bottom': '10px'}),
                                                 dbc.Button("Move",
                                                      id="move-dir",
@@ -380,7 +380,7 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
     changed_id = dash.callback_context.triggered[0]['prop_id']
     files = []
     if browse_n_clicks or import_n_clicks:
-        files = files_list(HOME_DATA, browse_format)
+        files = filename_list(HOME_DATA, browse_format)
         
     selected_files = []
     if bool(rows):
@@ -394,9 +394,12 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
             else:
                 os.remove(filepath['file_path'])
         selected_files = []
-        files = files_list(HOME_DATA, browse_format)
+        files = filename_list(HOME_DATA, browse_format)
     
-    if browse_n_clicks and changed_id == 'move-dir.n_clicks' and dest is not None:
+    if browse_n_clicks and changed_id == 'move-dir.n_clicks':
+        if dest is None:
+            dest = ''
+            
         destination = HOME_DATA / dest
         destination.mkdir(parents=True, exist_ok=True)
         if bool(rows):
@@ -412,7 +415,7 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
                 move_a_file(source['file_path'], str(destination))
                 
         selected_files = []
-        files = files_list(HOME_DATA, browse_format)
+        files = filename_list(HOME_DATA, browse_format)
 
     return files, selected_files
 
@@ -492,7 +495,7 @@ def display_index(file_paths, list_filenames_cache, import_n_clicks, import_form
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_filename = add_files_from_dir(file_path['file_path'], supported_formats, list_filename)
+                list_filename = add_filenames_from_dir(file_path['file_path'], supported_formats, list_filename)
             else:
                 list_filename.append(file_path['file_path'])
     else:
@@ -597,7 +600,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_filename = add_files_from_dir(file_path['file_path'], supported_formats, list_filename)
+                list_filename = add_filenames_from_dir(file_path['file_path'], supported_formats, list_filename)
             else:
                 list_filename.append(file_path['file_path'])
     else:
