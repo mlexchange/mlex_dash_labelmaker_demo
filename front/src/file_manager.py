@@ -28,8 +28,7 @@ def move_dir(source, destination):
     
     for dirname in list_dirs:
         dir_source = dir_path + '/' + dirname
-        new_destination = destination + '/' + dirname
-        move_dir(dir_source, new_destination)
+        move_dir(dir_source, destination)
 
 
 def add_files_from_dir(dir_path, supported_formats, list_filename):
