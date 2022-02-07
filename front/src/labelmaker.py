@@ -134,6 +134,7 @@ data_access = html.Div([
                                                      color="secondary",
                                                      outline=True,
                                                      n_clicks=0,
+                                                     disabled = True,
                                                      style={'width': '22%', 'margin': '5px'}),
                                             ],
                                             style = {'width': '100%', 'display': 'flex', 'align-items': 'center'},
