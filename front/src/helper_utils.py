@@ -1,29 +1,6 @@
-import os, pathlib
 from dash import html
 import dash_bootstrap_components as dbc
 import plotly.express as px
-
-
-def files_list(directory, format):
-    '''
-    Return a list of absolute file path (filtered by file formats) in a directory. 
-    '''
-    files = []
-    if format == 'dir':
-        if os.path.exists(directory):
-            for filepath in pathlib.Path(directory).glob('**/*'):
-                if os.path.isdir(filepath):
-                    files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
-    else:
-        format = format.split(',')
-        for ext in format:
-            if os.path.exists(directory):
-                for filepath in pathlib.Path(directory).glob('**/{}'.format(ext)):
-                    if os.path.isdir(filepath):
-                        files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
-                    else:
-                        files.append({'file_path': str(filepath.absolute()), 'file_type': 'file'})
-    return files
 
 
 def get_color_from_label(label, color_cycle):
