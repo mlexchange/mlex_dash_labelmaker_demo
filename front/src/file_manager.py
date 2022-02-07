@@ -51,7 +51,7 @@ def add_filenames_from_dir(dir_path, supported_formats, list_filename):
             
     for dirname in list_dirs:
         new_dir_path = dir_path + '/' + dirname
-        list_filename = add_files_from_dir(new_dir_path, supported_formats, list_filename)
+        list_filename = add_filenames_from_dir(new_dir_path, supported_formats, list_filename)
     
     return list_filename
 
