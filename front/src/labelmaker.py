@@ -92,7 +92,7 @@ data_access = html.Div([
     dbc.Card([
         dbc.CardBody(id='data-body',
                       children=[
-                          dbc.Label('Or upload a new file or folder (zip) to work dir:', className='mr-2'),
+                          dbc.Label('Upload a new file or folder (zip) to work dir:', className='mr-2'),
                           html.Div([html.Div([ du.Upload(
                                                     id="dash-uploader",
                                                     max_file_size=1800,  # 1800 Mb
@@ -131,7 +131,7 @@ data_access = html.Div([
                                     ],
                             style = {'width': '100%', 'display': 'flex', 'align-items': 'center'}
                           ),
-                          dbc.Label('Or choose files/directories:', className='mr-2'),
+                          dbc.Label('Choose files/directories:', className='mr-2'),
                           html.Div(
                                   [dbc.Button("Browse",
                                              id="browse-dir",
