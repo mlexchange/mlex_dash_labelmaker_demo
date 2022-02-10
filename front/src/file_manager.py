@@ -83,3 +83,11 @@ def filename_list(directory, format):
     
     return files
 
+def check_duplicate_filename(dir_path, filename):
+    root_path, list_dirs, filenames = next(os.walk(dir_path))
+    if filename in filenames:
+        return True
+    else:
+        return False
+
+
