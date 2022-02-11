@@ -1,5 +1,5 @@
 import os
-import io, shutil, pathlib, base64, math
+import io, shutil, pathlib, base64, math, zipfile
 
 import dash
 from dash import dcc, html, dash_table
@@ -264,7 +264,8 @@ browser_cache =html.Div(
             dcc.Store(id='label-list', data=LABEL_LIST),
             dcc.Store(id='current-page', data=0),
             dcc.Store(id='image-order', data=[]),
-            dcc.Store(id='del-label', data=-1)
+            dcc.Store(id='del-label', data=-1),
+            dcc.Store(id='dummy-data', data=0),
         ],
     )
 
@@ -323,6 +324,28 @@ def toggle_modal(n1, n2, is_open):
         return not is_open
     return is_open
 
+@app.callback(
+    Output('dummy-data', 'data'),
+    [Input('dash-uploader', 'isCompleted')],
+    [State('dash-uploader', 'fileNames'),
+     State('dash-uploader', 'upload_id')],
+)
+def upload_zip(iscompleted, upload_filename, upload_id):
+    if not iscompleted:
+        return 0
+
+    if upload_filename is not None:
+        extension = upload_filename[0].split('.')[-1]
+        foldername  = upload_filename[0].split('.')[-2]
+        if extension == 'zip':
+            # unzip files and delete zip file
+            path_to_zip_file = pathlib.Path(UPLOAD_FOLDER_ROOT) / upload_filename[0]
+            zip_ref = zipfile.ZipFile(path_to_zip_file)  # create zipfile object
+            zip_ref.extractall(pathlib.Path(UPLOAD_FOLDER_ROOT))  # extract file to dir
+            zip_ref.close()  # close file
+            os.remove(path_to_zip_file)
+
+    return 0 
 
 @app.callback(
     Output('files-table', 'data'),
