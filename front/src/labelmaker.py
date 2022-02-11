@@ -14,7 +14,8 @@ import plotly.express as px
 
 import templates
 from helper_utils import get_color_from_label, create_label_component, draw_rows
-from file_manager import filename_list, move_a_file, move_dir, add_filenames_from_dir
+from file_manager import filename_list, move_a_file, move_dir, \
+                         add_filenames_from_dir, check_duplicate_filename
 
 
 external_stylesheets = [dbc.themes.BOOTSTRAP]
@@ -91,7 +92,7 @@ data_access = html.Div([
     dbc.Card([
         dbc.CardBody(id='data-body',
                       children=[
-                          dbc.Label('Or upload a new file or folder (zip) to work dir:', className='mr-2'),
+                          dbc.Label('Upload a new file or folder (zip) to work dir:', className='mr-2'),
                           html.Div([html.Div([ du.Upload(
                                                     id="dash-uploader",
                                                     max_file_size=1800,  # 1800 Mb
@@ -130,7 +131,7 @@ data_access = html.Div([
                                     ],
                             style = {'width': '100%', 'display': 'flex', 'align-items': 'center'}
                           ),
-                          dbc.Label('Or choose files/directories:', className='mr-2'),
+                          dbc.Label('Choose files/directories:', className='mr-2'),
                           html.Div(
                                   [dbc.Button("Browse",
                                              id="browse-dir",
@@ -773,10 +774,17 @@ def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data,
                     label_dir = root / pathlib.Path(label_list[int(label_index)])
                     label_dir.mkdir(parents=True, exist_ok=True)
                     # save all files under the current label into the directory
-                    for i,filename in enumerate(filename_list):
+                    for filename in filename_list:
                         im_bytes = filename
                         im = PIL.Image.open(im_bytes)
                         filename = im_bytes.split("/")[-1]
+                        f_name = filename.split('.')[-2]
+                        f_ext  = filename.split('.')[-1]
+                        i = 0
+                        while check_duplicate_filename(label_dir,filename):
+                            if i:
+                                filename = f_name + '_%s'%i + '.' + f_ext
+                            i += 1 
                         im_fname = label_dir / pathlib.Path(filename)
                         im.save(im_fname)
     return []
