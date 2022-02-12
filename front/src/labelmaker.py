@@ -15,7 +15,7 @@ import plotly.express as px
 import templates
 from helper_utils import get_color_from_label, create_label_component, draw_rows
 from file_manager import filename_list, move_a_file, move_dir, \
-                         add_filenames_from_dir, check_duplicate_filename
+                         add_paths_from_dir, check_duplicate_filename
 
 
 external_stylesheets = [dbc.themes.BOOTSTRAP]
@@ -121,7 +121,7 @@ data_access = html.Div([
                                                      color="secondary",
                                                      outline=True,
                                                      n_clicks=0,
-                                                     disabled = True,
+                                                     #disabled = True,
                                                      style={'width': '22%', 'margin': '5px'}),
                                             ],
                                             style = {'width': '100%', 'display': 'flex', 'align-items': 'center'},
@@ -335,13 +335,15 @@ def upload_zip(iscompleted, upload_filename, upload_id):
         return 0
 
     if upload_filename is not None:
-        extension = upload_filename[0].split('.')[-1]
-        foldername  = upload_filename[0].split('.')[-2]
-        if extension == 'zip':
-            # unzip files and delete zip file
-            path_to_zip_file = pathlib.Path(UPLOAD_FOLDER_ROOT) / upload_filename[0]
+        path_to_zip_file = pathlib.Path(UPLOAD_FOLDER_ROOT) / upload_filename[0]
+        if upload_filename[0].split('.')[-1] == 'zip':   # unzip files and delete zip file
             zip_ref = zipfile.ZipFile(path_to_zip_file)  # create zipfile object
-            zip_ref.extractall(pathlib.Path(UPLOAD_FOLDER_ROOT))  # extract file to dir
+            path_to_folder = pathlib.Path(UPLOAD_FOLDER_ROOT) / upload_filename[0].split('.')[-2]
+            if zip_ref.namelist()[0].endswith('/'):
+                zip_ref.extractall(pathlib.Path(UPLOAD_FOLDER_ROOT))    # extract file to dir
+            else:
+                zip_ref.extractall(path_to_folder)
+                
             zip_ref.close()  # close file
             os.remove(path_to_zip_file)
 
@@ -453,7 +455,7 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_filename = add_filenames_from_dir(file_path['file_path'], supported_formats, list_filename)
+                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
             else:
                 list_filename.append(file_path['file_path'])
     
@@ -553,7 +555,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_filename = add_filenames_from_dir(file_path['file_path'], supported_formats, list_filename)
+                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
             else:
                 list_filename.append(file_path['file_path'])
     
