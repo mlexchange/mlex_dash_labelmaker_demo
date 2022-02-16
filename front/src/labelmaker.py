@@ -525,12 +525,13 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
     Input('files-table', 'selected_rows'),
     Input('import-format', 'value'),
     Input('docker-file-paths','data'),
+    Input('my-toggle-switch', 'value'),
 
     State('current-page', 'data'),
     State('import-dir', 'n_clicks')],
     prevent_initial_call=True)
 def update_output(image_order, thumbnail_slider_value, button_prev_page, button_next_page, rows, import_format,
-                  file_paths, current_page, import_n_clicks):
+                  file_paths, docker_path, current_page, import_n_clicks):
     '''
     This callback displays images in the front-end
     Args:
@@ -541,6 +542,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         rows:                   Rows of the selected file paths from path table
         import_format:          File format for import
         file_paths:             Absolute file paths selected from path table
+        docker_path             Showing file path in Docker environment 
         current_page:           Index of the current page
         import_n_clicks:        Button for importing the selected paths
     Returns:
@@ -589,8 +591,10 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
                     img = base64.b64encode(file.read())
                     file_ext = filename[filename.find('.')+1:]
                     new_contents.append('data:image/'+file_ext+';base64,'+img.decode("utf-8"))
-                    
-                new_filenames.append(list_filename[image_order[i]])
+                if docker_path:
+                    new_filenames.append(list_filename[image_order[i]])
+                else:
+                    new_filenames.append(docker_to_local_path(list_filename[image_order[i]], DOCKER_HOME, LOCAL_HOME, 'str'))
                 
             children = draw_rows(new_contents, new_filenames, thumbnail_slider_value, NUMBER_OF_ROWS)
 
@@ -605,7 +609,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
     Input('labels', 'data'),
     Input('my-toggle-switch', 'value'),
     State({'type': 'thumbnail-name', 'index': MATCH}, 'children'),
-    State('labels-name', 'data'),
+    State('docker-labels-name', 'data'),
     prevent_initial_call=True
 )
 def select_thumbnail(value, labels_data, docker_path, thumbnail_name_children, labels_name_data):
@@ -624,7 +628,6 @@ def select_thumbnail(value, labels_data, docker_path, thumbnail_name_children, l
         thumbnail_color:            Color of thumbnail card
     '''
     name = thumbnail_name_children
-    labels_name_data = local_to_docker_path(labels_name_data, DOCKER_HOME, LOCAL_HOME)
     if not docker_path:
         name =  local_to_docker_path(name, DOCKER_HOME, LOCAL_HOME, 'str')
 
@@ -664,7 +667,6 @@ def deselect(label_button_trigger, unlabel_n_clicks, thumb_clicked):
 @app.callback(
     Output('labels', 'data'),
     Output('docker-labels-name', 'data'),
-    Output('labels-name', 'data'),
     Input('del-label', 'data'),
     Input({'type': 'label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input('un-label', 'n_clicks'),
@@ -673,7 +675,7 @@ def deselect(label_button_trigger, unlabel_n_clicks, thumb_clicked):
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
     State('labels', 'data'),
-    State('labels-name', 'data'),
+    State('docker-labels-name', 'data'),
     prevent_initial_call=True
 )
 def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, docker_path,
@@ -711,8 +713,8 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
             if int(label)==del_label:
                 del current_labels[label]
                 del current_labels_name[label]
-        docker_current_labels_name = local_to_docker_path(current_labels_name, DOCKER_HOME, LOCAL_HOME)
-        return current_labels, docker_current_labels_name, current_labels_name
+        
+        return current_labels, current_labels_name
 
     label_class_value = max(enumerate(label_button_n_clicks), key=lambda t: 0 if t[1] is None else t[1] )[0]
     selected_thumbs = []
@@ -730,14 +732,12 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
             if select_value % 2 == 1:
                 selected_thumbs.append(index)
                 selected_thumbs_filename.append(filename)
-    
-    current_labels_name = local_to_docker_path(current_labels_name, DOCKER_HOME, LOCAL_HOME)
+
     selected_thumbs_filename = local_to_docker_path(selected_thumbs_filename, DOCKER_HOME, LOCAL_HOME, 'list')
 
     # remove de-selected (de-color) thumb cards
     other_labels = {key: value[:] for key, value in current_labels.items() if key != label_class_value}
     other_labels_name = {key: value[:] for key, value in current_labels_name.items() if key != label_class_value}
-    other_labels_name = local_to_docker_path(other_labels_name, DOCKER_HOME, LOCAL_HOME)
     for thumb_index, thumb_name in zip(selected_thumbs, selected_thumbs_filename):
         for label in other_labels:
             if thumb_index in other_labels[label]:
@@ -748,10 +748,8 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
     if dash.callback_context.triggered[0]['prop_id'] != 'un-label.n_clicks':
         current_labels[str(label_class_value)].extend(selected_thumbs)
         current_labels_name[str(label_class_value)].extend(selected_thumbs_filename)
-    
-    docker_current_labels_name = local_to_docker_path(current_labels_name, DOCKER_HOME, LOCAL_HOME)
-    
-    return current_labels, docker_current_labels_name, current_labels_name
+
+    return current_labels, current_labels_name
 
 
 @app.callback(
