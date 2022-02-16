@@ -525,13 +525,12 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
     Input('files-table', 'selected_rows'),
     Input('import-format', 'value'),
     Input('docker-file-paths','data'),
-    Input('my-toggle-switch', 'value'),
 
     State('current-page', 'data'),
     State('import-dir', 'n_clicks')],
     prevent_initial_call=True)
 def update_output(image_order, thumbnail_slider_value, button_prev_page, button_next_page, rows, import_format,
-                  file_paths, docker_path, current_page, import_n_clicks):
+                  file_paths, current_page, import_n_clicks):
     '''
     This callback displays images in the front-end
     Args:
@@ -542,7 +541,6 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         rows:                   Rows of the selected file paths from path table
         import_format:          File format for import
         file_paths:             Absolute file paths selected from path table
-        docker_path             Showing file path in Docker environment 
         current_page:           Index of the current page
         import_n_clicks:        Button for importing the selected paths
     Returns:
@@ -585,17 +583,14 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
             max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
             new_contents = []
             new_filenames = []
-            filenames_todraw = []
             for i in range(start_indx, max_indx):
                 filename = list_filename[image_order[i]]
                 with open(filename, "rb") as file:
                     img = base64.b64encode(file.read())
                     file_ext = filename[filename.find('.')+1:]
                     new_contents.append('data:image/'+file_ext+';base64,'+img.decode("utf-8"))
-                if docker_path:
-                    new_filenames.append(list_filename[image_order[i]])
-                else:
-                    new_filenames.append(LOCAL_HOME + list_filename[image_order[i]].split(DOCKER_HOME)[-1])
+                    
+                new_filenames.append(list_filename[image_order[i]])
                 
             children = draw_rows(new_contents, new_filenames, thumbnail_slider_value, NUMBER_OF_ROWS)
 
