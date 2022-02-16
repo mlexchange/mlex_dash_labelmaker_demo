@@ -1,9 +1,10 @@
-import os
-import io, shutil, pathlib, base64, math, zipfile
+import os, io
+import shutil, pathlib, base64, math, copy, zipfile
 
 import dash
 from dash import dcc, html, dash_table
 import dash_bootstrap_components as dbc
+import dash_daq as daq
 import dash_uploader as du
 from dash.dependencies import Input, Output, State, MATCH, ALL
 
@@ -13,9 +14,11 @@ import PIL
 import plotly.express as px
 
 import templates
+
 from helper_utils import get_color_from_label, create_label_component, draw_rows
-from file_manager import filename_list, move_a_file, move_dir, \
-                         add_paths_from_dir, check_duplicate_filename
+
+from file_manager import filename_list, move_a_file, move_dir, add_paths_from_dir, \
+                         check_duplicate_filename, docker_to_local_path, local_to_docker_path
 
 
 external_stylesheets = [dbc.themes.BOOTSTRAP]
@@ -33,11 +36,13 @@ LABEL_LIST = ['Arc', 'Peaks', 'Rings', 'Rods']
 COLOR_CYCLE = px.colors.qualitative.Plotly
 NUMBER_OF_ROWS = 4
 
-HOME_DATA = pathlib.Path.home() / 'data'
+DOCKER_DATA = pathlib.Path.home() / 'data'
+LOCAL_DATA = str(os.environ['DATA_DIR'])
+DOCKER_HOME = str(DOCKER_DATA) + '/'
+LOCAL_HOME = str(LOCAL_DATA) 
 
-UPLOAD_FOLDER_ROOT = HOME_DATA / 'upload'
+UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
-
 
 # REACTIVE COMPONENTS FOR ADDITIONAL OPTIONS : SORT, HIDE, ETC
 additional_options_html = html.Div(
@@ -110,9 +115,9 @@ data_access = html.Div([
                                             dbc.Label("Dataset is by default uploaded to '{}'. \
                                                        You can move the selected files or dirs (from File Table) \
                                                        into a new dir.".format(UPLOAD_FOLDER_ROOT), className='mr-5'),
-                                            dbc.Label("Home data dir (HOME) is '{}'.".format(HOME_DATA), className='mr-5'),
+                                            dbc.Label("Home data dir (HOME) is '{}'.".format(DOCKER_DATA), className='mr-5'),
                                             html.Div([
-                                                dbc.Label('Move data into dir:'.format(HOME_DATA), className='mr-5'),
+                                                dbc.Label('Move data into dir:'.format(DOCKER_DATA), className='mr-5'),
                                                 dcc.Input(id='dest-dir-name', placeholder="Input relative path to HOME", 
                                                                 style={'width': '40%', 'margin-bottom': '10px'}),
                                                 dbc.Button("Move",
@@ -205,6 +210,13 @@ data_access = html.Div([
                                  ],
                                 style = {'width': '100%', 'display': 'flex', 'align-items': 'center'},
                                 ),
+                         html.Div([ html.Div([dbc.Label('Show Local/Docker Path')], style = {'margin-right': '10px'}),
+                                    daq.ToggleSwitch(
+                                        id='my-toggle-switch',
+                                        value=False
+                                    )],
+                            style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'margin': '10px', 'margin-left': '0px'},
+                        ),
                         file_paths_table,
                         ]),
     ],
@@ -259,7 +271,8 @@ browser_cache =html.Div(
         children=[
             dcc.Store(id='labels', data={}),
             dcc.Store(id='labels-name', data={}),
-            dcc.Store(id='file-paths', data=[]),
+            dcc.Store(id='docker-labels-name', data={}),
+            dcc.Store(id='docker-file-paths', data=[]),
             dcc.Store(id='save-results-buffer', data=[]),
             dcc.Store(id='label-list', data=LABEL_LIST),
             dcc.Store(id='current-page', data=0),
@@ -324,6 +337,7 @@ def toggle_modal(n1, n2, is_open):
         return not is_open
     return is_open
 
+
 @app.callback(
     Output('dummy-data', 'data'),
     [Input('dash-uploader', 'isCompleted')],
@@ -349,24 +363,26 @@ def upload_zip(iscompleted, upload_filename, upload_id):
 
     return 0 
 
+
 @app.callback(
     Output('files-table', 'data'),
-    Output('file-paths', 'data'),
+    Output('docker-file-paths', 'data'),
     Input('browse-format', 'value'),
     Input('browse-dir', 'n_clicks'),
     Input('import-dir', 'n_clicks'),
     Input('confirm-delete','n_clicks'),
     Input('move-dir', 'n_clicks'),
     Input('files-table', 'selected_rows'),
-    Input('file-paths', 'data'),
+    Input('docker-file-paths', 'data'),
+    Input('my-toggle-switch', 'value'),
     State('dest-dir-name', 'value')
 )
-def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, \
-                  move_dir_n_clicks, rows, selected_paths, dest):
+def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, 
+                  move_dir_n_clicks, rows, selected_paths, docker_path, dest):
     changed_id = dash.callback_context.triggered[0]['prop_id']
     files = []
     if browse_n_clicks or import_n_clicks:
-        files = filename_list(HOME_DATA, browse_format)
+        files = filename_list(DOCKER_DATA, browse_format)
         
     selected_files = []
     if bool(rows):
@@ -380,35 +396,34 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
             else:
                 os.remove(filepath['file_path'])
         selected_files = []
-        files = filename_list(HOME_DATA, browse_format)
+        files = filename_list(DOCKER_DATA, browse_format)
     
     if browse_n_clicks and changed_id == 'move-dir.n_clicks':
         if dest is None:
             dest = ''
-            
-        destination = HOME_DATA / dest
+        destination = DOCKER_DATA / dest
         destination.mkdir(parents=True, exist_ok=True)
         if bool(rows):
             sources = selected_paths
-        else:
-            sources = [{'file_path': str(UPLOAD_FOLDER_ROOT)}]
-    
-        for source in sources:
-            if os.path.isdir(source['file_path']):
-                move_dir(source['file_path'], str(destination))
-                shutil.rmtree(source['file_path'])
-            else:
-                move_a_file(source['file_path'], str(destination))
+            for source in sources:
+                if os.path.isdir(source['file_path']):
+                    move_dir(source['file_path'], str(destination))
+                    shutil.rmtree(source['file_path'])
+                else:
+                    move_a_file(source['file_path'], str(destination))
                 
-        selected_files = []
-        files = filename_list(HOME_DATA, browse_format)
+            selected_files = []
+            files = filename_list(DOCKER_DATA, browse_format)
 
-    return files, selected_files
+    if docker_path:
+        return files, selected_files
+    else:
+        return docker_to_local_path(files, DOCKER_HOME, LOCAL_HOME), selected_files
 
 
 @app.callback(
     Output('image-order','data'),
-    Input('file-paths','data'),
+    Input('docker-file-paths','data'),
     Input('import-dir', 'n_clicks'),
     Input('import-format', 'value'),
     Input('files-table', 'selected_rows'),
@@ -416,25 +431,27 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
     Input('button-sort', 'n_clicks'),
     Input('confirm-delete','n_clicks'),
     Input('move-dir', 'n_clicks'),
-    State('labels-name', 'data'),
+    State('docker-labels-name', 'data'),
     State('label-list', 'data'),
     State('image-order','data'),
     prevent_initial_call=True)
 def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_n_clicks,
-                  button_sort_n_clicks, delete_n_clicks, move_dir_n_clicks, labels_name_data, label_list, image_order):
+                  button_sort_n_clicks, delete_n_clicks, move_dir_n_clicks, 
+                  labels_name_data, label_list, image_order):
     '''
     This callback arranges the image order according to the following actions:
         - New content is uploaded
         - Buttons sort or hidden are selected
     Args:
-        file_paths :            Absolute file paths selected from path table
+        file_paths :            Absolute (docker) file paths selected from path table
         import_n_clicks:        Button for importing selected paths
         import_format:          File format for import
         rows:                   Rows of the selected file paths from path table
         button_hide_n_clicks:   Hide button
         button_sort_n_clicks:   Sort button
         delete_n_clicks:        Button for deleting selected file paths
-        labels_name_data:       Dictionary of labeled images, as follows: {label: list of image filenames}
+        move_dir_n_clicks       Button for moving dir
+        labels_name_data:       Dictionary of labeled images (docker path), as follows: {label: list of image filenames}
         label_list:             List of label names (tag name)
         image_order:            Order of the images according to the selected action (sort, hide, new data, etc)
 
@@ -507,13 +524,14 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
     Input('next-page', 'n_clicks'),
     Input('files-table', 'selected_rows'),
     Input('import-format', 'value'),
-    Input('file-paths','data'),
+    Input('docker-file-paths','data'),
+    Input('my-toggle-switch', 'value'),
 
     State('current-page', 'data'),
     State('import-dir', 'n_clicks')],
     prevent_initial_call=True)
 def update_output(image_order, thumbnail_slider_value, button_prev_page, button_next_page, rows, import_format,
-                  file_paths, current_page, import_n_clicks):
+                  file_paths, docker_path, current_page, import_n_clicks):
     '''
     This callback displays images in the front-end
     Args:
@@ -524,6 +542,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         rows:                   Rows of the selected file paths from path table
         import_format:          File format for import
         file_paths:             Absolute file paths selected from path table
+        docker_path             Showing file path in Docker environment 
         current_page:           Index of the current page
         import_n_clicks:        Button for importing the selected paths
     Returns:
@@ -566,28 +585,35 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
             max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
             new_contents = []
             new_filenames = []
+            filenames_todraw = []
             for i in range(start_indx, max_indx):
                 filename = list_filename[image_order[i]]
                 with open(filename, "rb") as file:
                     img = base64.b64encode(file.read())
                     file_ext = filename[filename.find('.')+1:]
                     new_contents.append('data:image/'+file_ext+';base64,'+img.decode("utf-8"))
-                new_filenames.append(list_filename[image_order[i]])
+                if docker_path:
+                    new_filenames.append(list_filename[image_order[i]])
+                else:
+                    new_filenames.append(LOCAL_HOME + list_filename[image_order[i]].split(DOCKER_HOME)[-1])
+                
             children = draw_rows(new_contents, new_filenames, thumbnail_slider_value, NUMBER_OF_ROWS)
 
     return children, current_page==0, math.ceil((num_imgs//thumbnail_slider_value)/NUMBER_OF_ROWS)<=current_page+1, \
            current_page
 
 
+##### clean later
 @app.callback(
     Output({'type': 'thumbnail-card', 'index': MATCH}, 'color'),
     Input({'type': 'thumbnail-image', 'index': MATCH}, 'n_clicks'),
     Input('labels', 'data'),
+    Input('my-toggle-switch', 'value'),
     State({'type': 'thumbnail-name', 'index': MATCH}, 'children'),
     State('labels-name', 'data'),
     prevent_initial_call=True
 )
-def select_thumbnail(value, labels_data, thumbnail_name_children, labels_name_data):
+def select_thumbnail(value, labels_data, docker_path, thumbnail_name_children, labels_name_data):
     '''
     This callback assigns a color to thumbnail cards in the following scenarios:
         - An image has been selected, but no label has been assigned (blue)
@@ -603,7 +629,10 @@ def select_thumbnail(value, labels_data, thumbnail_name_children, labels_name_da
         thumbnail_color:            Color of thumbnail card
     '''
     name = thumbnail_name_children
-    # find background color according to label class if thumb is labelled
+    labels_name_data = local_to_docker_path(labels_name_data, DOCKER_HOME, LOCAL_HOME)
+    if not docker_path:
+        name =  local_to_docker_path(name, DOCKER_HOME, LOCAL_HOME, 'str')
+
     color = ''
     for label_key in labels_name_data:
         if name in labels_name_data[label_key]:
@@ -629,19 +658,22 @@ def deselect(label_button_trigger, unlabel_n_clicks, thumb_clicked):
     Args:
         label_button_trigger:   Label button
         unlabel_n_clicks:       Un-label button
-        thumb_clicked:          Selected thumbnail card
+        thumb_clicked:          Selected thumbnail card indice, e.g., [0,1,1,0,0,0]
     Returns:
         Modify the number of clicks for a specific thumbnail card
     '''
     return [0 for thumb in thumb_clicked]
 
 
+##### clean later
 @app.callback(
     Output('labels', 'data'),
+    Output('docker-labels-name', 'data'),
     Output('labels-name', 'data'),
     Input('del-label', 'data'),
     Input({'type': 'label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input('un-label', 'n_clicks'),
+    Input('my-toggle-switch', 'value'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'id'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
@@ -649,9 +681,9 @@ def deselect(label_button_trigger, unlabel_n_clicks, thumb_clicked):
     State('labels-name', 'data'),
     prevent_initial_call=True
 )
-def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, thumbnail_image_index,
-                              thumbnail_image_select_value, thumbnail_name_children, current_labels,
-                              current_labels_name):
+def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, docker_path,
+                              thumbnail_image_index, thumbnail_image_select_value, 
+                              thumbnail_name_children, current_labels, current_labels_name):
     '''
     This callback updates the dictionary of labeled images when:
         - A new image is labeled
@@ -661,6 +693,7 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
         del_label:                      Delete label button
         label_button_n_clicks:          Label button
         unlabel_button:                 Un-label button
+        docker_path:                    Triggers callback when toggle change
         thumbnail_image_index:          Index of the thumbnail image
         thumbnail_image_select_value:   Selected thumbnail image (n_clicks)
         thumbnail_name_children:        Filename of the selected thumbnail image
@@ -683,7 +716,8 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
             if int(label)==del_label:
                 del current_labels[label]
                 del current_labels_name[label]
-        return current_labels, current_labels_name
+        docker_current_labels_name = local_to_docker_path(current_labels_name, DOCKER_HOME, LOCAL_HOME)
+        return current_labels, docker_current_labels_name, current_labels_name
 
     label_class_value = max(enumerate(label_button_n_clicks), key=lambda t: 0 if t[1] is None else t[1] )[0]
     selected_thumbs = []
@@ -701,21 +735,28 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
             if select_value % 2 == 1:
                 selected_thumbs.append(index)
                 selected_thumbs_filename.append(filename)
+    
+    current_labels_name = local_to_docker_path(current_labels_name, DOCKER_HOME, LOCAL_HOME)
+    selected_thumbs_filename = local_to_docker_path(selected_thumbs_filename, DOCKER_HOME, LOCAL_HOME, 'list')
 
-    # need to remove label from other label_class if exists
+    # remove de-selected (de-color) thumb cards
     other_labels = {key: value[:] for key, value in current_labels.items() if key != label_class_value}
     other_labels_name = {key: value[:] for key, value in current_labels_name.items() if key != label_class_value}
-    # create dict of every other label to test
+    other_labels_name = local_to_docker_path(other_labels_name, DOCKER_HOME, LOCAL_HOME)
     for thumb_index, thumb_name in zip(selected_thumbs, selected_thumbs_filename):
         for label in other_labels:
             if thumb_index in other_labels[label]:
                 current_labels[label].remove(thumb_index)
             if thumb_name in other_labels_name[label]:
                 current_labels_name[label].remove(thumb_name)
+
     if dash.callback_context.triggered[0]['prop_id'] != 'un-label.n_clicks':
         current_labels[str(label_class_value)].extend(selected_thumbs)
         current_labels_name[str(label_class_value)].extend(selected_thumbs_filename)
-    return current_labels, current_labels_name
+    
+    docker_current_labels_name = local_to_docker_path(current_labels_name, DOCKER_HOME, LOCAL_HOME)
+    
+    return current_labels, docker_current_labels_name, current_labels_name
 
 
 @app.callback(
@@ -729,7 +770,7 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
 
     State('add-label-name', 'value'),
     State('label-list', 'data'),
-    State('labels-name', 'data'),
+    State('docker-labels-name', 'data'),
     State('labels', 'data'),
     prevent_initial_call=True
 )
@@ -742,7 +783,7 @@ def update_list(n_clicks, n_clicks2, add_label_name, label_list, labels_name_dat
         n_clicks2:              Delete the associated label (tag name)
         add_label_name:         Label to add (tag name)
         label_list:             List of label names (tag name)
-        labels_name_data:       Dictionary of labeled images, as follows: {label: list of image filenames}
+        labels_name_data:       Dictionary of labeled images (docker path), as follows: {label: list of image filenames}
         labels:                 Dictionary of labeled images, as follows: {label: list of image indexes}
     Returns:
         label_component:        Reactive component with the updated list of labels
@@ -768,8 +809,8 @@ def update_list(n_clicks, n_clicks2, add_label_name, label_list, labels_name_dat
 @app.callback(
     Output('save-results-buffer', 'data'),
     Input('button-save-disk', 'n_clicks'),
-    State('file-paths','data'),
-    State('labels-name', 'data'),
+    State('docker-file-paths','data'),
+    State('docker-labels-name', 'data'),
     State('label-list', 'data'),
     State('import-dir', 'n_clicks'),
     State('files-table', 'selected_rows')
@@ -781,7 +822,7 @@ def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data,
     Args:
         button_save_disk_n_clicks:  Button save to disk
         file_paths:                 Absolute file paths selected from path table
-        labels_name_data:           Dictionary of labeled images, as follows: {label: list of image filenames}
+        labels_name_data:           Dictionary of labeled images (docker path), as follows: {label: list of image filenames}
         label_list:                 List of label names (tag name)
         import_n_clicks:            Button for importing selected paths
         rows:                       Rows of the selected file paths from path table
@@ -795,7 +836,7 @@ def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data,
                 filename_list = labels_name_data[label_index]
                 if len(filename_list)>0:
                     # create root directory
-                    root = pathlib.Path(HOME_DATA / 'labelmaker_outputs')
+                    root = pathlib.Path(DOCKER_DATA / 'labelmaker_outputs')
                     label_dir = root / pathlib.Path(label_list[int(label_index)])
                     label_dir.mkdir(parents=True, exist_ok=True)
                     # save all files under the current label into the directory
@@ -806,7 +847,7 @@ def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data,
                         f_name = filename.split('.')[-2]
                         f_ext  = filename.split('.')[-1]
                         i = 0
-                        while check_duplicate_filename(label_dir,filename):
+                        while check_duplicate_filename(label_dir,filename): # check duplicate filenames and save as different names 
                             if i:
                                 filename = f_name + '_%s'%i + '.' + f_ext
                             i += 1 
