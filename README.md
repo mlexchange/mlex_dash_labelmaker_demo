@@ -30,6 +30,10 @@ When importing a directory, you can import **only** files of a specific format b
 The selected file paths can be deleted by clicking **Delete the Selected** button. User must click on **Import** button again to ingest the newly selected files/paths 
 
 
+## View paths in different environments
+File manager allows users to view file paths either in local paths (mounted to docker) or docker paths. Users can choose which path by toggling the swith below the **Browse** button.
+
+
 ## Labeling instructions:
 
 Assigning a new label:  
