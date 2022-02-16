@@ -1,5 +1,6 @@
 import os 
 import pathlib
+import copy
 
 def move_a_file(source, destination):
     '''
@@ -59,7 +60,11 @@ def add_paths_from_dir(dir_path, supported_formats, list_file_path):
 
 def filename_list(directory, format):
     '''
-    Return a full list of absolute file path (filtered by file formats) inside a directory. 
+    Args:
+        directory, str:     full path of a directory
+        format, list(str):  list of supported formats
+    Return:
+        a full list of absolute file path (filtered by file formats) inside a directory. 
     '''
     hidden_formats = ['DS_Store']
     files = []
@@ -83,11 +88,75 @@ def filename_list(directory, format):
     
     return files
 
+
 def check_duplicate_filename(dir_path, filename):
     root_path, list_dirs, filenames = next(os.walk(dir_path))
     if filename in filenames:
         return True
     else:
         return False
+
+
+def docker_to_local_path(paths, docker_home, local_home, type='list-dict'):
+    '''
+    Args:
+        paths:              docker file paths
+        docker_home, str:   full path of home dir (ends with '/') in docker environment
+        local_home, str:    full path of home dir (ends with '/') mounted in local machine
+        type:
+            list-dict, default:  a list of dictionary (docker paths), e.g., [{'file_path': 'docker_path1'},{...}]
+    Return: 
+        replace docker path with local path.
+    '''
+    files = copy.deepcopy(paths)
+    for file in files:
+        if not file['file_path'].startswith(local_home):
+            file['file_path'] = local_home + file['file_path'].split(docker_home)[-1]
+    
+    return files
+
+
+def local_to_docker_path(paths, docker_home, local_home, type='dict-list'):
+    '''
+    Args:
+        paths:             selected local (full) paths 
+        docker_home, str:  full path of home dir (ends with '/') in docker environment
+        local_home, str:   full path of home dir (ends with '/') mounted in local machine
+        type:
+            dict-list, default:  local paths wrt label class, e.g., {'1': ['selected_card_path1', 'selected_card_path2'], ...} 
+            str:                 single path string 
+            list:                a list of path string
+            
+    Return: 
+        replace local path with docker path
+    '''
+    if type == 'dict-list':
+        files = copy.deepcopy(paths)
+        for key, value_list in files.items():
+            new_value_list = []
+            for value in value_list:
+                if not value.startswith(docker_home):
+                    new_value_list.append(docker_home + value.split(local_home)[-1])
+                else:
+                    new_value_list.append(value)
+       
+            files[key] = new_value_list
+    
+    if type == 'str':
+        if not paths.startswith(docker_home):
+            files = docker_home + paths.split(local_home)[-1]
+        else:
+            files = paths
+    
+    if type == 'list':
+        files = []
+        for i in range(len(paths)):
+            if not paths[i].startswith(docker_home):
+                files.append(docker_home + paths[i].split(local_home)[-1])
+            else:
+                files.append(paths[i])
+
+    return files
+
 
 
