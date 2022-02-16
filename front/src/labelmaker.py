@@ -270,7 +270,6 @@ browser_cache =html.Div(
         id="no-display",
         children=[
             dcc.Store(id='labels', data={}),
-            dcc.Store(id='labels-name', data={}),
             dcc.Store(id='docker-labels-name', data={}),
             dcc.Store(id='docker-file-paths', data=[]),
             dcc.Store(id='save-results-buffer', data=[]),
@@ -542,7 +541,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         rows:                   Rows of the selected file paths from path table
         import_format:          File format for import
         file_paths:             Absolute file paths selected from path table
-        docker_path             Showing file path in Docker environment 
+        docker_path:            Showing file path in Docker environment 
         current_page:           Index of the current page
         import_n_clicks:        Button for importing the selected paths
     Returns:
@@ -670,7 +669,6 @@ def deselect(label_button_trigger, unlabel_n_clicks, thumb_clicked):
     Input('del-label', 'data'),
     Input({'type': 'label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input('un-label', 'n_clicks'),
-    Input('my-toggle-switch', 'value'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'id'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
@@ -678,7 +676,7 @@ def deselect(label_button_trigger, unlabel_n_clicks, thumb_clicked):
     State('docker-labels-name', 'data'),
     prevent_initial_call=True
 )
-def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, docker_path,
+def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
                               thumbnail_image_index, thumbnail_image_select_value, 
                               thumbnail_name_children, current_labels, current_labels_name):
     '''
@@ -690,7 +688,6 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
         del_label:                      Delete label button
         label_button_n_clicks:          Label button
         unlabel_button:                 Un-label button
-        docker_path:                    Triggers callback when toggle change
         thumbnail_image_index:          Index of the thumbnail image
         thumbnail_image_select_value:   Selected thumbnail image (n_clicks)
         thumbnail_name_children:        Filename of the selected thumbnail image
