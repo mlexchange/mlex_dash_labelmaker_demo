@@ -124,3 +124,4 @@ def draw_rows(list_of_contents, list_of_names, n_cols, n_rows):
             visible.append(1)
         children.append(dbc.Row(row_child))
     return children
+
