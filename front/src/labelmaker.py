@@ -10,6 +10,7 @@ from dash.dependencies import Input, Output, State, MATCH, ALL
 
 from flask import Flask
 import itertools
+import pandas as pd
 import PIL
 import plotly.express as px
 
@@ -39,33 +40,85 @@ NUMBER_OF_ROWS = 4
 DOCKER_DATA = pathlib.Path.home() / 'data'
 LOCAL_DATA = str(os.environ['DATA_DIR'])
 DOCKER_HOME = str(DOCKER_DATA) + '/'
-LOCAL_HOME = str(LOCAL_DATA) 
+LOCAL_HOME = str(LOCAL_DATA)
+
+PROB_FILE = pd.read_csv('data/results.csv')
 
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 
+
+# REACTIVE COMPONENTS FOR LABELING METHOD
+label_method = html.Div([
+    dbc.Row([dbc.Col(dbc.Button('Manual', id='button-manual',
+                               outline='True', color='primary', style={'width': '100%'})),
+             dbc.Col(dbc.Button('MLCoach', id='button-mlcoach',
+                               outline='True', color='primary', style={'width': '100%'})),
+             dbc.Col(dbc.Button('Data Clinic', id='button-data-clinic',
+                               outline='True', color='primary', style={'width': '100%', 'margin-bottom': '20px'}))
+             ], className="g-0"),
+    html.Div(id='label_buttons', style={'margin-bottom': '0.5rem'}),
+    # Labeling manually
+    dbc.Collapse(
+        children = [dcc.Input(id='add-label-name',
+                              placeholder="Input new label name",
+                              style={'width': '100%', 'margin-bottom': '10px'}),
+                    dbc.Row(dbc.Col(dbc.Button('Add New Label',
+                                               id='modify-list',
+                                               outline="True",
+                                               color='primary',
+                                               n_clicks=0,
+                                               style={'width': '100%'})))],
+        id="manual-collapse",
+        is_open=False
+    ),
+    # Labeling with MLCoach
+    dbc.Collapse(
+        children = [dbc.Label('Probability Threshold'),
+                    dcc.Slider(id='probability-threshold',
+                               min=0,
+                               max=100,
+                               value=51,
+                               tooltip={"placement": "top", "always_visible": True},
+                               marks={0: '0', 25: '25', 50: '50', 75: '75', 100: '100'}),
+                    dbc.Row([dbc.Col(dbc.Label('Region to Label')),
+                             dbc.Col(html.P(id='chosen-label'))]),
+                    dbc.Button('Label with Threshold', id='mlcoach-label', outline="True",
+                               color='primary', style={'width': '100%', 'margin-top': '20px'})
+                    ],
+        id="mlcoach-collapse",
+        is_open=False
+    ),
+    # Labeling with Data Clinic
+    dbc.Collapse(
+        children = [dbc.CardHeader("Instructions Data Clinic"),
+        dbc.CardBody(
+            dbc.Label('Please mark the image slice(s) for the selected unsupervised model. \
+            Otherwise, the whole stack will be used.', className='mr-2'))],
+        id="data-clinic-collapse",
+        is_open=False
+    )
+])
+
+
 # REACTIVE COMPONENTS FOR ADDITIONAL OPTIONS : SORT, HIDE, ETC
 additional_options_html = html.Div(
         [
-            dcc.Input(id='add-label-name', placeholder="Input new label name", style={'width': '95%', 'margin-bottom': '10px'}),
-            dbc.Row(dbc.Col(dbc.Button('Add New Label', id='modify-list',
-                               outline="True", color='primary', n_clicks=0, style={'width': '95%', 'margin-bottom': '20px'}))),
             dbc.Row(dbc.Col([
                     dbc.Label('Number of Thumbnail Columns'),
                     dcc.Slider(id='thumbnail-slider', min=1, max=5, value=4,
                                marks = {str(n):str(n) for n in range(5+1)})
             ])),
-                dbc.Row(dbc.Col(dbc.Button('Sort', id='button-sort', outline="True",
-                                           color='primary', style={'width': '95%', 'margin-top': '20px'}))),
-                dbc.Row(html.P('')),
-                dbc.Row(dbc.Col(dbc.Button('Hide', id='button-hide', outline='True',
-                                           color='primary', style={'width': '95%'}))),
-                dbc.Row(html.P('')),
-                dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk',
-                                           outline='True', color='primary', style={'width': '95%'}))),
+            dbc.Row(dbc.Col(dbc.Button('Sort', id='button-sort', outline="True",
+                                       color='primary', style={'width': '100%', 'margin-top': '20px'}))),
+            dbc.Row(html.P('')),
+            dbc.Row(dbc.Col(dbc.Button('Hide', id='button-hide', outline='True',
+                                       color='primary', style={'width': '100%'}))),
+            dbc.Row(html.P('')),
+            dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk',
+                                       outline='True', color='primary', style={'width': '100%'}))),
         ]
 )
-
 
 # files display
 file_paths_table = html.Div(
@@ -260,12 +313,6 @@ display = html.Div(
 )
 
 
-label_html = html.Div(
-    id='label_buttons',
-    children=create_label_component(LABEL_LIST)
-)
-
-
 browser_cache =html.Div(
         id="no-display",
         children=[
@@ -291,14 +338,16 @@ layout = html.Div(
                 dbc.Row(
                     [
                         dbc.Col(display, width=8),
-                        dbc.Col(
-                            dbc.Card(
-                                dbc.CardBody([
-                                    label_html,
-                                    html.Hr(),
-                                    additional_options_html
-                                ]
-                                )), width='auto', align='top'),
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardHeader('Labeling Method'),
+                                dbc.CardBody([label_method])
+                            ]),
+                            dbc.Card([
+                                dbc.CardHeader('Display Settings'),
+                                dbc.CardBody([additional_options_html])
+                            ])
+                        ], width='auto', align='top'),
                     ],
                     justify='center'
                 ),
@@ -323,6 +372,23 @@ def toggle_collapse(n, is_open):
     if n:
         return not is_open
     return is_open
+
+
+@app.callback(
+    Output("manual-collapse", "is_open"),
+    Output("mlcoach-collapse", "is_open"),
+    Output("data-clinic-collapse", "is_open"),
+    Input("button-manual", "n_clicks"),
+    Input("button-mlcoach", "n_clicks"),
+    Input("button-data-clinic", "n_clicks"),
+    State("manual-collapse", "is_open"),
+    State("mlcoach-collapse", "is_open"),
+    State("data-clinic-collapse", "is_open"),
+)
+def toggle_collapse(n_manual, n_mlcoach, n_data_clinic, manual_is_open, ml_coach_is_open, data_clinic_is_open):
+    changed_id = dash.callback_context.triggered[0]['prop_id']
+    return changed_id == 'button-manual.n_clicks', changed_id == 'button-mlcoach.n_clicks', \
+           changed_id == 'button-data-clinic.n_clicks'
 
 
 @app.callback(
@@ -525,12 +591,13 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
     Input('import-format', 'value'),
     Input('docker-file-paths','data'),
     Input('my-toggle-switch', 'value'),
+    Input('mlcoach-collapse', 'is_open'),
 
     State('current-page', 'data'),
     State('import-dir', 'n_clicks')],
     prevent_initial_call=True)
 def update_output(image_order, thumbnail_slider_value, button_prev_page, button_next_page, rows, import_format,
-                  file_paths, docker_path, current_page, import_n_clicks):
+                  file_paths, docker_path, ml_coach_is_open, current_page, import_n_clicks):
     '''
     This callback displays images in the front-end
     Args:
@@ -541,7 +608,8 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         rows:                   Rows of the selected file paths from path table
         import_format:          File format for import
         file_paths:             Absolute file paths selected from path table
-        docker_path:            Showing file path in Docker environment 
+        docker_path:            Showing file path in Docker environment
+        ml_coach_is_open:       MLCoach is the labeling method
         current_page:           Index of the current page
         import_n_clicks:        Button for importing the selected paths
     Returns:
@@ -593,9 +661,11 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
                 if docker_path:
                     new_filenames.append(list_filename[image_order[i]])
                 else:
-                    new_filenames.append(docker_to_local_path(list_filename[image_order[i]], DOCKER_HOME, LOCAL_HOME, 'str'))
+                    new_filenames.append(docker_to_local_path(list_filename[image_order[i]], DOCKER_HOME,
+                                                              LOCAL_HOME, 'str'))
                 
-            children = draw_rows(new_contents, new_filenames, thumbnail_slider_value, NUMBER_OF_ROWS)
+            children = draw_rows(new_contents, new_filenames, thumbnail_slider_value, NUMBER_OF_ROWS,
+                                 ml_coach_is_open, PROB_FILE)
 
     return children, current_page==0, math.ceil((num_imgs//thumbnail_slider_value)/NUMBER_OF_ROWS)<=current_page+1, \
            current_page
@@ -666,19 +736,23 @@ def deselect(label_button_trigger, unlabel_n_clicks, thumb_clicked):
 @app.callback(
     Output('labels', 'data'),
     Output('docker-labels-name', 'data'),
+    Output('chosen-label', 'children'),
     Input('del-label', 'data'),
     Input({'type': 'label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input('un-label', 'n_clicks'),
+    Input('mlcoach-label', 'n_clicks'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'id'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
     State('labels', 'data'),
     State('docker-labels-name', 'data'),
+    State('probability-threshold', 'value'),
+    State('label-list', 'data'),
     prevent_initial_call=True
 )
-def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
+def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, mlcoach_label_button,
                               thumbnail_image_index, thumbnail_image_select_value, 
-                              thumbnail_name_children, current_labels, current_labels_name):
+                              thumbnail_name_children, current_labels, current_labels_name, threshold, label_list):
     '''
     This callback updates the dictionary of labeled images when:
         - A new image is labeled
@@ -688,11 +762,14 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
         del_label:                      Delete label button
         label_button_n_clicks:          Label button
         unlabel_button:                 Un-label button
+        mlcoach_label_button:           Button to label with mlcoach results
         thumbnail_image_index:          Index of the thumbnail image
         thumbnail_image_select_value:   Selected thumbnail image (n_clicks)
         thumbnail_name_children:        Filename of the selected thumbnail image
         current_labels:                 Dictionary of labeled images, as follows: {label: list of image indexes}
         current_labels_name:            Dictionary of labeled images, as follows: {label: list of image filenames}
+        threshold:                      Threshold value
+        label_list:                     List of label names (tag name)
     Returns:
         labels_data:                    Dictionary of labeled images, as follows: {label: list of image indexes}
         labels_name_data:               Dictionary of labeled images, as follows: {label: list of image filenames}
@@ -711,7 +788,7 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
                 del current_labels[label]
                 del current_labels_name[label]
         
-        return current_labels, current_labels_name
+        return current_labels, current_labels_name, None
 
     label_class_value = max(enumerate(label_button_n_clicks), key=lambda t: 0 if t[1] is None else t[1] )[0]
     selected_thumbs = []
@@ -721,14 +798,22 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
         current_labels[str(label_class_value)] = []
         current_labels_name[str(label_class_value)] = []
 
-    for thumb_id, select_value, filename in zip(thumbnail_image_index, thumbnail_image_select_value,
-                                                thumbnail_name_children):
-        index = thumb_id['index']
-        if select_value is not None:
-            # add selected thumbs to the label key corresponding to last pressed button
-            if select_value % 2 == 1:
-                selected_thumbs.append(index)
-                selected_thumbs_filename.append(filename)
+    if changed_id == 'mlcoach-label.n_clicks':
+        filenames = PROB_FILE['filename'][PROB_FILE.iloc[:,label_class_value+1]>threshold/100].tolist()
+        for indx, filename in enumerate(filenames):
+            selected_thumbs.append(indx)
+            # warning
+            # the next line is needed bc the filenames in mlcoach do not match (that 'born/' should not be there)
+            selected_thumbs_filename.append(LOCAL_HOME+'born/'+filename)   # the filename in mlcoach needs to match this
+    else:
+        for thumb_id, select_value, filename in zip(thumbnail_image_index, thumbnail_image_select_value,
+                                                    thumbnail_name_children):
+            index = thumb_id['index']
+            if select_value is not None:
+                # add selected thumbs to the label key corresponding to last pressed button
+                if select_value % 2 == 1:
+                    selected_thumbs.append(index)
+                    selected_thumbs_filename.append(filename)
 
     selected_thumbs_filename = local_to_docker_path(selected_thumbs_filename, DOCKER_HOME, LOCAL_HOME, 'list')
 
@@ -746,7 +831,7 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
         current_labels[str(label_class_value)].extend(selected_thumbs)
         current_labels_name[str(label_class_value)].extend(selected_thumbs_filename)
 
-    return current_labels, current_labels_name
+    return current_labels, current_labels_name, label_list[label_class_value]
 
 
 @app.callback(
@@ -755,6 +840,9 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
      Output('label-list', 'data'),
      Output('del-label', 'data')],
 
+    Input("button-manual", "n_clicks"),
+    Input("button-mlcoach", "n_clicks"),
+    Input("button-data-clinic", "n_clicks"),
     Input('modify-list', 'n_clicks'),
     Input({'type': 'delete-label-button', 'index': ALL}, 'n_clicks'),
 
@@ -764,11 +852,15 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
     State('labels', 'data'),
     prevent_initial_call=True
 )
-def update_list(n_clicks, n_clicks2, add_label_name, label_list, labels_name_data, labels):
+def update_list(manual_n_clicks, mlcoach_n_clicks, data_clinic_n_clicks, n_clicks, n_clicks2, add_label_name,
+                label_list, labels_name_data, labels):
     '''
     This callback updates the list of labels. In the case a label is deleted, the index of this label is saved in
     cache so that the list of assigned labels can be updated in the next callback
     Args:
+        manual_n_clicks
+        mlcoach_n_clicks
+        data_clinic_n_clicks
         n_clicks:               Button to add a new label (tag name)
         n_clicks2:              Delete the associated label (tag name)
         add_label_name:         Label to add (tag name)
@@ -782,6 +874,14 @@ def update_list(n_clicks, n_clicks2, add_label_name, label_list, labels_name_dat
         del_label:              Index of the deleted label
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+    indx = -1
+    if 'button-manual.n_clicks' in changed_id:
+        return [create_label_component(label_list, del_button=True), 0, label_list, indx]
+    if 'button-mlcoach.n_clicks' in changed_id:
+        label_list = list(PROB_FILE.columns[1:])
+        return [create_label_component(label_list, del_button=False), 0, label_list, indx]
+    if 'button-data-clinic.n_clicks' in changed_id:
+        return [create_label_component(label_list, del_button=False), 0, label_list, indx]
     add_clicks = n_clicks
     if 'delete-label-button' in changed_id and any(n_clicks2):
         rem = changed_id[changed_id.find('index')+7:]
@@ -792,8 +892,7 @@ def update_list(n_clicks, n_clicks2, add_label_name, label_list, labels_name_dat
             print(e)
     if add_clicks > 0:
         label_list.append(add_label_name)
-        indx = -1
-    return [create_label_component(label_list), 0, label_list, indx]
+    return [create_label_component(label_list, del_button=True), 0, label_list, indx]
 
 
 @app.callback(
