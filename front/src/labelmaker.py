@@ -50,13 +50,13 @@ du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 
 # REACTIVE COMPONENTS FOR LABELING METHOD
 label_method = html.Div([
-    dbc.Row([dbc.Col(dbc.Button('Manual', id='button-manual',
-                               outline='True', color='primary', style={'width': '100%'})),
+    html.Div([dbc.Col(dbc.Button('Manual', id='button-manual',
+                               outline='True', color='primary', size="sm", style={'width': '96%'})),
              dbc.Col(dbc.Button('MLCoach', id='button-mlcoach',
-                               outline='True', color='primary', style={'width': '100%'})),
-             dbc.Col(dbc.Button('Data Clinic', id='button-data-clinic',
-                               outline='True', color='primary', style={'width': '100%', 'margin-bottom': '20px'}))
-             ], className="g-0"),
+                               outline='True', color='primary', size="sm", style={'width': '96%'})),
+             dbc.Col(dbc.Button('DataClinic', id='button-data-clinic',
+                               outline='True', color='primary', size="sm", style={'width': '96%'}))
+             ], style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'margin-bottom': '20px'}),
     html.Div(id='label_buttons', style={'margin-bottom': '0.5rem'}),
     # Labeling manually
     dbc.Collapse(
@@ -67,10 +67,11 @@ label_method = html.Div([
                                                id='modify-list',
                                                outline="True",
                                                color='primary',
+                                               size="sm",
                                                n_clicks=0,
                                                style={'width': '100%'})))],
         id="manual-collapse",
-        is_open=False
+        is_open=True
     ),
     # Labeling with MLCoach
     dbc.Collapse(
@@ -84,7 +85,7 @@ label_method = html.Div([
                     dbc.Row([dbc.Col(dbc.Label('Region to Label')),
                              dbc.Col(html.P(id='chosen-label'))]),
                     dbc.Button('Label with Threshold', id='mlcoach-label', outline="True",
-                               color='primary', style={'width': '100%', 'margin-top': '20px'})
+                               color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'})
                     ],
         id="mlcoach-collapse",
         is_open=False
@@ -110,13 +111,13 @@ additional_options_html = html.Div(
                                marks = {str(n):str(n) for n in range(5+1)})
             ])),
             dbc.Row(dbc.Col(dbc.Button('Sort', id='button-sort', outline="True",
-                                       color='primary', style={'width': '100%', 'margin-top': '20px'}))),
+                                       color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'}))),
             dbc.Row(html.P('')),
             dbc.Row(dbc.Col(dbc.Button('Hide', id='button-hide', outline='True',
-                                       color='primary', style={'width': '100%'}))),
+                                       color='primary', size="sm", style={'width': '100%'}))),
             dbc.Row(html.P('')),
             dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk',
-                                       outline='True', color='primary', style={'width': '100%'}))),
+                                       outline='True', color='primary', size="sm", style={'width': '100%'}))),
         ]
 )
 
@@ -347,7 +348,7 @@ layout = html.Div(
                                 dbc.CardHeader('Display Settings'),
                                 dbc.CardBody([additional_options_html])
                             ])
-                        ], width='auto', align='top'),
+                        ], width=3),
                     ],
                     justify='center'
                 ),
@@ -415,7 +416,7 @@ def upload_zip(iscompleted, upload_filename, upload_id):
 
     if upload_filename is not None:
         path_to_zip_file = pathlib.Path(UPLOAD_FOLDER_ROOT) / upload_filename[0]
-        if upload_filename[0].split('.')[-1] == 'zip':   # unzip files and delete zip file
+        if upload_filename[0].split('.')[-1] == 'zip':
             zip_ref = zipfile.ZipFile(path_to_zip_file)  # create zipfile object
             path_to_folder = pathlib.Path(UPLOAD_FOLDER_ROOT) / upload_filename[0].split('.')[-2]
             if (upload_filename[0].split('.')[-2] + '/') in zip_ref.namelist():
@@ -750,8 +751,8 @@ def deselect(label_button_trigger, unlabel_n_clicks, thumb_clicked):
     State('label-list', 'data'),
     prevent_initial_call=True
 )
-def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, mlcoach_label_button,
-                              thumbnail_image_index, thumbnail_image_select_value, 
+def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
+                              mlcoach_label_button, thumbnail_image_index, thumbnail_image_select_value, 
                               thumbnail_name_children, current_labels, current_labels_name, threshold, label_list):
     '''
     This callback updates the dictionary of labeled images when:
@@ -804,7 +805,9 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
             selected_thumbs.append(indx)
             # warning
             # the next line is needed bc the filenames in mlcoach do not match (that 'born/' should not be there)
-            selected_thumbs_filename.append(LOCAL_HOME+'born/'+filename)   # the filename in mlcoach needs to match this
+            print(f'local home {LOCAL_HOME}')
+            print(f'filename {filename}')
+            selected_thumbs_filename.append(LOCAL_HOME+'test/'+filename)   # the filename in mlcoach needs to match this
     else:
         for thumb_id, select_value, filename in zip(thumbnail_image_index, thumbnail_image_select_value,
                                                     thumbnail_name_children):
@@ -830,7 +833,7 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
     if dash.callback_context.triggered[0]['prop_id'] != 'un-label.n_clicks':
         current_labels[str(label_class_value)].extend(selected_thumbs)
         current_labels_name[str(label_class_value)].extend(selected_thumbs_filename)
-
+    
     return current_labels, current_labels_name, label_list[label_class_value]
 
 
@@ -876,12 +879,16 @@ def update_list(manual_n_clicks, mlcoach_n_clicks, data_clinic_n_clicks, n_click
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     indx = -1
     if 'button-manual.n_clicks' in changed_id:
+        label_list = LABEL_LIST
         return [create_label_component(label_list, del_button=True), 0, label_list, indx]
+    
     if 'button-mlcoach.n_clicks' in changed_id:
         label_list = list(PROB_FILE.columns[1:])
         return [create_label_component(label_list, del_button=False), 0, label_list, indx]
+    
     if 'button-data-clinic.n_clicks' in changed_id:
         return [create_label_component(label_list, del_button=False), 0, label_list, indx]
+    
     add_clicks = n_clicks
     if 'delete-label-button' in changed_id and any(n_clicks2):
         rem = changed_id[changed_id.find('index')+7:]
@@ -892,6 +899,7 @@ def update_list(manual_n_clicks, mlcoach_n_clicks, data_clinic_n_clicks, n_click
             print(e)
     if add_clicks > 0:
         label_list.append(add_label_name)
+    
     return [create_label_component(label_list, del_button=True), 0, label_list, indx]
 
 

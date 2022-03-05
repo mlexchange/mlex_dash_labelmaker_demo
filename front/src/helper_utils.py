@@ -36,6 +36,7 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del
                     dbc.Col(
                         dbc.Button(label,
                                    id={'type': 'label-button', 'index': i},
+                                   size="sm",
                                    style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
                                           'color':'white', 'width': '100%', 'margin-bottom': '5px'}
                                    ),
@@ -44,6 +45,7 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del
                     dbc.Col(
                         dbc.Button('\u2716',
                                    id={'type': 'delete-label-button', 'index': i},
+                                   size="sm",
                                    style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
                                           'color':'white', 'width': '100%', 'margin-bottom': '5px'}),
                         width=4
@@ -57,6 +59,7 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del
                 dbc.Col(
                     dbc.Button(label,
                                id={'type': 'label-button', 'index': i},
+                               size="sm",
                                style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
                                       'color': 'white', 'width': '100%', 'margin-bottom': '5px'}
                                )
@@ -64,13 +67,14 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del
             )
             comp_list.append(comp_row)
     comp_list.append(
-        dbc.Row(
+        dbc.Row([
             dbc.Col(
-                dbc.Button('Un-label',
+                dbc.Button('Unlabel the Selected',
                            id='un-label',
+                           size="sm",
                            style={'color':'white', 'width': '100%', 'margin-bottom': '10px', 'margin-top': '10px'})
             )
-        )
+        ])
     )
     return comp_list
 
@@ -88,7 +92,7 @@ def parse_contents(contents, filename, index, probs=None):
     '''
     text=''
     if probs:
-        text = 'Label \t Probability\n' + '=======================' + probs
+        text = 'Label \t Probability\n' + '--------\n' + probs
     # ====== label results =======
     img_card = html.Div(
         dbc.Card(
