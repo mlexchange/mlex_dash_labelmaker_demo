@@ -72,8 +72,14 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del
                 dbc.Button('Unlabel the Selected',
                            id='un-label',
                            size="sm",
-                           style={'color':'white', 'width': '100%', 'margin-bottom': '10px', 'margin-top': '10px'})
-            )
+                           style={'color':'white', 'width': '100%', 'margin-bottom': '0px', 'margin-top': '10px'})
+            ),
+            dbc.Col(
+                dbc.Button('Unlabel All',
+                           id='un-label-all',
+                           size="sm",
+                           style={'color':'white', 'width': '100%', 'margin-bottom': '10px', 'margin-top': '5px'})
+           )
         ])
     )
     return comp_list
@@ -116,14 +122,44 @@ def parse_contents(contents, filename, index, probs=None):
     return img_card
 
 
-def draw_rows(list_of_contents, list_of_names, n_cols, n_rows, show_prob=False, file=None):
+def parse_contents_data_clinic(contents, filename, index):
+    '''
+    This function creates the reactive components to display 1 image with it's thumbnail card
+    Args:
+        contents:   Image contents
+        filename:   Filename
+        index:      Index of the reactive component
+    Returns:
+        reactive_component
+    '''
+    img_card = html.Div(
+        dbc.Card(
+            id={'type': 'thumbnail-data-clinic', 'index': index},
+            children=[
+                html.A(id={'type': 'thumbnail-image-data-clinic', 'index': index},
+                       children=dbc.CardImg(id={'type': 'thumbnail-src-data-clinic', 'index': index},
+                                            src=contents,
+                                            bottom=False)),
+                dbc.CardBody([
+                    html.P(id={'type':'thumbnail-name-data-clinic', 'index': index}, children=filename, style={'font-size': '12px'}),
+                ])
+            ],
+            outline=False,
+            color='white'
+        ),
+        id={'type': 'thumbnail-wrapper-data-clinic', 'index': index},
+        style={'display': 'block'}
+    )
+    return img_card
+
+def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, file=None, data_clinic=False):
     '''
     This function display the images per page
     Args:
         list_of_contents:   List of contents
         list_of_names:      List of filenames
-        n_cols:             Number of columns
         n_rows:             Number of rows
+        n_cols:             Number of columns
         show_prob:          Bool, show probabilities
         file:               table of filenames and probabilities
     Returns:
@@ -147,18 +183,30 @@ def draw_rows(list_of_contents, list_of_names, n_cols, n_rows, show_prob=False, 
             name = list_of_names[index]
             if show_prob:
                 # warning
-                filename = name.split(os.sep)     # this section is needed bc the filenames in mlcoach do not match
-                filename = '/'.join(filename[-2:])
+                # this section is needed bc the filenames in mlcoach do not match
+                filename = '/'.join(name.split(os.sep)[-2:])
                 if filename in filenames:
                     probs = str(file.loc[file['filename']==filename].T.iloc[1:].to_string(header=None))
-            row_child.append(dbc.Col(parse_contents(content,
-                                                    name,
-                                                    j * n_cols + i,
-                                                    probs),
-                                     width="{}".format(12 // n_cols),
-                                     )
-                             )
+            if data_clinic:
+                row_child.append(dbc.Col(parse_contents_data_clinic(content,
+                                                                    name,
+                                                                    j * n_cols + i),
+                                                     width="{}".format(12 // n_cols),
+                                         )
+                                 )
+            else:
+                row_child.append(dbc.Col(parse_contents(content,
+                                                        name,
+                                                        j * n_cols + i,
+                                                        probs),
+                                         width="{}".format(12 // n_cols),
+                                         )
+                                 )
             visible.append(1)
+        
+        if data_clinic:
+            row_child.insert(0,dbc.Input(placeholder="Input Label for this row", className="mb-3"))
+            
         children.append(dbc.Row(row_child))
     return children
 
