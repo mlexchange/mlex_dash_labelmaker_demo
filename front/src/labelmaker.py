@@ -1,5 +1,6 @@
 import os, io
 import shutil, pathlib, base64, math, copy, zipfile
+import numpy as np
 
 import dash
 from dash import dcc, html, dash_table
@@ -42,7 +43,10 @@ LOCAL_DATA = str(os.environ['DATA_DIR'])
 DOCKER_HOME = str(DOCKER_DATA) + '/'
 LOCAL_HOME = str(LOCAL_DATA)
 
-PROB_FILE = pd.read_csv('data/results.csv')
+df_prob = pd.read_csv('data/results.csv')
+df_clinic = pd.read_csv('data/dist_matrix.csv')
+
+print(f'data clinic file {df_clinic}')
 
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
@@ -93,9 +97,13 @@ label_method = html.Div([
     # Labeling with Data Clinic
     dbc.Collapse(
         children = [dbc.CardHeader("Instructions Data Clinic"),
-        dbc.CardBody(
-            dbc.Label('Please mark the image slice(s) for the selected unsupervised model. \
-            Otherwise, the whole stack will be used.', className='mr-2'))],
+                    dbc.CardBody([
+                        dbc.Label('Please mark the image slice(s) for the selected unsupervised model and click the button below. \
+                                   Otherwise, the whole stack will be used.', className='mr-2'),
+                        dbc.Button('Find most similar images', id='find-similar-unsupervised', outline="True",
+                               color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'})
+                    ]),
+        ],
         id="data-clinic-collapse",
         is_open=False
     )
@@ -151,51 +159,28 @@ data_access = html.Div([
     dbc.Card([
         dbc.CardBody(id='data-body',
                       children=[
-                          dbc.Label('Upload a new file or folder (zip) to work dir:', className='mr-2'),
-                          html.Div([html.Div([ du.Upload(
-                                                    id="dash-uploader",
-                                                    max_file_size=1800,  # 1800 Mb
-                                                    cancel_button=True,
-                                                    pause_button=True)],
-                                                style={  # wrapper div style
-                                                    'textAlign': 'center',
-                                                    'width': '300px',
-                                                    'padding': '5px',
-                                                    'display': 'inline-block',
-                                                    'margin-bottom': '30px',
-                                                    'margin-right': '20px'}),
-                                    html.Div([
-                                        dbc.Col([
-                                            dbc.Label("Dataset is by default uploaded to '{}'. \
-                                                       You can move the selected files or dirs (from File Table) \
-                                                       into a new dir.".format(UPLOAD_FOLDER_ROOT), className='mr-5'),
-                                            dbc.Label("Home data dir (HOME) is '{}'.".format(DOCKER_DATA), className='mr-5'),
-                                            html.Div([
-                                                dbc.Label('Move data into dir:'.format(DOCKER_DATA), className='mr-5'),
-                                                dcc.Input(id='dest-dir-name', placeholder="Input relative path to HOME", 
-                                                                style={'width': '40%', 'margin-bottom': '10px'}),
-                                                dbc.Button("Move",
-                                                     id="move-dir",
-                                                     className="ms-auto",
-                                                     color="secondary",
-                                                     outline=True,
-                                                     n_clicks=0,
-                                                     #disabled = True,
-                                                     style={'width': '22%', 'margin': '5px'}),
-                                            ],
-                                            style = {'width': '100%', 'display': 'flex', 'align-items': 'center'},
-                                            )
-                                        ])
-                                    ])
-                                    ],
-                            style = {'width': '100%', 'display': 'flex', 'align-items': 'center'}
+                          dbc.Label('1. Upload a new file or a zipped folder:', className='mr-2'),
+                          html.Div([ du.Upload(
+                                            id="dash-uploader",
+                                            max_file_size=1800,  # 1800 Mb
+                                            cancel_button=True,
+                                            pause_button=True
+                                    )],
+                                    style={  # wrapper div style
+                                        'textAlign': 'center',
+                                        'width': '770px',
+                                        'padding': '5px',
+                                        'display': 'inline-block',
+                                        'margin-bottom': '10px',
+                                        'margin-right': '20px'},
                           ),
-                          dbc.Label('Choose files/directories:', className='mr-2'),
+                          dbc.Label('2. Choose files/directories:', className='mr-2'),
                           html.Div(
                                   [dbc.Button("Browse",
                                              id="browse-dir",
                                              className="ms-auto",
                                              color="secondary",
+                                             size='sm',
                                              outline=True,
                                              n_clicks=0,
                                              style={'width': '15%', 'margin': '5px'}),
@@ -219,6 +204,7 @@ data_access = html.Div([
                                              id="delete-files",
                                              className="ms-auto",
                                              color="danger",
+                                             size='sm',
                                              outline=True,
                                              n_clicks=0,
                                              style={'width': '22%', 'margin-right': '10px'}
@@ -242,6 +228,7 @@ data_access = html.Div([
                                              id="import-dir",
                                              className="ms-auto",
                                              color="secondary",
+                                             size='sm',
                                              outline=True,
                                              n_clicks=0,
                                              style={'width': '22%', 'margin': '5px'}
@@ -262,9 +249,47 @@ data_access = html.Div([
                                             style={"width": "15%"}
                                     ),
                                  ],
-                                style = {'width': '100%', 'display': 'flex', 'align-items': 'center'},
+                                style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'margin-bottom': '10px'},
                                 ),
-                         html.Div([ html.Div([dbc.Label('Show Local/Docker Path')], style = {'margin-right': '10px'}),
+                        dbc.Label('3. (Optional) Move a file or folder into a new directory:', className='mr-2'),
+                        dbc.Button(
+                            "Open File Mover",
+                            id="file-mover-button",
+                            size="sm",
+                            className="mb-3",
+                            color="secondary",
+                            outline=True,
+                            n_clicks=0,
+                        ),
+                        dbc.Collapse(
+                            html.Div([
+                                dbc.Col([
+                                      dbc.Label("Home data directory (Docker HOME) is '{}'.\
+                                                 Dataset is by default uploaded to '{}'. \
+                                                 You can move the selected files or directories (from File Table) \
+                                                 into a new directory.".format(DOCKER_DATA, UPLOAD_FOLDER_ROOT), className='mr-5'),
+                                      html.Div([
+                                          dbc.Label('Move data into directory:', className='mr-5'),
+                                          dcc.Input(id='dest-dir-name', placeholder="Input relative path to Docker HOME", 
+                                                        style={'width': '40%', 'margin-bottom': '10px'}),
+                                          dbc.Button("Move",
+                                               id="move-dir",
+                                               className="ms-auto",
+                                               color="secondary",
+                                               size='sm',
+                                               outline=True,
+                                               n_clicks=0,
+                                               #disabled = True,
+                                               style={'width': '22%', 'margin': '5px'}),
+                                      ],
+                                      style = {'width': '100%', 'display': 'flex', 'align-items': 'center'},
+                                      )
+                                  ])
+                             ]),
+                            id="file-mover-collapse",
+                            is_open=False,
+                        ),
+                        html.Div([ html.Div([dbc.Label('4. Show Local/Docker Path')], style = {'margin-right': '10px'}),
                                     daq.ToggleSwitch(
                                         id='my-toggle-switch',
                                         value=False
@@ -298,6 +323,28 @@ file_explorer = html.Div(
         ),
     ]
 )
+
+
+data_clinic_display = dbc.Modal(
+    [
+        dbc.ModalHeader(dbc.ModalTitle("Top similar images")),
+        dbc.ModalBody([html.Div(id='output-image-find')]),
+        dbc.ModalFooter([
+            dbc.Button(
+                "Exit", id="exit-window", color='danger', outline=False, 
+                className="ms-auto", n_clicks=0),
+        ],
+        style={'display': 'flex', 'margin-right': '1000px'}
+        ),
+    ],
+    id="modal-window",
+    size="xl",
+    scrollable=True,
+    centered=True,
+    is_open=False,
+   # style = {'color': 'red'}
+)
+
 
 
 # DISPLAY DATASET
@@ -338,6 +385,7 @@ layout = html.Div(
             [
                 dbc.Row(
                     [
+                        data_clinic_display,
                         dbc.Col(display, width=8),
                         dbc.Col([
                             dbc.Card([
@@ -363,7 +411,6 @@ layout = html.Div(
 app.layout = layout
 
 #================================== callback functions ===================================
-
 @app.callback(
     Output("collapse", "is_open"),
     Input("collapse-button", "n_clicks"),
@@ -371,6 +418,40 @@ app.layout = layout
 )
 def toggle_collapse(n, is_open):
     if n:
+        return not is_open
+    return is_open
+
+@app.callback(
+    Output("file-mover-collapse", "is_open"),
+    Input("file-mover-button", "n_clicks"),
+    State("file-mover-collapse", "is_open")
+)
+def file_mover_collapse(n, is_open):
+    if n:
+        return not is_open
+    return is_open
+
+@app.callback(
+    Output("modal", "is_open"),
+    Input("delete-files", "n_clicks"),
+    Input("confirm-delete", "n_clicks"),  
+    State("modal", "is_open")
+)
+def toggle_modal(n1, n2, is_open):
+    if n1 or n2:
+        return not is_open
+    return is_open
+
+
+@app.callback(
+    Output("modal-window", "is_open"),
+    Input("find-similar-unsupervised", "n_clicks"),
+    Input("exit-window", "n_clicks"), 
+    Input('docker-file-paths','data'), 
+    State("modal-window", "is_open")
+)
+def data_clinic_window(n1, n2, docker_file_paths, is_open):
+    if n1 or n2:
         return not is_open
     return is_open
 
@@ -390,18 +471,6 @@ def toggle_collapse(n_manual, n_mlcoach, n_data_clinic, manual_is_open, ml_coach
     changed_id = dash.callback_context.triggered[0]['prop_id']
     return changed_id == 'button-manual.n_clicks', changed_id == 'button-mlcoach.n_clicks', \
            changed_id == 'button-data-clinic.n_clicks'
-
-
-@app.callback(
-    Output("modal", "is_open"),
-    Input("delete-files", "n_clicks"),
-    Input("confirm-delete", "n_clicks"),  
-    State("modal", "is_open")
-)
-def toggle_modal(n1, n2, is_open):
-    if n1 or n2:
-        return not is_open
-    return is_open
 
 
 @app.callback(
@@ -578,6 +647,54 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
     return image_order
 
 
+@app.callback(
+    Output('output-image-find', 'children'),
+    Input('find-similar-unsupervised', 'n_clicks'),
+    Input('my-toggle-switch', 'value'),
+    State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
+    State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
+    prevent_initial_call=True
+)
+def update_pop_window(find_similar_images, docker_path, thumb_clicked, thumbnail_name_children):
+    clicked_indice = [i for i, e in enumerate(thumb_clicked) if e != 0]
+    filenames = []
+    new_filenames = []
+    display_filenames = []
+    contents = []
+    children = []
+    print(f'clicked indice {clicked_indice}')
+    if bool(clicked_indice):
+        for index in clicked_indice:
+            index = int(index)
+            if docker_path:
+                filenames.append(thumbnail_name_children[index])
+            else:
+                filenames.append(local_to_docker_path(thumbnail_name_children[index], DOCKER_HOME, LOCAL_HOME, type='str'))
+
+        CLINIC_PATH = '/'.join(local_to_docker_path(thumbnail_name_children[0], DOCKER_HOME, LOCAL_HOME, type='str').split('/')[:-2])
+        TOP_N = 6
+        for name in filenames:
+            filename = '/'.join(name.split(os.sep)[-2:])
+            row_dataframe = df_clinic.iloc[df_clinic.set_index('filename').index.get_loc(filename)]
+            row_filenames = df_clinic.iloc[np.argsort(row_dataframe.values[1:])[:TOP_N]]['filename'].tolist()
+            for row_filename in row_filenames:
+                row_filename = CLINIC_PATH + '/' + row_filename
+                new_filenames.append(row_filename)
+                with open(row_filename, "rb") as file:
+                    img = base64.b64encode(file.read())
+                    file_ext = row_filename.split('.')[-1]
+                    contents.append('data:image/'+file_ext+';base64,'+img.decode("utf-8"))
+                    
+                if docker_path:
+                    display_filenames.append(row_filename)
+                else:
+                    display_filenames.append(docker_to_local_path(row_filename, DOCKER_HOME, LOCAL_HOME, type='str'))
+    
+        children = draw_rows(contents, display_filenames, len(filenames), TOP_N, data_clinic=True)
+    
+    return children
+
+
 @app.callback([
     Output('output-image-upload', 'children'),
     Output('prev-page', 'disabled'),
@@ -593,12 +710,13 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
     Input('docker-file-paths','data'),
     Input('my-toggle-switch', 'value'),
     Input('mlcoach-collapse', 'is_open'),
+    Input('find-similar-unsupervised', 'n_clicks'),
 
     State('current-page', 'data'),
     State('import-dir', 'n_clicks')],
     prevent_initial_call=True)
 def update_output(image_order, thumbnail_slider_value, button_prev_page, button_next_page, rows, import_format,
-                  file_paths, docker_path, ml_coach_is_open, current_page, import_n_clicks):
+                  file_paths, docker_path, ml_coach_is_open, find_similar_images, current_page, import_n_clicks):
     '''
     This callback displays images in the front-end
     Args:
@@ -637,6 +755,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         current_page = current_page + 1
 
     children = []
+    children_data_clinic = []
     num_imgs = 0
     if import_n_clicks and bool(rows):
         list_filename = []
@@ -666,13 +785,16 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
                                                               LOCAL_HOME, 'str'))
                 
             children = draw_rows(new_contents, new_filenames, thumbnail_slider_value, NUMBER_OF_ROWS,
-                                 ml_coach_is_open, PROB_FILE)
+                                                 ml_coach_is_open, df_prob)
+            
+            #if changed_id == 'find-similar-unsupervised.n-clicks':
+            children_data_clinic = draw_rows(new_contents, new_filenames, thumbnail_slider_value, NUMBER_OF_ROWS, data_clinic=True)
+            
 
     return children, current_page==0, math.ceil((num_imgs//thumbnail_slider_value)/NUMBER_OF_ROWS)<=current_page+1, \
            current_page
 
 
-##### clean later
 @app.callback(
     Output({'type': 'thumbnail-card', 'index': MATCH}, 'color'),
     Input({'type': 'thumbnail-image', 'index': MATCH}, 'n_clicks'),
@@ -730,6 +852,7 @@ def deselect(label_button_trigger, unlabel_n_clicks, thumb_clicked):
     Returns:
         Modify the number of clicks for a specific thumbnail card
     '''
+    print(f'thumbnail trigger {label_button_trigger}')
     return [0 for thumb in thumb_clicked]
 
 
@@ -741,6 +864,7 @@ def deselect(label_button_trigger, unlabel_n_clicks, thumb_clicked):
     Input('del-label', 'data'),
     Input({'type': 'label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input('un-label', 'n_clicks'),
+    Input('un-label-all', 'n_clicks'),
     Input('mlcoach-label', 'n_clicks'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'id'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
@@ -751,7 +875,7 @@ def deselect(label_button_trigger, unlabel_n_clicks, thumb_clicked):
     State('label-list', 'data'),
     prevent_initial_call=True
 )
-def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
+def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, unlabel_all_button,
                               mlcoach_label_button, thumbnail_image_index, thumbnail_image_select_value, 
                               thumbnail_name_children, current_labels, current_labels_name, threshold, label_list):
     '''
@@ -775,6 +899,7 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
         labels_data:                    Dictionary of labeled images, as follows: {label: list of image indexes}
         labels_name_data:               Dictionary of labeled images, as follows: {label: list of image filenames}
     '''
+    print(f'thumbnail value {thumbnail_image_select_value}')
     changed_id = dash.callback_context.triggered[-1]['prop_id']
     # if the list of labels is modified
     if changed_id == 'del-label.data' and del_label>-1:
@@ -800,14 +925,13 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
         current_labels_name[str(label_class_value)] = []
 
     if changed_id == 'mlcoach-label.n_clicks':
-        filenames = PROB_FILE['filename'][PROB_FILE.iloc[:,label_class_value+1]>threshold/100].tolist()
+        filenames = df_prob['filename'][df_prob.iloc[:,label_class_value+1]>threshold/100].tolist()
+        MLCOACH_PATH = '/'.join(docker_to_local_path(thumbnail_name_children[0], DOCKER_HOME, LOCAL_HOME, type='str').split('/')[:-2])
         for indx, filename in enumerate(filenames):
             selected_thumbs.append(indx)
             # warning
-            # the next line is needed bc the filenames in mlcoach do not match (that 'born/' should not be there)
-            print(f'local home {LOCAL_HOME}')
-            print(f'filename {filename}')
-            selected_thumbs_filename.append(LOCAL_HOME+'test/'+filename)   # the filename in mlcoach needs to match this
+            # the next line is needed bc the filenames in mlcoach do not match (only good for selecting single folder/subfolder )
+            selected_thumbs_filename.append(MLCOACH_PATH+'/'+filename)
     else:
         for thumb_id, select_value, filename in zip(thumbnail_image_index, thumbnail_image_select_value,
                                                     thumbnail_name_children):
@@ -820,7 +944,7 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
 
     selected_thumbs_filename = local_to_docker_path(selected_thumbs_filename, DOCKER_HOME, LOCAL_HOME, 'list')
 
-    # remove de-selected (de-color) thumb cards
+    # remove de-selected (de-color) thumb cards (other labels)
     other_labels = {key: value[:] for key, value in current_labels.items() if key != label_class_value}
     other_labels_name = {key: value[:] for key, value in current_labels_name.items() if key != label_class_value}
     for thumb_index, thumb_name in zip(selected_thumbs, selected_thumbs_filename):
@@ -833,6 +957,11 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button,
     if dash.callback_context.triggered[0]['prop_id'] != 'un-label.n_clicks':
         current_labels[str(label_class_value)].extend(selected_thumbs)
         current_labels_name[str(label_class_value)].extend(selected_thumbs_filename)
+        
+    if dash.callback_context.triggered[0]['prop_id'] == 'un-label-all.n_clicks':
+        current_labels = {}
+        current_labels_name = {}
+        return current_labels, current_labels_name, []
     
     return current_labels, current_labels_name, label_list[label_class_value]
 
@@ -883,7 +1012,7 @@ def update_list(manual_n_clicks, mlcoach_n_clicks, data_clinic_n_clicks, n_click
         return [create_label_component(label_list, del_button=True), 0, label_list, indx]
     
     if 'button-mlcoach.n_clicks' in changed_id:
-        label_list = list(PROB_FILE.columns[1:])
+        label_list = list(df_prob.columns[1:])
         return [create_label_component(label_list, del_button=False), 0, label_list, indx]
     
     if 'button-data-clinic.n_clicks' in changed_id:
