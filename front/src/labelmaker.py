@@ -80,6 +80,7 @@ label_method = html.Div([
         className="radio-group",
         style ={'font-size': '0.5px','margin-bottom': '20px'},
     ),
+    # manual tab is default button group
     html.Div(id='label_buttons', children=create_label_component(LABEL_LIST, del_button=True), style={'margin-bottom': '0.5rem'}),
     # Labeling manually
     dbc.Collapse(
@@ -451,6 +452,19 @@ def file_mover_collapse(n, is_open):
     return is_open
 
 @app.callback(
+    Output("manual-collapse", "is_open"),
+    Output("mlcoach-collapse", "is_open"),
+    Output("data-clinic-collapse", "is_open"),
+    Input("tab-group", "value")
+)
+def toggle_tabs_collapse(tab_value):
+    keys = ['manual', 'mlcoach', 'clinic']
+    tabs = {key: False for key in keys}
+    tabs[tab_value] = True
+     
+    return tabs['manual'], tabs['mlcoach'], tabs['clinic']
+
+@app.callback(
     Output("modal", "is_open"),
     Input("delete-files", "n_clicks"),
     Input("confirm-delete", "n_clicks"),  
@@ -460,7 +474,6 @@ def toggle_modal(n1, n2, is_open):
     if n1 or n2:
         return not is_open
     return is_open
-
 
 @app.callback(
     Output("modal-window", "is_open"),
@@ -473,21 +486,6 @@ def data_clinic_window(n1, n2, docker_file_paths, is_open):
     if n1 or n2:
         return not is_open
     return is_open
-
-
-# @app.callback(
-#     Output("manual-collapse", "is_open"),
-#     Output("mlcoach-collapse", "is_open"),
-#     Output("data-clinic-collapse", "is_open"),
-#     Input("tab-group", "value"),
-#     State("manual-collapse", "is_open"),
-#     State("mlcoach-collapse", "is_open"),
-#     State("data-clinic-collapse", "is_open"),
-# )
-# def toggle_collapse(n_manual, n_mlcoach, n_data_clinic, manual_is_open, ml_coach_is_open, data_clinic_is_open):
-#     changed_id = dash.callback_context.triggered[0]['prop_id']
-#     return changed_id == 'button-manual.n_clicks', changed_id == 'button-mlcoach.n_clicks', \
-#            changed_id == 'button-data-clinic.n_clicks'
 
 
 @app.callback(
