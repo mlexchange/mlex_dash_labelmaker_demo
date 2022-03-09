@@ -54,13 +54,6 @@ du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 
 # REACTIVE COMPONENTS FOR LABELING METHOD
 label_method = html.Div([
-#     html.Div([dbc.Col(dbc.Button('Manual', id='button-manual',
-#                                outline='True', color='primary', size="sm", style={'width': '96%'})),
-#              dbc.Col(dbc.Button('MLCoach', id='button-mlcoach',
-#                                outline='True', color='primary', size="sm", style={'width': '96%'})),
-#              dbc.Col(dbc.Button('DataClinic', id='button-data-clinic',
-#                                outline='True', color='primary', size="sm", style={'width': '96%'}))
-#              ], style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'margin-bottom': '20px'}),
     html.Div(
         [
             dbc.RadioItems(
@@ -361,8 +354,7 @@ data_clinic_display = dbc.Modal(
     size="xl",
     scrollable=True,
     centered=True,
-    is_open=False,
-   # style = {'color': 'red'}
+    is_open=False
 )
 
 
@@ -744,6 +736,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         file_paths:             Absolute file paths selected from path table
         docker_path:            Showing file path in Docker environment
         ml_coach_is_open:       MLCoach is the labeling method
+        find_similar_images:    Find similar images button, n_clicks
         current_page:           Index of the current page
         import_n_clicks:        Button for importing the selected paths
     Returns:
@@ -770,7 +763,6 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         current_page = current_page + 1
 
     children = []
-    children_data_clinic = []
     num_imgs = 0
     if import_n_clicks and bool(rows):
         list_filename = []
@@ -801,10 +793,6 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
                 
             children = draw_rows(new_contents, new_filenames, thumbnail_slider_value, NUMBER_OF_ROWS,
                                                  ml_coach_is_open, df_prob)
-            
-            #if changed_id == 'find-similar-unsupervised.n-clicks':
-            children_data_clinic = draw_rows(new_contents, new_filenames, thumbnail_slider_value, NUMBER_OF_ROWS, data_clinic=True)
-            
 
     return children, current_page==0, math.ceil((num_imgs//thumbnail_slider_value)/NUMBER_OF_ROWS)<=current_page+1, \
            current_page
@@ -847,7 +835,7 @@ def select_thumbnail(value, labels_data, docker_path, thumbnail_name_children, l
         return ''
     if value % 2 == 1:
         return 'primary'
-    elif value % 2 == 0:
+    else:
         return color
 
 
@@ -946,7 +934,6 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
         MLCOACH_PATH = '/'.join(docker_to_local_path(thumbnail_name_children[0], DOCKER_HOME, LOCAL_HOME, type='str').split('/')[:-2])
         for indx, filename in enumerate(filenames):
             selected_thumbs.append(indx)
-            # warning
             # the next line is needed bc the filenames in mlcoach do not match (only good for selecting single folder/subfolder )
             selected_thumbs_filename.append(MLCOACH_PATH+'/'+filename)
     else:
@@ -1026,14 +1013,11 @@ def update_list(tab_value, n_clicks, n_clicks2, add_label_name, label_list, labe
     if tab_value == 'manual':
         del_button = True
         label_list = LABEL_LIST
-        #return [create_label_component(label_list, del_button=True), 0, LABEL_LIST, indx]
     
     elif tab_value == 'mlcoach':
         label_list = list(df_prob.columns[1:])
-        #return [create_label_component(label_list, del_button=False), 0, list(df_prob.columns[1:]), indx]
     
     #elif tab_value == 'clinic':
-        #return [create_label_component(label_list, del_button=False), 0, label_list, indx]
     
     add_clicks = n_clicks
     if 'delete-label-button' in changed_id and any(n_clicks2):
