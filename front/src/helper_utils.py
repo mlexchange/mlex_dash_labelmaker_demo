@@ -71,14 +71,20 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del
             dbc.Col(
                 dbc.Button('Unlabel the Selected',
                            id='un-label',
+                           className="ms-auto",
+                           color = 'primary',
                            size="sm",
-                           style={'color':'white', 'width': '100%', 'margin-bottom': '0px', 'margin-top': '10px'})
+                           outline=True,
+                           style={'width': '100%', 'margin-bottom': '0px', 'margin-top': '10px'})
             ),
             dbc.Col(
                 dbc.Button('Unlabel All',
                            id='un-label-all',
+                           className="ms-auto",
+                           color = 'primary',
                            size="sm",
-                           style={'color':'white', 'width': '100%', 'margin-bottom': '10px', 'margin-top': '5px'})
+                           outline=True,
+                           style={'width': '100%', 'margin-bottom': '10px', 'margin-top': '5px'})
            )
         ])
     )
