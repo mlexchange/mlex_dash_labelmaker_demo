@@ -54,14 +54,33 @@ du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 
 # REACTIVE COMPONENTS FOR LABELING METHOD
 label_method = html.Div([
-    html.Div([dbc.Col(dbc.Button('Manual', id='button-manual',
-                               outline='True', color='primary', size="sm", style={'width': '96%'})),
-             dbc.Col(dbc.Button('MLCoach', id='button-mlcoach',
-                               outline='True', color='primary', size="sm", style={'width': '96%'})),
-             dbc.Col(dbc.Button('DataClinic', id='button-data-clinic',
-                               outline='True', color='primary', size="sm", style={'width': '96%'}))
-             ], style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'margin-bottom': '20px'}),
-    html.Div(id='label_buttons', style={'margin-bottom': '0.5rem'}),
+#     html.Div([dbc.Col(dbc.Button('Manual', id='button-manual',
+#                                outline='True', color='primary', size="sm", style={'width': '96%'})),
+#              dbc.Col(dbc.Button('MLCoach', id='button-mlcoach',
+#                                outline='True', color='primary', size="sm", style={'width': '96%'})),
+#              dbc.Col(dbc.Button('DataClinic', id='button-data-clinic',
+#                                outline='True', color='primary', size="sm", style={'width': '96%'}))
+#              ], style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'margin-bottom': '20px'}),
+    html.Div(
+        [
+            dbc.RadioItems(
+                id="tab-group",
+                className="btn-group",
+                inputClassName="btn-check",
+                labelClassName="btn btn-outline-primary",
+                labelCheckedClassName="active",
+                labelStyle={'font-size': '13px', 'width': '85px', 'margin':'0px'},
+                options=[
+                    {"label": "Manual", "value": "manual"},
+                    {"label": "MLCoach", "value": "mlcoach"},
+                    {"label": "DataClinic", "value": "clinic"},
+                ],
+                value="manual")
+        ],
+        className="radio-group",
+        style ={'font-size': '0.5px','margin-bottom': '20px'},
+    ),
+    html.Div(id='label_buttons', children=create_label_component(LABEL_LIST, del_button=True), style={'margin-bottom': '0.5rem'}),
     # Labeling manually
     dbc.Collapse(
         children = [dcc.Input(id='add-label-name',
@@ -456,21 +475,19 @@ def data_clinic_window(n1, n2, docker_file_paths, is_open):
     return is_open
 
 
-@app.callback(
-    Output("manual-collapse", "is_open"),
-    Output("mlcoach-collapse", "is_open"),
-    Output("data-clinic-collapse", "is_open"),
-    Input("button-manual", "n_clicks"),
-    Input("button-mlcoach", "n_clicks"),
-    Input("button-data-clinic", "n_clicks"),
-    State("manual-collapse", "is_open"),
-    State("mlcoach-collapse", "is_open"),
-    State("data-clinic-collapse", "is_open"),
-)
-def toggle_collapse(n_manual, n_mlcoach, n_data_clinic, manual_is_open, ml_coach_is_open, data_clinic_is_open):
-    changed_id = dash.callback_context.triggered[0]['prop_id']
-    return changed_id == 'button-manual.n_clicks', changed_id == 'button-mlcoach.n_clicks', \
-           changed_id == 'button-data-clinic.n_clicks'
+# @app.callback(
+#     Output("manual-collapse", "is_open"),
+#     Output("mlcoach-collapse", "is_open"),
+#     Output("data-clinic-collapse", "is_open"),
+#     Input("tab-group", "value"),
+#     State("manual-collapse", "is_open"),
+#     State("mlcoach-collapse", "is_open"),
+#     State("data-clinic-collapse", "is_open"),
+# )
+# def toggle_collapse(n_manual, n_mlcoach, n_data_clinic, manual_is_open, ml_coach_is_open, data_clinic_is_open):
+#     changed_id = dash.callback_context.triggered[0]['prop_id']
+#     return changed_id == 'button-manual.n_clicks', changed_id == 'button-mlcoach.n_clicks', \
+#            changed_id == 'button-data-clinic.n_clicks'
 
 
 @app.callback(
@@ -915,8 +932,10 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
                 del current_labels_name[label]
         
         return current_labels, current_labels_name, None
-
-    label_class_value = max(enumerate(label_button_n_clicks), key=lambda t: 0 if t[1] is None else t[1] )[0]
+    
+    label_class_value = -1
+    if bool(label_button_n_clicks):
+        label_class_value = max(enumerate(label_button_n_clicks), key=lambda t: 0 if t[1] is None else t[1] )[0]
     selected_thumbs = []
     selected_thumbs_filename = []
     # add empty list to browser cache to store indices of thumbs
@@ -963,6 +982,9 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
         current_labels_name = {}
         return current_labels, current_labels_name, []
     
+    if label_class_value == -1:
+        return current_labels, current_labels_name, []
+    
     return current_labels, current_labels_name, label_list[label_class_value]
 
 
@@ -972,9 +994,7 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
      Output('label-list', 'data'),
      Output('del-label', 'data')],
 
-    Input("button-manual", "n_clicks"),
-    Input("button-mlcoach", "n_clicks"),
-    Input("button-data-clinic", "n_clicks"),
+    Input("tab-group", "value"),
     Input('modify-list', 'n_clicks'),
     Input({'type': 'delete-label-button', 'index': ALL}, 'n_clicks'),
 
@@ -984,15 +1004,12 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
     State('labels', 'data'),
     prevent_initial_call=True
 )
-def update_list(manual_n_clicks, mlcoach_n_clicks, data_clinic_n_clicks, n_clicks, n_clicks2, add_label_name,
-                label_list, labels_name_data, labels):
+def update_list(tab_value, n_clicks, n_clicks2, add_label_name, label_list, labels_name_data, labels):
     '''
     This callback updates the list of labels. In the case a label is deleted, the index of this label is saved in
     cache so that the list of assigned labels can be updated in the next callback
     Args:
-        manual_n_clicks
-        mlcoach_n_clicks
-        data_clinic_n_clicks
+        tab_value:             Tab option
         n_clicks:               Button to add a new label (tag name)
         n_clicks2:              Delete the associated label (tag name)
         add_label_name:         Label to add (tag name)
@@ -1007,16 +1024,18 @@ def update_list(manual_n_clicks, mlcoach_n_clicks, data_clinic_n_clicks, n_click
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     indx = -1
-    if 'button-manual.n_clicks' in changed_id:
+    del_button = False 
+    if tab_value == 'manual':
+        del_button = True
         label_list = LABEL_LIST
-        return [create_label_component(label_list, del_button=True), 0, label_list, indx]
+        #return [create_label_component(label_list, del_button=True), 0, LABEL_LIST, indx]
     
-    if 'button-mlcoach.n_clicks' in changed_id:
+    elif tab_value == 'mlcoach':
         label_list = list(df_prob.columns[1:])
-        return [create_label_component(label_list, del_button=False), 0, label_list, indx]
+        #return [create_label_component(label_list, del_button=False), 0, list(df_prob.columns[1:]), indx]
     
-    if 'button-data-clinic.n_clicks' in changed_id:
-        return [create_label_component(label_list, del_button=False), 0, label_list, indx]
+    #elif tab_value == 'clinic':
+        #return [create_label_component(label_list, del_button=False), 0, label_list, indx]
     
     add_clicks = n_clicks
     if 'delete-label-button' in changed_id and any(n_clicks2):
@@ -1029,7 +1048,7 @@ def update_list(manual_n_clicks, mlcoach_n_clicks, data_clinic_n_clicks, n_click
     if add_clicks > 0:
         label_list.append(add_label_name)
     
-    return [create_label_component(label_list, del_button=True), 0, label_list, indx]
+    return [create_label_component(label_list, del_button=del_button), 0, label_list, indx]
 
 
 @app.callback(
