@@ -318,10 +318,10 @@ data_clinic_display = dbc.Modal(
         dbc.ModalBody([html.Div(id='output-image-find')]),
         dbc.ModalFooter([
             dbc.Button(
-                "Add Input Labels", id='clinic-label-button', color='primary', outline=True, 
+                "Add New Labels", id='clinic-label-button', color='primary', outline=True, 
                 className="ms-auto", n_clicks=0),
         ],
-        style={'display': 'flex', 'margin-right': '1000px'}
+        style={'display': 'flex', 'margin-right': '950px'}
         ),
     ],
     id="modal-window",

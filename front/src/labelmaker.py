@@ -308,7 +308,6 @@ def update_pop_window(find_similar_images, docker_path, thumb_clicked, thumbnail
     
         children = draw_rows(contents, display_filenames, len(filenames), TOP_N, data_clinic=True)
     
-    print(f'docker_filenames {docker_filenames}')
     return children, docker_filenames
 
 
@@ -637,8 +636,8 @@ def update_list(tab_value, n_clicks, n_clicks2, clinic_label_button,
         label_list = LABEL_LIST
     elif tab_value == 'mlcoach':
         label_list = list(df_prob.columns[1:])
-    elif tab_value == 'clinic':
-        label_list = []
+#     elif tab_value == 'clinic':
+#         label_list = []
     
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if changed_id == 'clinic-label-button.n_clicks':
