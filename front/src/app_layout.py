@@ -82,9 +82,12 @@ label_method = html.Div([
     dbc.Collapse(
         children = [dbc.CardHeader("Instructions Data Clinic"),
                     dbc.CardBody([
-                        dbc.Label('Please mark the image slice(s) for the selected unsupervised model and click the button below. \
+                        dbc.Label('1. Please click on image(s) and hit Find Similar Images button below. \
                                    Otherwise, the whole stack will be used.', className='mr-2'),
-                        dbc.Button('Find most similar images', id='find-similar-unsupervised', outline="True",
+                        dbc.Label('2. Click Label button.', className='mr-2'),
+                        dbc.Button('Find Top 5 Similar Images', id='find-similar-unsupervised', outline="True",
+                               color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'}),
+                        dbc.Button('Label', id='clinic-label', outline="True",
                                color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'})
                     ]),
         ],
@@ -315,7 +318,7 @@ data_clinic_display = dbc.Modal(
         dbc.ModalBody([html.Div(id='output-image-find')]),
         dbc.ModalFooter([
             dbc.Button(
-                "Label", id="clinic-label-button", color='danger', outline=False, 
+                "Add Input Labels", id='clinic-label-button', color='primary', outline=True, 
                 className="ms-auto", n_clicks=0),
         ],
         style={'display': 'flex', 'margin-right': '1000px'}
