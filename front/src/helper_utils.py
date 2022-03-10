@@ -211,7 +211,8 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
             visible.append(1)
         
         if data_clinic:
-            row_child.insert(0,dbc.Input(placeholder="Input Label for this row", className="mb-3"))
+            row_child.insert(0,dbc.Input(id={'type':'clinic-label-input', 'index':j}, 
+                                         placeholder="Input Label for this row", className="mb-3"))
             
         children.append(dbc.Row(row_child))
     return children

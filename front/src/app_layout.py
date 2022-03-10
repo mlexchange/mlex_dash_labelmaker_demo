@@ -315,7 +315,7 @@ data_clinic_display = dbc.Modal(
         dbc.ModalBody([html.Div(id='output-image-find')]),
         dbc.ModalFooter([
             dbc.Button(
-                "Exit", id="exit-window", color='danger', outline=False, 
+                "Label", id="clinic-label-button", color='danger', outline=False, 
                 className="ms-auto", n_clicks=0),
         ],
         style={'display': 'flex', 'margin-right': '1000px'}
@@ -356,6 +356,7 @@ browser_cache =html.Div(
             dcc.Store(id='image-order', data=[]),
             dcc.Store(id='del-label', data=-1),
             dcc.Store(id='dummy-data', data=0),
+            dcc.Store(id='clinic-filenames', data=[]),
         ],
     )
 
