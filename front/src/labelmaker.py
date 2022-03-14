@@ -514,11 +514,8 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
     changed_id = dash.callback_context.triggered[-1]['prop_id']
     # if the list of labels is modified
     if changed_id == 'del-label.data' and del_label>-1:
-        labels = list(label_dict.keys())
-        for label in labels:
-            if int(label)==del_label:
-                del current_labels_name[label]
-        
+        if str(del_label) in current_labels_name.keys():
+            current_labels_name.pop(str(del_label))
         return current_labels_name, None
     
     label_class_value = -1
@@ -529,7 +526,7 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
     selected_thumbs = []
     selected_thumbs_filename = []
     # add empty list to browser cache to store indices of thumbs
-    if str(label_class_value) not in label_dict.keys():
+    if str(label_class_value) not in current_labels_name.keys():
         current_labels_name[str(label_class_value)] = []
     
     changed_id = dash.callback_context.triggered[-1]['prop_id']
@@ -557,31 +554,14 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
 
     selected_thumbs_filename = local_to_docker_path(selected_thumbs_filename, DOCKER_HOME, LOCAL_HOME, 'list')
 
-    # remove de-selected (de-color) thumb cards (other labels)
-#     other_labels = {key: value[:] for key, value in current_labels.items() if key != label_class_value}
-#     other_labels_name = {key: value[:] for key, value in current_labels_name.items() if key != label_class_value}
-#     for thumb_index, thumb_name in zip(selected_thumbs, selected_thumbs_filename):
-#         for label in other_labels:
-#             if thumb_name in other_labels_name[label]:
-#                 current_labels_name[label].remove(thumb_name)
-                
-    
-    for thumb_name in selected_thumbs_filename:
-        for label_index in label_dict.keys():
-            if label_index in current_labels_name.keys():
-                current_labels_name[label_index].remove(thumb_name)
-
-    if dash.callback_context.triggered[0]['prop_id'] != 'un-label.n_clicks':
-        if str(label_class_value) in current_labels_name.keys():
-            current_labels_name[str(label_class_value)].extend(selected_thumbs_filename)
-    
-    print(f'selected_thumbs_filename {selected_thumbs_filename}')
-    print(f'current_labels_name {current_labels_name}')
     if dash.callback_context.triggered[0]['prop_id'] == 'un-label.n_clicks':
         for thumb_name in selected_thumbs_filename:
             for names in current_labels_name.values():
                 if thumb_name in names:
                     names.remove(thumb_name)
+    else:
+        if str(label_class_value) in current_labels_name.keys():
+            current_labels_name[str(label_class_value)].extend(selected_thumbs_filename)
         
     if dash.callback_context.triggered[0]['prop_id'] == 'un-label-all.n_clicks':
         current_labels_name = {}
@@ -663,12 +643,12 @@ def update_list(tab_value, n_clicks, n_clicks2, clinic_label_button,
             print(e)
             
     if add_clicks > 0:
-        if len(label_dict.keys()) < max(label_dict.keys()):
+        if len(label_dict.keys()) < max(label_dict.keys())+1:
             key_to_add = 0
             last_key = -1
             for key in sorted(label_dict.keys()):
                 if key > last_key + 1:
-                    key_add = last_key +1
+                    key_to_add = last_key +1
                     break
                 else:
                     last_key += 1
@@ -697,13 +677,14 @@ def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data,
     Args:
         button_save_disk_n_clicks:  Button save to disk
         file_paths:                 Absolute file paths selected from path table
-        labels_name_data:           Dictionary of labeled images (docker path), as follows: {label: list of image filenames}
+        labels_name_data:           Dictionary of labeled images (docker path), as follows: {0: [image filenames],...}
         label_dict:                 Dictionary of label names (tag name), e.g., {0: 'label',...}
         import_n_clicks:            Button for importing selected paths
         rows:                       Rows of the selected file paths from path table
     Returns:
         The data is saved in the output directory
     '''
+    label_dict = {int(key):value for key,value in label_dict.items()}
     if labels_name_data is not None and import_n_clicks and bool(rows):
         if len(labels_name_data)>0:
             print('Saving labels')
