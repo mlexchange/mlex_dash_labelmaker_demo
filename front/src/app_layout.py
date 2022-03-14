@@ -17,7 +17,7 @@ app = dash.Dash(__name__, external_stylesheets = external_stylesheets, suppress_
 
 header = templates.header()
 
-LABEL_LIST = ['Arc', 'Peaks', 'Rings', 'Rods']
+LABEL_LIST = {0:'Arc', 1:'Peaks', 2:'Rings', 3:'Rods'}
 DOCKER_DATA = pathlib.Path.home() / 'data'
 
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
@@ -42,7 +42,7 @@ label_method = html.Div([
                 value="manual")
         ],
         className="radio-group",
-        style ={'font-size': '0.5px','margin-bottom': '20px'},
+        style ={'font-size': '0.5px','margin-bottom': '10px'},
     ),
     # manual tab is default button group
     html.Div(id='label_buttons', children=create_label_component(LABEL_LIST, del_button=True), style={'margin-bottom': '0.5rem'}),
@@ -350,11 +350,10 @@ display = html.Div(
 browser_cache =html.Div(
         id="no-display",
         children=[
-            dcc.Store(id='labels', data={}),
             dcc.Store(id='docker-labels-name', data={}),
             dcc.Store(id='docker-file-paths', data=[]),
             dcc.Store(id='save-results-buffer', data=[]),
-            dcc.Store(id='label-list', data=LABEL_LIST),
+            dcc.Store(id='label-dict', data=LABEL_LIST),
             dcc.Store(id='current-page', data=0),
             dcc.Store(id='image-order', data=[]),
             dcc.Store(id='del-label', data=-1),
