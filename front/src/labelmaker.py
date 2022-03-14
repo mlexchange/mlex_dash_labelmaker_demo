@@ -537,11 +537,11 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
             selected_thumbs.append(indx)
             # the next line is needed bc the filenames in mlcoach do not match (only good for selecting single folder/subfolder )
             selected_thumbs_filename.append(MLCOACH_PATH+'/'+filename)
-#     elif changed_id == 'clinic-label.n_clicks':
-#         print(f'DATA CLINIC filenames {clinic_filenames}')
-#         for indx, filename in enumerate(clinic_filenames):
-#             selected_thumbs.append(indx)
-#             selected_thumbs_filename.append(filename)
+    elif changed_id == 'clinic-label.n_clicks':
+        print(f'DATA CLINIC filenames {clinic_filenames}')
+        for indx, filename in enumerate(clinic_filenames):
+            selected_thumbs.append(indx)
+            selected_thumbs_filename.append(filename)
     else:
         for thumb_id, select_value, filename in zip(thumbnail_image_index, thumbnail_image_select_value,
                                                     thumbnail_name_children):
@@ -627,12 +627,9 @@ def update_list(tab_value, n_clicks, n_clicks2, clinic_label_button,
     if changed_id == 'clinic-label-button.n_clicks':
         for new_label in input_labels:
             if new_label is not None:
-                if bool(label_dict.values()): 
-                    label_dict[0] = new_label
-                else:
-                    if new_label not in label_dict.values():
-                        label_dict[max(label_dict.keys())+1] = new_label
-    
+                if new_label not in label_dict.values():
+                    label_dict[len(label_dict.keys())] = new_label
+
     add_clicks = n_clicks
     if 'delete-label-button' in changed_id and any(n_clicks2):
         rem = changed_id[changed_id.find('index')+7:]
