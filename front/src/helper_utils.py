@@ -16,26 +16,26 @@ def get_color_from_label(label, color_cycle):
     return color_cycle[int(label)]
 
 
-def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del_button=False):
+def create_label_component(label_dict, color_cycle=px.colors.qualitative.Plotly, del_button=False):
     '''
     This function updates the reactive component that contains the label buttons when
         - A new label is added
         - A label is deleted
     Args:
-        labels:         List of label names
+        label_dict:     Dictionary of label names, e.g., [0: 'label',...]
         color_cycle:    List of label colors
         del_button:     Bool that indicates if the labels can be deleted
     Returns:
-        Reactive components with updated label buttons
+        Reactive components with updated label buttons (sorted by label key number)
     '''
     comp_list = []
     if del_button:
-        for i, label in enumerate(labels):
+        for i in sorted(label_dict.keys()):
             comp_row = dbc.Row(
                 [
                     dbc.Col(
-                        dbc.Button(label,
-                                   id={'type': 'label-button', 'index': label},
+                        dbc.Button(label_dict[i],
+                                   id={'type': 'label-button', 'index': i},
                                    size="sm",
                                    style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
                                           'color':'white', 'width': '100%', 'margin-bottom': '5px'}
@@ -44,7 +44,7 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del
                     ),
                     dbc.Col(
                         dbc.Button('\u2716',
-                                   id={'type': 'delete-label-button', 'index': label},
+                                   id={'type': 'delete-label-button', 'index': i},
                                    size="sm",
                                    style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
                                           'color':'white', 'width': '100%', 'margin-bottom': '5px'}),
@@ -54,11 +54,11 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del
             )
             comp_list.append(comp_row)
     else:
-        for i, label in enumerate(labels):
+        for i in sorted(label_dict.keys()):
             comp_row = dbc.Row(
                 dbc.Col(
-                    dbc.Button(label,
-                               id={'type': 'label-button', 'index': label},
+                    dbc.Button(label_dict[i],
+                               id={'type': 'label-button', 'index': i},
                                size="sm",
                                style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
                                       'color': 'white', 'width': '100%', 'margin-bottom': '5px'}
@@ -66,28 +66,26 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del
                 ),
             )
             comp_list.append(comp_row)
+    
     comp_list.append(
-        dbc.Row([
-            dbc.Col(
-                dbc.Button('Unlabel the Selected',
-                           id='un-label',
-                           className="ms-auto",
-                           color = 'primary',
-                           size="sm",
-                           outline=True,
-                           style={'width': '100%', 'margin-bottom': '0px', 'margin-top': '10px'})
-            ),
-            dbc.Col(
-                dbc.Button('Unlabel All',
-                           id='un-label-all',
-                           className="ms-auto",
-                           color = 'primary',
-                           size="sm",
-                           outline=True,
-                           style={'width': '100%', 'margin-bottom': '10px', 'margin-top': '5px'})
-           )
-        ])
+        dbc.Button('Unlabel the Selected',
+                   id='un-label',
+                   className="ms-auto",
+                   color = 'primary',
+                   size="sm",
+                   outline=True,
+                   style={'width': '100%', 'margin-bottom': '0px', 'margin-top': '10px'})
     )
+    comp_list.append(
+        dbc.Button('Unlabel All',
+                   id='un-label-all',
+                   className="ms-auto",
+                   color = 'primary',
+                   size="sm",
+                   outline=True,
+                   style={'width': '100%', 'margin-bottom': '10px', 'margin-top': '5px'})
+    )
+    
     return comp_list
 
 
