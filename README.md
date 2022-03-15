@@ -36,6 +36,7 @@ File manager allows users to view file paths either in local paths (mounted to d
 
 ## Labeling instructions:
 
+### Label manually
 Assigning a new label:  
 1. Select all the images to be labeled  
 2. Choose label to be assigned  
@@ -43,3 +44,34 @@ Assigning a new label:
 Removing an assigned label (un-label):  
 1. Select all the images to be unlabeled  
 2. Click the "un-label" button
+
+### Label from MLCoach  
+Choose MLCoah tab on the right side bar. 
+The probability of each label will be shown under each image. 
+It allows users to label by a probibility threshold. 
+To label iamges:  
+
+1. Click on the label (button) and set a probability threshold.  
+2. Click Label with Threshold button.
+
+The images will be automatically labeled based on the threshold. After which, users can manually unlabel and re-label following **Label Manually** procedures.
+
+### Label from DataClinic
+Choose DataCinic tab on the right side bar.
+MLExchange Data clinic will produce unsupervised similarity results of all images.
+This tab allows users to tag the selected images and their top N most simialr images under the same label(s).
+
+Please follow the instructions in the app side bar. Likewise, users can also manually unlabel and re-label following **Label Manually** procedures afterwards.
+
+
+
+
+
+
+
+
+
+
+
+
+
