@@ -82,9 +82,10 @@ label_method = html.Div([
     dbc.Collapse(
         children = [dbc.CardHeader("Instructions Data Clinic"),
                     dbc.CardBody([
-                        dbc.Label('1. Please click on image(s) and hit Find Similar Images button below. \
-                                   Otherwise, the whole stack will be used.', className='mr-2'),
-                        dbc.Label('2. Click Label button.', className='mr-2'),
+                        dbc.Label('1. Please click on image(s) and click Find Top N Similar Images button below.', className='mr-2'),
+                        dbc.Label('2. In pop-up window, input label for each row and \
+                                      click Add Labels button (bottom left) .', className='mr-2'),
+                        dbc.Label('3. Click Label button.', className='mr-2'),
                         dbc.Button('Find Top 5 Similar Images', id='find-similar-unsupervised', outline="True",
                                color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'}),
                         dbc.Button('Label', id='clinic-label', outline="True",
@@ -318,7 +319,7 @@ data_clinic_display = dbc.Modal(
         dbc.ModalBody([html.Div(id='output-image-find')]),
         dbc.ModalFooter([
             dbc.Button(
-                "Add New Labels", id='clinic-label-button', color='primary', outline=True, 
+                "Add Labels", id='clinic-add-label-button', color='primary', outline=True, 
                 className="ms-auto", n_clicks=0),
         ],
         style={'display': 'flex', 'margin-right': '950px'}
@@ -358,7 +359,8 @@ browser_cache =html.Div(
             dcc.Store(id='image-order', data=[]),
             dcc.Store(id='del-label', data=-1),
             dcc.Store(id='dummy-data', data=0),
-            dcc.Store(id='clinic-filenames', data=[]),
+            dcc.Store(id='clinic-file-list', data=[]),
+            dcc.Store(id='clinic-filenames', data=[])
         ],
     )
 

@@ -79,7 +79,7 @@ def toggle_modal(n1, n2, is_open):
 @app.callback(
     Output("modal-window", "is_open"),
     Input("find-similar-unsupervised", "n_clicks"),
-    Input("clinic-label-button", "n_clicks"), 
+    Input("clinic-add-label-button", "n_clicks"), 
     Input('docker-file-paths','data'), 
     State("modal-window", "is_open")
 )
@@ -265,7 +265,7 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
 
 @app.callback(
     Output('output-image-find', 'children'),
-    Output('clinic-filenames', 'data'),
+    Output('clinic-file-list', 'data'),
     Input('find-similar-unsupervised', 'n_clicks'),
     Input('my-toggle-switch', 'value'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
@@ -274,9 +274,10 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
     prevent_initial_call=True
 )
 def update_pop_window(find_similar_images, docker_path, thumb_clicked, thumbnail_name_children, input_value):
+    print(f'input_value {input_value}')
     clicked_indice = [i for i, e in enumerate(thumb_clicked) if e != 0]
     filenames = []
-    docker_filenames = []
+    clinic_file_list = []
     display_filenames = []
     contents = []
     children = []
@@ -295,7 +296,7 @@ def update_pop_window(find_similar_images, docker_path, thumb_clicked, thumbnail
             row_filenames = df_clinic.iloc[np.argsort(row_dataframe.values[1:])[:TOP_N]]['filename'].tolist()
             for row_filename in row_filenames:
                 row_filename = CLINIC_PATH + '/' + row_filename
-                docker_filenames.append(row_filename)
+                clinic_file_list.append(row_filename)
                 with open(row_filename, "rb") as file:
                     img = base64.b64encode(file.read())
                     file_ext = row_filename.split('.')[-1]
@@ -308,7 +309,30 @@ def update_pop_window(find_similar_images, docker_path, thumb_clicked, thumbnail
     
         children = draw_rows(contents, display_filenames, len(filenames), TOP_N, data_clinic=True)
     
-    return children, docker_filenames
+    return children, clinic_file_list
+
+
+@app.callback(
+    Output('clinic-filenames', 'data'),
+    Input('clinic-add-label-button', 'n_clicks'),
+    Input('label-dict', 'data'),
+    State('clinic-file-list', 'data'),
+    State({'type': 'clinic-label-input', 'index': ALL}, 'value'),
+    prevent_initial_call=True
+)
+def update_data_clinic_filenames(clinic_label, label_dict, clinic_file_list, input_values):
+    clinic_filenames = {}
+    label_dict_r = {value: int(key) for key, value in label_dict.items()}
+    j = -1
+    for i,filename in enumerate(clinic_file_list):
+        if i % TOP_N == 0:
+            j += 1
+            if input_values[j] in label_dict_r:
+                if label_dict_r[input_values[j]] not in clinic_filenames:
+                    clinic_filenames[label_dict_r[input_values[j]]] = []
+        clinic_filenames[label_dict_r[input_values[j]]].append(filename)
+    
+    return clinic_filenames
 
 
 @app.callback([
@@ -425,7 +449,7 @@ def select_thumbnail(value, labels_name_data, docker_path, thumbnail_name_childr
         value:                      Thumbnail card that triggered the callback (n_clicks)
         unlabel_n_clicks:           Un-label button (n_clicks)
         thumbnail_name_children:    Filename in selected thumbnail
-        labels_name_data:           Dictionary of labeled images, as follows: {label: list of image filenames}
+        labels_name_data:           Dictionary of labeled images, as follows: {0: [image filenames]}
     Returns:
         thumbnail_color:            Color of thumbnail card
     '''
@@ -499,16 +523,20 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
         del_label:                      Delete label button
         label_button_n_clicks:          Label button
         unlabel_button:                 Un-label button
+        unlabel_all_button:             Unlabel all button
         mlcoach_label_button:           Button to label with mlcoach results
+        clinic_label_button:            Label button under DataClinic tab
         thumbnail_image_index:          Index of the thumbnail image
         thumbnail_image_select_value:   Selected thumbnail image (n_clicks)
         thumbnail_name_children:        Filename of the selected thumbnail image
-        current_labels_name:            Dictionary of labeled images, as follows: {label: list of image filenames}
+        current_labels_name:            Dictionary of labeled images, e.g., {0: [image filenames],...}
         threshold:                      Threshold value
         label_dict:                     Dict of label names (tag name), e.g., {0: 'label',...}
+        input_labels:                   A list of ordered labels from Add Label button in DataClinic pop window
+        clinic_filenames:               Dictionary of labeled images from DataClinic pop window, e.g., {0: [image filenames],...} 
     Returns:
-        labels_data:                    Dictionary of labeled images, as follows: {label: list of image indexes}
-        labels_name_data:               Dictionary of labeled images, as follows: {label: list of image filenames}
+        labels_data:                    Dictionary of labeled images, e.g., {label: list of image indexes}
+        labels_name_data:               Dictionary of labeled images, e.g., {label: list of image filenames}
     '''
     label_dict = {int(key): value for key,value in label_dict.items()}
     changed_id = dash.callback_context.triggered[-1]['prop_id']
@@ -537,11 +565,14 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
             selected_thumbs.append(indx)
             # the next line is needed bc the filenames in mlcoach do not match (only good for selecting single folder/subfolder )
             selected_thumbs_filename.append(MLCOACH_PATH+'/'+filename)
+    
     elif changed_id == 'clinic-label.n_clicks':
-        print(f'DATA CLINIC filenames {clinic_filenames}')
-        for indx, filename in enumerate(clinic_filenames):
-            selected_thumbs.append(indx)
-            selected_thumbs_filename.append(filename)
+        for key, name_list in clinic_filenames.items():
+            if key in current_labels_name.keys():
+                current_labels_name[key].extend(name_list)
+            else:
+                current_labels_name[key] = name_list
+    
     else:
         for thumb_id, select_value, filename in zip(thumbnail_image_index, thumbnail_image_select_value,
                                                     thumbnail_name_children):
@@ -582,7 +613,7 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
     Input("tab-group", "value"),
     Input('modify-list', 'n_clicks'),
     Input({'type': 'delete-label-button', 'index': ALL}, 'n_clicks'),
-    Input('clinic-label-button', 'n_clicks'),
+    Input('clinic-add-label-button', 'n_clicks'),
 
     State('add-label-name', 'value'),
     State('label-dict', 'data'),
@@ -590,18 +621,20 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
     State({'type': 'clinic-label-input', 'index': ALL}, 'value'),
     prevent_initial_call=True
 )
-def update_list(tab_value, n_clicks, n_clicks2, clinic_label_button,
+def update_list(tab_value, n_clicks, n_clicks2, clinic_add_label_button,
                 add_label_name, label_dict, labels_name_data, input_labels):
     '''
     This callback updates the list of labels. In the case a label is deleted, the index of this label is saved in
     cache so that the list of assigned labels can be updated in the next callback
     Args:
-        tab_value:             Tab option
-        n_clicks:               Button to add a new label (tag name)
-        n_clicks2:              Delete the associated label (tag name)
-        add_label_name:         Label to add (tag name)
-        label_dict:             Dict of label names (tag name), e.g., {0:'label',...}
-        labels_name_data:       Dictionary of labeled images (docker path), as follows: {label: list of image filenames}
+        tab_value:                  Tab option
+        n_clicks:                   Button to add a new label (tag name)
+        n_clicks2:                  Delete the associated label (tag name)
+        clinic_add_label_button:    Add Label button in DataClinic pop window 
+        add_label_name:             Label to add (tag name)
+        label_dict:                 Dict of label names (tag name), e.g., {0:'label',...}
+        labels_name_data:           Dictionary of labeled images (docker path), as follows: {label: list of image filenames}
+        input_labels:               A list of ordered labels from Add Label button in DataClinic pop window
     Returns:
         label_component:        Reactive component with the updated list of labels
         modify_lists.n_clicks:  Number of clicks for the modify list button
@@ -624,7 +657,7 @@ def update_list(tab_value, n_clicks, n_clicks2, clinic_label_button,
         del_button = True
     
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    if changed_id == 'clinic-label-button.n_clicks':
+    if changed_id == 'clinic-add-label-button.n_clicks':
         for new_label in input_labels:
             if new_label is not None:
                 if new_label not in label_dict.values():
