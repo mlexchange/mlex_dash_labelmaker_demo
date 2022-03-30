@@ -423,8 +423,8 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
                 else:
                     new_filenames.append(docker_to_local_path(list_filename[image_order[i]], DOCKER_HOME,
                                                               LOCAL_HOME, 'str'))
-                
-            children = draw_rows(new_contents, new_filenames, thumbnail_slider_value, NUMBER_OF_ROWS,
+
+            children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value,
                                                  ml_coach_is_open, df_prob)
 
     return children, current_page==0, math.ceil((num_imgs//thumbnail_slider_value)/NUMBER_OF_ROWS)<=current_page+1, \
