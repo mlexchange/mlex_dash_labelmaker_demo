@@ -11,7 +11,7 @@ import PIL
 import plotly.express as px
 
 from helper_utils import get_color_from_label, create_label_component, draw_rows
-from app_layout import app, LABEL_LIST, DOCKER_DATA
+from app_layout import app, LABEL_LIST, DOCKER_DATA, UPLOAD_FOLDER_ROOT
 from file_manager import filename_list, move_a_file, move_dir, add_paths_from_dir, \
                          check_duplicate_filename, docker_to_local_path, local_to_docker_path
 
