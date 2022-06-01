@@ -83,8 +83,9 @@ label_method = html.Div([
         children = [dbc.CardHeader("Instructions Data Clinic"),
                     dbc.CardBody([
                         dbc.Label('1. Please click on image(s) and click Find Top N Similar Images button below.', className='mr-2'),
-                        dbc.Label('2. In pop-up window, input label for each row and \
-                                      click Add Labels button (bottom left) .', className='mr-2'),
+                        dbc.Label('2. In pop-up window, input label for each row , \
+                                      and (if needed) click on wrongly grouped images to remove them, \
+                                      then click Add Labels button (bottom left) .', className='mr-2'),
                         dbc.Label('3. Click Label button.', className='mr-2'),
                         dbc.Button('Find Top 5 Similar Images', id='find-similar-unsupervised', outline="True",
                                color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'}),
