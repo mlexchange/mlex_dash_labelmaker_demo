@@ -138,7 +138,7 @@ def parse_contents_data_clinic(contents, filename, index):
     '''
     img_card = html.Div(
         dbc.Card(
-            id={'type': 'thumbnail-data-clinic', 'index': index},
+            id={'type': 'thumbnail-card-data-clinic', 'index': index},
             children=[
                 html.A(id={'type': 'thumbnail-image-data-clinic', 'index': index},
                        children=dbc.CardImg(id={'type': 'thumbnail-src-data-clinic', 'index': index},
@@ -149,7 +149,7 @@ def parse_contents_data_clinic(contents, filename, index):
                 ])
             ],
             outline=False,
-            color='white'
+            color='primary'
         ),
         id={'type': 'thumbnail-wrapper-data-clinic', 'index': index},
         style={'display': 'block'}

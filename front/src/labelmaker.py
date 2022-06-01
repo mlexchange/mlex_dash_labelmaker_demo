@@ -26,7 +26,7 @@ NUMBER_OF_ROWS = 4
 LOCAL_DATA = str(os.environ['DATA_DIR'])
 DOCKER_HOME = str(DOCKER_DATA) + '/'
 LOCAL_HOME = str(LOCAL_DATA)
-TOP_N = 6 # number of images per row in data clinic pop window
+TOP_N_SEARCH = 6 # number of images per row in data clinic pop window
 
 df_prob = pd.read_csv('data/results.csv')
 df_clinic = pd.read_csv('data/dist_matrix.csv')
@@ -293,7 +293,7 @@ def update_pop_window(find_similar_images, docker_path, thumb_clicked, thumbnail
         for name in filenames:
             filename = '/'.join(name.split(os.sep)[-2:])
             row_dataframe = df_clinic.iloc[df_clinic.set_index('filename').index.get_loc(filename)]
-            row_filenames = df_clinic.iloc[np.argsort(row_dataframe.values[1:])[:TOP_N]]['filename'].tolist()
+            row_filenames = df_clinic.iloc[np.argsort(row_dataframe.values[1:])[:TOP_N_SEARCH]]['filename'].tolist()
             for row_filename in row_filenames:
                 row_filename = CLINIC_PATH + '/' + row_filename
                 clinic_file_list.append(row_filename)
@@ -307,7 +307,7 @@ def update_pop_window(find_similar_images, docker_path, thumb_clicked, thumbnail
                 else:
                     display_filenames.append(docker_to_local_path(row_filename, DOCKER_HOME, LOCAL_HOME, type='str'))
     
-        children = draw_rows(contents, display_filenames, len(filenames), TOP_N, data_clinic=True)
+        children = draw_rows(contents, display_filenames, len(filenames), TOP_N_SEARCH, data_clinic=True)
     
     return children, clinic_file_list
 
@@ -318,19 +318,28 @@ def update_pop_window(find_similar_images, docker_path, thumb_clicked, thumbnail
     Input('label-dict', 'data'),
     State('clinic-file-list', 'data'),
     State({'type': 'clinic-label-input', 'index': ALL}, 'value'),
+    State({'type': 'thumbnail-image-data-clinic', 'index': ALL}, 'n_clicks'),
     prevent_initial_call=True
 )
-def update_data_clinic_filenames(clinic_label, label_dict, clinic_file_list, input_values):
+def update_data_clinic_filenames(clinic_label, label_dict, clinic_file_list, input_values, n_clicks):
+    '''
+    Args:
+        input_values:   The label input in the pop window per image search
+        label_dict:     Dict of label names (tag name) in the order of labels, e.g., {0: 'label',...}
+    '''
     clinic_filenames = {}
     label_dict_r = {value: int(key) for key, value in label_dict.items()}
     j = -1
+    print(f'n_clicks list {n_clicks}')
     for i,filename in enumerate(clinic_file_list):
-        if i % TOP_N == 0:
+        if i % TOP_N_SEARCH == 0:
             j += 1
             if input_values[j] in label_dict_r:
                 if label_dict_r[input_values[j]] not in clinic_filenames:
                     clinic_filenames[label_dict_r[input_values[j]]] = []
-        clinic_filenames[label_dict_r[input_values[j]]].append(filename)
+        
+        if n_clicks[i] is None or n_clicks[i] % 2 == 0:
+            clinic_filenames[label_dict_r[input_values[j]]].append(filename)
     
     return clinic_filenames
 
@@ -468,6 +477,20 @@ def select_thumbnail(value, labels_name_data, docker_path, thumbnail_name_childr
         return 'primary'
     else:
         return color
+
+
+@app.callback(
+    Output({'type': 'thumbnail-card-data-clinic', 'index': MATCH}, 'color'),
+    Input({'type': 'thumbnail-image-data-clinic', 'index': MATCH}, 'n_clicks'),
+    prevent_initial_call=True
+)
+def window_thumbnail_selection(n_clicks):
+    print(f'n_clicks {n_clicks}')
+    if n_clicks is None or n_clicks % 2 == 0:
+        return 'primary'
+
+    elif n_clicks % 2 == 1:
+        return 'white'
 
 
 @app.callback(
@@ -743,7 +766,7 @@ def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data,
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0')
+    app.run_server(debug=True, host='0.0.0.0', port=8057)
 
 
 
