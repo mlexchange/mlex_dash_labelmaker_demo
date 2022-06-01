@@ -6,6 +6,7 @@ Simple labeling application with a Dash UI.
 ```
 docker-compose up --build
 ```
+Go to `http://localhost:8057` in web browser.
 
 ## Ingest data with MLExchange file manager
 Put your dataset inside the **data folder** or use **MLExchange data connector** to transfer data to this folder (in future). 
