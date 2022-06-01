@@ -14,4 +14,4 @@ services:
             - "./data:/app/work/data"
             - "./front/src:/app/work/src"
         ports:
-            - '8050:8050'
+            - '8057:8057'
