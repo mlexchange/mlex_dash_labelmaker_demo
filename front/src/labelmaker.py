@@ -271,16 +271,23 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
     State({'type': 'clinic-label-input', 'index': ALL}, 'value'),
+    State('n-similar-images', 'value'),
     prevent_initial_call=True
 )
-def update_pop_window(find_similar_images, docker_path, thumb_clicked, thumbnail_name_children, input_value):
-    print(f'input_value {input_value}')
+def update_pop_window(find_similar_images, docker_path, thumb_clicked, \
+                      thumbnail_name_children, input_value, top_n_search):
     clicked_indice = [i for i, e in enumerate(thumb_clicked) if e != 0]
     filenames = []
     clinic_file_list = []
     display_filenames = []
     contents = []
     children = []
+    
+    if top_n_search is None:
+        top_n_search = TOP_N_SEARCH
+    else:
+        top_n_search = int(top_n_search)+1
+    
     if bool(clicked_indice):
         for index in clicked_indice:
             index = int(index)
@@ -293,7 +300,7 @@ def update_pop_window(find_similar_images, docker_path, thumb_clicked, thumbnail
         for name in filenames:
             filename = '/'.join(name.split(os.sep)[-2:])
             row_dataframe = df_clinic.iloc[df_clinic.set_index('filename').index.get_loc(filename)]
-            row_filenames = df_clinic.iloc[np.argsort(row_dataframe.values[1:])[:TOP_N_SEARCH]]['filename'].tolist()
+            row_filenames = df_clinic.iloc[np.argsort(row_dataframe.values[1:])[:top_n_search]]['filename'].tolist()
             for row_filename in row_filenames:
                 row_filename = CLINIC_PATH + '/' + row_filename
                 clinic_file_list.append(row_filename)
@@ -307,7 +314,7 @@ def update_pop_window(find_similar_images, docker_path, thumb_clicked, thumbnail
                 else:
                     display_filenames.append(docker_to_local_path(row_filename, DOCKER_HOME, LOCAL_HOME, type='str'))
     
-        children = draw_rows(contents, display_filenames, len(filenames), TOP_N_SEARCH, data_clinic=True)
+        children = draw_rows(contents, display_filenames, len(filenames), top_n_search, data_clinic=True)
     
     return children, clinic_file_list
 
@@ -319,20 +326,26 @@ def update_pop_window(find_similar_images, docker_path, thumb_clicked, thumbnail
     State('clinic-file-list', 'data'),
     State({'type': 'clinic-label-input', 'index': ALL}, 'value'),
     State({'type': 'thumbnail-image-data-clinic', 'index': ALL}, 'n_clicks'),
+    State('n-similar-images', 'value'),
     prevent_initial_call=True
 )
-def update_data_clinic_filenames(clinic_label, label_dict, clinic_file_list, input_values, n_clicks):
+def update_data_clinic_filenames(clinic_label, label_dict, clinic_file_list, input_values,\
+                                 n_clicks, top_n_search):
     '''
     Args:
         input_values:   The label input in the pop window per image search
         label_dict:     Dict of label names (tag name) in the order of labels, e.g., {0: 'label',...}
     '''
+    if top_n_search is None:
+        top_n_search = TOP_N_SEARCH
+    else:
+        top_n_search = int(top_n_search)+1
+    
     clinic_filenames = {}
     label_dict_r = {value: int(key) for key, value in label_dict.items()}
     j = -1
-    print(f'n_clicks list {n_clicks}')
     for i,filename in enumerate(clinic_file_list):
-        if i % TOP_N_SEARCH == 0:
+        if i % top_n_search == 0:
             j += 1
             if input_values[j] in label_dict_r:
                 if label_dict_r[input_values[j]] not in clinic_filenames:
@@ -485,7 +498,6 @@ def select_thumbnail(value, labels_name_data, docker_path, thumbnail_name_childr
     prevent_initial_call=True
 )
 def window_thumbnail_selection(n_clicks):
-    print(f'n_clicks {n_clicks}')
     if n_clicks is None or n_clicks % 2 == 0:
         return 'primary'
 
@@ -510,7 +522,6 @@ def deselect(label_button_trigger, unlabel_n_clicks, unlabel_all, thumb_clicked)
     Returns:
         Modify the number of clicks for a specific thumbnail card
     '''
-    print(f'thumbnail trigger {label_button_trigger}')
     return [0 for thumb in thumb_clicked]
 
 
