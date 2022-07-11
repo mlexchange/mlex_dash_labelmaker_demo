@@ -679,12 +679,12 @@ def update_list(tab_value, n_clicks, n_clicks2, clinic_add_label_button,
     indx = -1
     changed_id = dash.callback_context.triggered[-1]['prop_id']
     if changed_id == 'tab-group.value':
-        if tab_value == 'manual':
-            label_dict = LABEL_LIST
-        elif tab_value == 'mlcoach':
-            label_dict = {key: value for key,value in zip(range(len(list(df_prob.columns[1:]))), list(df_prob.columns[1:]))}
-        elif tab_value == 'clinic':
-            label_dict = {}
+        if tab_value == 'mlcoach':
+            mlcoach_labels = list(set(list(df_prob.columns[1:]))-set(list(label_dict.values())))
+            current_num_keys = len(list(label_dict.keys()))
+            num_keys = range(current_num_keys+len(mlcoach_labels))
+            num_keys = list(set(num_keys)-set(list(label_dict.keys())))
+            label_dict.update(({key: value for key,value in zip(num_keys,list(df_prob.columns[1:]))}))
     
     del_button = False 
     if tab_value == 'manual':
