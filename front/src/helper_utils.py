@@ -2,6 +2,7 @@ import os
 from dash import html
 import dash_bootstrap_components as dbc
 import plotly.express as px
+import requests
 
 
 def get_color_from_label(label, color_cycle):
@@ -16,7 +17,7 @@ def get_color_from_label(label, color_cycle):
     return color_cycle[int(label)]
 
 
-def create_label_component(label_dict, color_cycle=px.colors.qualitative.Plotly, del_button=False):
+def create_label_component(label_dict, color_cycle=px.colors.qualitative.Dark24, del_button=False):
     '''
     This function updates the reactive component that contains the label buttons when
         - A new label is added
@@ -215,3 +216,28 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
         children.append(dbc.Row(row_child))
     return children
 
+
+def get_trained_models_list(user, datapath, tab):
+    '''
+    This function queries the MLCoach or DataClinic results
+    Args:
+        user:               Username
+        datapath:           Path to data
+        tab:                Tab option (MLCoach vs Data Clinic)
+    Returns:
+        trained_models:     List of options
+    '''
+    if tab == 'mlcoach':
+        filename = '/results.csv'
+    else:
+        tab = 'data_clinic'
+        filename = '/dist_matrix.csv'
+    model_list = requests.get(f'http://job-service:8080/api/v0/jobs?&user={user}&mlex_app={tab}').json()
+    trained_models = [{'label': 'Default', 'value': 'data'+filename}]
+    for model in model_list:
+        if model['job_kwargs']['kwargs']['dataset'][0]==datapath and \
+                model['job_kwargs']['kwargs']['job_type'].split(' ')[0]=='prediction_model':
+            if os.path.exists(model['job_kwargs']['cmd'].split(' ')[3]+filename):  # check if the file exists
+                trained_models.append({'label': model['job_kwargs']['kwargs']['job_type'],
+                                       'value': model['job_kwargs']['cmd'].split(' ')[3]+filename})
+    return trained_models
