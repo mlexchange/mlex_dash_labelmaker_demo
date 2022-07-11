@@ -1,6 +1,7 @@
 import os, io
 import shutil, pathlib, base64, math, copy, zipfile
 import numpy as np
+import requests
 
 import dash
 from dash.dependencies import Input, Output, State, MATCH, ALL
@@ -56,14 +57,39 @@ def file_mover_collapse(n, is_open):
     Output("manual-collapse", "is_open"),
     Output("mlcoach-collapse", "is_open"),
     Output("data-clinic-collapse", "is_open"),
+    Output("goto-webpage-collapse", "is_open"),
+    Output("goto-webpage", "children"),
     Input("tab-group", "value")
 )
 def toggle_tabs_collapse(tab_value):
     keys = ['manual', 'mlcoach', 'clinic']
     tabs = {key: False for key in keys}
     tabs[tab_value] = True
+    
+    goto_webpage = {'manual': False, 'mlcoach': True, 'clinic': True}
+    button_name = 'Go to MLCoach Webpage'
+    if tab_value == 'clinic':
+        button_name = 'Go to DataClinic Webpage'
      
-    return tabs['manual'], tabs['mlcoach'], tabs['clinic']
+    return tabs['manual'], tabs['mlcoach'], tabs['clinic'], goto_webpage[tab_value], button_name
+
+
+app.clientside_callback(
+    """
+    function(n_clicks, tab_value) {
+        if (tab_value == 'mlcoach') {
+            window.open('http://localhost:8051');
+        } else if (tab_value == 'clinic') {
+            window.open('http://localhost:8050');
+        } 
+        return '';
+    }
+    """,
+    Output('dummy1', 'data'),
+    Input('goto-webpage', 'n_clicks'),
+    State('tab-group', 'value')
+)
+
 
 @app.callback(
     Output("modal", "is_open"),
@@ -166,6 +192,7 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
             selected_files = []
             files = filename_list(DOCKER_DATA, browse_format)
 
+    resp = requests.post("http://labelmaker-api:8005/api/v0/datapath", json=selected_files)
     if docker_path:
         return files, selected_files
     else:
@@ -639,7 +666,7 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
 
 
 @app.callback(
-    [Output('label_buttons', 'children'),
+    [Output('label-buttons', 'children'),
      Output('modify-list', 'n_clicks'),
      Output('label-dict', 'data'),
      Output('del-label', 'data')],
