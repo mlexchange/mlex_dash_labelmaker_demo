@@ -15,3 +15,22 @@ services:
             - "./front/src:/app/work/src"
         ports:
             - '8057:8057'
+        networks:
+            - computing_api_default
+
+    api:
+        restart: "unless-stopped"
+        container_name: "labelmaker-api"
+        build:
+          context: "api/"
+          dockerfile: "docker/Dockerfile"
+        volumes:
+          - ./api/src:/app/api/src
+        ports:
+          - "8005:8005"
+        networks:
+          - computing_api_default
+
+networks:
+  computing_api_default:
+    external: true
