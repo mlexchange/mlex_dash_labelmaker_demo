@@ -12,3 +12,4 @@ plotly==5.4.0
 scikit_image==0.18.3
 scipy==1.7.1
 werkzeug==2.0.0
+requests==2.25.1

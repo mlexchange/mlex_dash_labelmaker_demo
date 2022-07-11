@@ -44,8 +44,17 @@ label_method = html.Div([
         className="radio-group",
         style ={'font-size': '0.5px','margin-bottom': '10px'},
     ),
+        # Labeling with MLCoach
+    dbc.Collapse(
+        children = [
+                    dbc.Button('Go to MLCoach Webpage', id='goto-webpage', outline="True",
+                               color='primary', size="sm", style={'width': '100%', 'margin-bottom': '0.5rem'})
+                    ],
+        id="goto-webpage-collapse",
+        is_open=False
+    ),
     # manual tab is default button group
-    html.Div(id='label_buttons', children=create_label_component(LABEL_LIST, del_button=True), style={'margin-bottom': '0.5rem'}),
+    html.Div(id='label-buttons', children=create_label_component(LABEL_LIST, del_button=True), style={'margin-bottom': '0.5rem'}),
     # Labeling manually
     dbc.Collapse(
         children = [dcc.Input(id='add-label-name',
@@ -362,6 +371,7 @@ browser_cache =html.Div(
             dcc.Store(id='image-order', data=[]),
             dcc.Store(id='del-label', data=-1),
             dcc.Store(id='dummy-data', data=0),
+            dcc.Store(id='dummy1', data=0),
             dcc.Store(id='clinic-file-list', data=[]),
             dcc.Store(id='clinic-filenames', data=[])
         ],
