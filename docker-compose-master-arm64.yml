@@ -1,0 +1,148 @@
+version: '3'
+
+services:
+
+########################## LABELMAKER ##########################
+    labelmaker:
+        restart: "unless-stopped"
+        container_name: "dash-label"
+        build: 
+            context: 'front/'
+            dockerfile: 'docker/Dockerfile'
+        command: 'python src/labelmaker.py'
+        environment:
+            DATA_DIR: "${PWD}/data/"
+        volumes:
+            - "./data:/app/work/data"
+            - "./front/src:/app/work/src"
+        ports:
+            - '8057:8057'
+
+    api:
+        restart: "unless-stopped"
+        container_name: "labelmaker-api"
+        build:
+          context: "api/"
+          dockerfile: "docker/Dockerfile"
+        volumes:
+          - ./api/src:/app/api/src
+        ports:
+          - "8005:8005"
+
+######################### COMPUTE API ##########################
+
+  mongo:
+    image: mongo:4.4
+    restart: always
+    container_name: "mongodb"
+    working_dir: "/database/"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: '${MONGO_DB_USERNAME}'
+      MONGO_INITDB_ROOT_PASSWORD: '${MONGO_DB_PASSWORD}'
+    volumes:
+      - "./database/:/data/db"
+
+  job-service:
+    restart: 'unless-stopped'
+    container_name: 'job-service'
+    build:
+      context: '../mlex_computing_api/job_manager'
+      dockerfile: 'docker/Dockerfile'
+    command: 'python api/main.py'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: '${MONGO_DB_USERNAME}'
+      MONGO_INITDB_ROOT_PASSWORD: '${MONGO_DB_PASSWORD}'
+    depends_on:
+      - 'mongo'
+    ports:
+      - '8080:8080'
+
+  worker-launcher:
+    restart: 'unless-stopped'
+    container_name: 'worker-launcher'
+    build:
+      context: '../mlex_computing_api/ml_worker'
+      dockerfile: 'docker/Dockerfile_arm64'
+    command: sh -c '
+      make build_docker_arm64 &&
+      sleep 20 &&
+      python3 src/worker_launcher.py'
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./ml_worker:/app"
+    environment:
+      NUM_PROCESSORS: '${NUM_PROCESSORS}'
+      NETWORK: '${COMPOSE_PROJECT_NAME}_default'
+      HOST: '${HOST}'
+    depends_on:
+      - 'job-service'
+
+  compute-front-end:
+    restart: "unless-stopped"
+    container_name: "../mlex_computing_api/comp-frontend"
+    build:
+      context: "front_end"
+      dockerfile: "docker/Dockerfile"
+    command: "python frontend.py"
+    ports:
+      - "8050:8050"
+    depends_on:
+      - 'job-service'
+
+####################### CONTENT REGISTRY #######################
+
+  content-api:
+    restart: "unless-stopped"
+    container_name: "content-api"
+    build:
+      context: "../mlex_content_registry/content-api/"
+      dockerfile: "docker/Dockerfile"
+    volumes:
+      - ./content-api/src:/app/api/src
+    ports:
+      - "8000:8000"
+
+  content-registry:
+    restart: "unless-stopped"
+    container_name: "content-registry"
+    build:
+      context: "../mlex_content_registry/content-regist/"
+      dockerfile: "docker/Dockerfile"
+    volumes:
+      - ./content-regist/data:/app/content-regist/data    
+      - ./content-regist/src:/app/content-regist/src
+    ports:
+      - "8051:8051"
+
+##########################  MLCOACH   ##########################
+
+  mlcoach:
+    restart: "unless-stopped"
+    container_name: "mlcoach"
+    build:
+      context: "../mlex_mlcoach"
+      dockerfile: "docker/Dockerfile"
+    command: "python src/frontend.py"
+    environment:
+      DATA_DIR: "${PWD}/data/"
+    volumes:
+      - ${PWD}:/app/work
+    ports:
+      - "8062:8062"
+
+######################### DATA CLINIC ##########################
+
+#  data-clinic:
+#    restart: "unless-stopped"
+#    container_name: "data_clinic"
+#    #user: "${UID}:${GID}"
+#    build:
+#      context: "../mlex_data_clinic"
+#      dockerfile: "docker/Dockerfile"
+#    command: "python src/frontend.py"
+#    environment:
+#      DATA_DIR: "${PWD}/data/"
+#    volumes:
+#      - ${PWD}:/app/work
+#    ports:
+#      - "8072:8072"

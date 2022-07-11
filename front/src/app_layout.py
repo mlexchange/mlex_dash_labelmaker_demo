@@ -72,7 +72,9 @@ label_method = html.Div([
     ),
     # Labeling with MLCoach
     dbc.Collapse(
-        children = [dbc.Label('Probability Threshold'),
+        children = [dbc.Label('Trained models:'),
+                    dcc.Dropdown(id='mlcoach-model-list'),
+                    dbc.Label('Probability Threshold', style={'width': '100%', 'margin-top': '20px'}),
                     dcc.Slider(id='probability-threshold',
                                min=0,
                                max=100,
@@ -91,13 +93,17 @@ label_method = html.Div([
     dbc.Collapse(
         children = [dbc.CardHeader("Instructions Data Clinic"),
                     dbc.CardBody([
-                        dbc.Label('1. Please click on image(s) and enter the number of simialr images to find. \
+                        dbc.Label('1. Select a trained model to start.', className='mr-2'),
+                        dbc.Label('2. Please click on image(s) and enter the number of similar images to find. \
                                       Then click Find Similar Images button below.', className='mr-2'),
-                        dbc.Label('2. In pop-up window, input label for each row , \
+                        dbc.Label('3. In pop-up window, input label for each row , \
                                       and (if needed) click on wrongly grouped images to remove them, \
                                       then click Add Labels button (bottom left) .', className='mr-2'),
-                        dbc.Label('3. Click Label button.', className='mr-2'),
-                        dbc.Input(id='n-similar-images', placeholder='Input num of similar images to find'),
+                        dbc.Label('4. Click Label button.', className='mr-2'),
+                        dbc.Label('Trained models:'),
+                        dcc.Dropdown(id='data-clinic-model-list'),
+                        dbc.Input(id='n-similar-images', placeholder='Input num of similar images to find',
+                                  style={'width': '100%', 'margin-top': '20px'}),
                         dbc.Button('Find Similar Images', id='find-similar-unsupervised', outline="True",
                                color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'}),
                         dbc.Button('Label', id='clinic-label', outline="True",
@@ -140,7 +146,7 @@ file_paths_table = html.Div(
                 ],
                 data = [],
                 hidden_columns = ['file_type'],
-                row_selectable='multi',
+                row_selectable='single',
                 style_cell={'padding': '0.5rem', 'textAlign': 'left'},
                 fixed_rows={'headers': False},
                 css=[{"selector": ".show-hide", "rule": "display: none"}],
