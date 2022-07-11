@@ -3,6 +3,12 @@
 Simple labeling application with a Dash UI.
 
 ## Running
+To run this demo, please start the following services in the order:
+
+* mlex_computing_api
+* mlex_dash_segmentation_demo
+
+To start a service, go to the source code folder and execute the following:
 ```
 docker-compose up --build
 ```
