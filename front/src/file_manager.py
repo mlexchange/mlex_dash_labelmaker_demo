@@ -106,7 +106,7 @@ def docker_to_local_path(paths, docker_home, local_home, type='list-dict'):
             list-dict, default:  a list of dictionary (docker paths), e.g., [{'file_path': 'docker_path1'},{...}]
             str:                a single file path string
     Return: 
-        replace docker path with local path.
+        replace docker path with local path
     '''
     if type == 'list-dict':
         files = copy.deepcopy(paths)

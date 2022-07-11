@@ -16,26 +16,27 @@ def get_color_from_label(label, color_cycle):
     return color_cycle[int(label)]
 
 
-def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del_button=False):
+def create_label_component(label_dict, color_cycle=px.colors.qualitative.Plotly, del_button=False):
     '''
     This function updates the reactive component that contains the label buttons when
         - A new label is added
         - A label is deleted
     Args:
-        labels:         List of label names
+        label_dict:     Dictionary of label names, e.g., [0: 'label',...]
         color_cycle:    List of label colors
         del_button:     Bool that indicates if the labels can be deleted
     Returns:
-        Reactive components with updated label buttons
+        Reactive components with updated label buttons (sorted by label key number)
     '''
     comp_list = []
     if del_button:
-        for i, label in enumerate(labels):
+        for i in sorted(label_dict.keys()):
             comp_row = dbc.Row(
                 [
                     dbc.Col(
-                        dbc.Button(label,
+                        dbc.Button(label_dict[i],
                                    id={'type': 'label-button', 'index': i},
+                                   size="sm",
                                    style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
                                           'color':'white', 'width': '100%', 'margin-bottom': '5px'}
                                    ),
@@ -44,6 +45,7 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del
                     dbc.Col(
                         dbc.Button('\u2716',
                                    id={'type': 'delete-label-button', 'index': i},
+                                   size="sm",
                                    style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
                                           'color':'white', 'width': '100%', 'margin-bottom': '5px'}),
                         width=4
@@ -52,26 +54,38 @@ def create_label_component(labels, color_cycle=px.colors.qualitative.Plotly, del
             )
             comp_list.append(comp_row)
     else:
-        for i, label in enumerate(labels):
+        for i in sorted(label_dict.keys()):
             comp_row = dbc.Row(
                 dbc.Col(
-                    dbc.Button(label,
+                    dbc.Button(label_dict[i],
                                id={'type': 'label-button', 'index': i},
+                               size="sm",
                                style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
                                       'color': 'white', 'width': '100%', 'margin-bottom': '5px'}
                                )
                 ),
             )
             comp_list.append(comp_row)
+    
     comp_list.append(
-        dbc.Row(
-            dbc.Col(
-                dbc.Button('Un-label',
-                           id='un-label',
-                           style={'color':'white', 'width': '100%', 'margin-bottom': '10px', 'margin-top': '10px'})
-            )
-        )
+        dbc.Button('Unlabel the Selected',
+                   id='un-label',
+                   className="ms-auto",
+                   color = 'primary',
+                   size="sm",
+                   outline=True,
+                   style={'width': '100%', 'margin-bottom': '0px', 'margin-top': '10px'})
     )
+    comp_list.append(
+        dbc.Button('Unlabel All',
+                   id='un-label-all',
+                   className="ms-auto",
+                   color = 'primary',
+                   size="sm",
+                   outline=True,
+                   style={'width': '100%', 'margin-bottom': '10px', 'margin-top': '5px'})
+    )
+    
     return comp_list
 
 
@@ -88,7 +102,7 @@ def parse_contents(contents, filename, index, probs=None):
     '''
     text=''
     if probs:
-        text = 'Label \t Probability\n' + '=======================' + probs
+        text = 'Label \t Probability\n' + '--------\n' + probs
     # ====== label results =======
     img_card = html.Div(
         dbc.Card(
@@ -112,14 +126,44 @@ def parse_contents(contents, filename, index, probs=None):
     return img_card
 
 
-def draw_rows(list_of_contents, list_of_names, n_cols, n_rows, show_prob=False, file=None):
+def parse_contents_data_clinic(contents, filename, index):
+    '''
+    This function creates the reactive components to display 1 image with it's thumbnail card
+    Args:
+        contents:   Image contents
+        filename:   Filename
+        index:      Index of the reactive component
+    Returns:
+        reactive_component
+    '''
+    img_card = html.Div(
+        dbc.Card(
+            id={'type': 'thumbnail-card-data-clinic', 'index': index},
+            children=[
+                html.A(id={'type': 'thumbnail-image-data-clinic', 'index': index},
+                       children=dbc.CardImg(id={'type': 'thumbnail-src-data-clinic', 'index': index},
+                                            src=contents,
+                                            bottom=False)),
+                dbc.CardBody([
+                    html.P(id={'type':'thumbnail-name-data-clinic', 'index': index}, children=filename, style={'font-size': '12px'}),
+                ])
+            ],
+            outline=False,
+            color='primary'
+        ),
+        id={'type': 'thumbnail-wrapper-data-clinic', 'index': index},
+        style={'display': 'block'}
+    )
+    return img_card
+
+def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, file=None, data_clinic=False):
     '''
     This function display the images per page
     Args:
         list_of_contents:   List of contents
         list_of_names:      List of filenames
-        n_cols:             Number of columns
         n_rows:             Number of rows
+        n_cols:             Number of columns
         show_prob:          Bool, show probabilities
         file:               table of filenames and probabilities
     Returns:
@@ -143,18 +187,31 @@ def draw_rows(list_of_contents, list_of_names, n_cols, n_rows, show_prob=False, 
             name = list_of_names[index]
             if show_prob:
                 # warning
-                filename = name.split(os.sep)     # this section is needed bc the filenames in mlcoach do not match
-                filename = '/'.join(filename[-2:])
+                # this section is needed bc the filenames in mlcoach do not match
+                filename = '/'.join(name.split(os.sep)[-2:])
                 if filename in filenames:
                     probs = str(file.loc[file['filename']==filename].T.iloc[1:].to_string(header=None))
-            row_child.append(dbc.Col(parse_contents(content,
-                                                    name,
-                                                    j * n_cols + i,
-                                                    probs),
-                                     width="{}".format(12 // n_cols),
-                                     )
-                             )
+            if data_clinic:
+                row_child.append(dbc.Col(parse_contents_data_clinic(content,
+                                                                    name,
+                                                                    j * n_cols + i),
+                                                     width="{}".format(12 // n_cols),
+                                         )
+                                 )
+            else:
+                row_child.append(dbc.Col(parse_contents(content,
+                                                        name,
+                                                        j * n_cols + i,
+                                                        probs),
+                                         width="{}".format(12 // n_cols),
+                                         )
+                                 )
             visible.append(1)
+        
+        if data_clinic:
+            row_child.insert(0,dbc.Input(id={'type':'clinic-label-input', 'index':j}, 
+                                         placeholder="Input Label for this row", className="mb-3"))
+            
         children.append(dbc.Row(row_child))
     return children
 
