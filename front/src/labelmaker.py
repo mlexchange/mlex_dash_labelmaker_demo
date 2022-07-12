@@ -75,9 +75,9 @@ app.clientside_callback(
     """
     function(n_clicks, tab_value) {
         if (tab_value == 'mlcoach') {
-            window.open('http://localhost:8051');
+            window.open('http://localhost:8062');
         } else if (tab_value == 'clinic') {
-            window.open('http://localhost:8050');
+            window.open('http://localhost:8072');
         } 
         return '';
     }
