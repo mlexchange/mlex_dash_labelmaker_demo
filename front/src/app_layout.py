@@ -48,7 +48,7 @@ label_method = html.Div([
     dbc.Collapse(
         children = [
                     dbc.Button('Go to MLCoach Webpage', id='goto-webpage', outline="True",
-                               color='primary', size="sm", style={'width': '100%', 'margin-bottom': '0.5rem'})
+                               color='primary', size="sm", style={'width': '100%', 'margin-bottom': '1rem', 'margin-top': '0.5rem'})
                     ],
         id="goto-webpage-collapse",
         is_open=False
