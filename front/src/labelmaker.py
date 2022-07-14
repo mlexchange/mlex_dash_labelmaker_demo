@@ -205,8 +205,9 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
                 
             selected_files = []
             files = filename_list(DOCKER_DATA, browse_format)
-
+    
     resp = requests.post("http://labelmaker-api:8005/api/v0/datapath", json=selected_files)
+    
     if docker_path:
         return files, selected_files
     else:
@@ -267,7 +268,9 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
                 list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
             else:
                 list_filename.append(file_path['file_path'])
-    
+        
+        resp = requests.post("http://labelmaker-api:8005/api/v0/filenames", json=list_filename)
+        
         num_imgs = len(list_filename)
         if  changed_id == 'import-dir.n_clicks' or \
             changed_id == 'confirm-delete.n_clicks' or \

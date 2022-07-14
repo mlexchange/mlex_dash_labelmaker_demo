@@ -28,22 +28,37 @@ def conn_mongodb(collection='models'):
     return db[collection]
 
 
-@app.get(API_URL_PREFIX+"/datapath", tags=['dataset'])
+@app.get(API_URL_PREFIX+"/filenames", tags=['dataset'])
 def get_the_datapath():
     mycollection = conn_mongodb('datapath')
     return mycollection.find_one({"content_id": 1})
+    
+@app.get(API_URL_PREFIX+"/datapath", tags=['dataset'])
+def get_the_datapath():
+    mycollection = conn_mongodb('datapath')
+    return mycollection.find_one({"content_id": 2})
 
-@app.post(API_URL_PREFIX+"/datapath", tags=['dataset'])
-def add_a_datapath(path: list):
+@app.post(API_URL_PREFIX+"/filenames", tags=['dataset'])
+def add_filenames(files: list):
     mycollection = conn_mongodb('datapath')
     mycollection.update_one({
                               '_id': 1
                             },{
                               '$set': {
-                                'datapath': path
+                              'filenames': files
                               }
                             }, upsert=False)
-    return path
+    return files
 
-
+@app.post(API_URL_PREFIX+"/datapath", tags=['dataset'])
+def add_datapath(paths: list):
+    mycollection = conn_mongodb('datapath')
+    mycollection.update_one({
+                              '_id': 2
+                            },{
+                              '$set': {
+                              'datapath': paths
+                              }
+                            }, upsert=False)
+    return paths
 
