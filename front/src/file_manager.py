@@ -57,7 +57,7 @@ def add_paths_from_dir(dir_path, supported_formats, list_file_path):
     return list_file_path
 
 
-def filename_list(directory, format):
+def filename_list(directory, form):
     '''
     Args:
         directory, str:     full path of a directory
@@ -67,14 +67,14 @@ def filename_list(directory, format):
     '''
     hidden_formats = ['DS_Store']
     files = []
-    if format == 'dir':
+    if form == 'dir':
         if os.path.exists(directory):
             for filepath in pathlib.Path(directory).glob('**/*'):
                 if os.path.isdir(filepath):
                     files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
     else:
-        format = format.split(',')
-        for f_ext in format:
+        form = form.split(',')
+        for f_ext in form:
             if os.path.exists(directory):
                 for filepath in pathlib.Path(directory).glob('**/{}'.format(f_ext)):
                     if os.path.isdir(filepath):
