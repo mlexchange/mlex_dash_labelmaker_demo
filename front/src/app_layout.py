@@ -57,13 +57,13 @@ label_method = html.Div([
     # Labeling manually
     dbc.Collapse(
         children = [dbc.Label('1. Please use the File Manager on the left to import/load the dataset of interest.'),
-                    dbc.Label('2. Click on Manual tab to manually label images.'),
-                    dbc.Label('3. After saving manual labels, click on MLCoach tab. \
-                              First use "Go to" button to open MLCoach and do supervised model training using the manual labels there. \
-                              Then come back to MLCoach tab to label the full dataset.'),
-                    dbc.Label('4. Or after step 1, click on DataClinic tab. \
-                              Use "Go to" button to open DataClinic and do unsupervised labeling there. \
-                              Then come back to DataClinic tab to load the results and manually correct the labels if needed.')
+                    dbc.Label('2. Click the Manual tab to manually label images.'),
+                    dbc.Label('3. After saving manual labels, click the MLCoach tab. \
+                              First use the "Go to" button to open MLCoach and do supervised model training using the manual labels there. \
+                              Then come back to the MLCoach tab to label the full dataset.'),
+                    dbc.Label('4. Or after step 1, click the DataClinic tab. \
+                              Use the "Go to" button to open DataClinic and do unsupervised labeling there. \
+                              Then come back to the DataClinic tab to load the results and manually correct the labels if needed.')
         ],
         id="instruction-collapse",
         is_open=True
