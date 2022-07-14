@@ -141,6 +141,7 @@ def upload_zip(iscompleted, upload_filename, upload_id):
 @app.callback(
     Output('files-table', 'data'),
     Output('docker-file-paths', 'data'),
+    Input('clear-data', 'n_clicks'),
     Input('browse-format', 'value'),
     Input('browse-dir', 'n_clicks'),
     Input('import-dir', 'n_clicks'),
@@ -151,11 +152,12 @@ def upload_zip(iscompleted, upload_filename, upload_id):
     Input('my-toggle-switch', 'value'),
     State('dest-dir-name', 'value')
 )
-def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, 
-                  move_dir_n_clicks, rows, selected_paths, docker_path, dest):
+def file_manager(clear_data, browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, 
+                move_dir_n_clicks, rows, selected_paths, docker_path, dest):
     '''
     This callback displays manages the actions of file manager
     Args:
+        clear_data:         Clear loaded images
         browse_format:      File extension to browse
         browse_n_clicks:    Browse button
         import_n_clicks:    Import button
@@ -208,7 +210,9 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
     
     resp = requests.post("http://labelmaker-api:8005/api/v0/datapath", json=selected_files)
     
-    if docker_path:
+    if changed_id == 'clear-data.n_clicks':
+        return [], []
+    elif docker_path:
         return files, selected_files
     else:
         return docker_to_local_path(files, DOCKER_HOME, LOCAL_HOME), selected_files
@@ -431,6 +435,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
     '''
     This callback displays images in the front-end
     Args:
+        clear_data:             Clear loaded images
         image_order:            Order of the images according to the selected action (sort, hide, new data, etc)
         thumbnail_slider_value: Number of images per row
         button_prev_page:       Go to previous page
@@ -468,7 +473,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
 
     children = []
     num_imgs = 0
-    if import_n_clicks and bool(rows):
+    if import_n_clicks and bool(file_paths):
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':

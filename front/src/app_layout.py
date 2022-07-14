@@ -317,10 +317,20 @@ file_explorer = html.Div(
             "Open File Manager",
             id="collapse-button",
             size="lg",
-            className="mb-3",
+            className="mtb-2",
             color="secondary",
             outline=True,
             n_clicks=0,
+        ),
+        dbc.Button(
+            "Clear Images",
+            id="clear-data",
+            size="lg",
+            className="m-2",
+            color="secondary",
+            outline=True,
+            n_clicks=0,
+            #style={'width': '100%', 'justify-content': 'center'}
         ),
         dbc.Collapse(
             data_access,
