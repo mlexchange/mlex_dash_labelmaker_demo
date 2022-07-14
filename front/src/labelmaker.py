@@ -2,6 +2,7 @@ import os, io
 import shutil, pathlib, base64, math, copy, zipfile
 import numpy as np
 import requests
+import uuid
 
 import dash
 from dash.dependencies import Input, Output, State, MATCH, ALL
@@ -208,11 +209,13 @@ def file_manager(clear_data, browse_format, browse_n_clicks, import_n_clicks, de
             selected_files = []
             files = filename_list(DOCKER_DATA, browse_format)
     
-    resp = requests.post("http://labelmaker-api:8005/api/v0/datapath", json=selected_files)
-    
     if changed_id == 'clear-data.n_clicks':
-        return [], []
-    elif docker_path:
+        selected_files = []
+    
+    params = {'key': 'datapath'}
+    resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=selected_files)
+
+    if docker_path:
         return files, selected_files
     else:
         return docker_to_local_path(files, DOCKER_HOME, LOCAL_HOME), selected_files
@@ -273,7 +276,9 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
             else:
                 list_filename.append(file_path['file_path'])
         
-        resp = requests.post("http://labelmaker-api:8005/api/v0/filenames", json=list_filename)
+        params = {'key': 'filenames'}
+        resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=list_filename)
+        #resp = requests.post("http://labelmaker-api:8005/api/v0/filenames", json=list_filename)
         
         num_imgs = len(list_filename)
         if  changed_id == 'import-dir.n_clicks' or \
@@ -829,11 +834,15 @@ def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data,
     if labels_name_data is not None and import_n_clicks and bool(rows):
         if len(labels_name_data)>0:
             print('Saving labels')
+            # create root directory
+            root = pathlib.Path(DOCKER_DATA / 'labelmaker_outputs' /str(uuid.uuid4()))
+            params1 = {'key': 'datapath'}
+            payload = [{'file_path': str(root), 'file_type': 'dir'}]
+            resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params1, json=payload)
+            total_filename_list = []
             for label_index in labels_name_data:
                 filename_list = labels_name_data[label_index]
                 if len(filename_list)>0:
-                    # create root directory
-                    root = pathlib.Path(DOCKER_DATA / 'labelmaker_outputs')
                     label_dir = root / pathlib.Path(label_dict[int(label_index)])
                     label_dir.mkdir(parents=True, exist_ok=True)
                     # save all files under the current label into the directory
@@ -850,6 +859,11 @@ def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data,
                             i += 1 
                         im_fname = label_dir / pathlib.Path(filename)
                         im.save(im_fname)
+                        total_filename_list.append(str(im_fname))
+            
+            params2 = {'key': 'filenames'}
+            resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params2, json=total_filename_list)
+    
     return []
 
 
