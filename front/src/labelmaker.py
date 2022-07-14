@@ -52,24 +52,31 @@ def file_mover_collapse(n, is_open):
     return is_open
 
 @app.callback(
+    Output("instruction-collapse", "is_open"),
     Output("manual-collapse", "is_open"),
     Output("mlcoach-collapse", "is_open"),
     Output("data-clinic-collapse", "is_open"),
+    Output("label-buttons-collapse", "is_open"),
     Output("goto-webpage-collapse", "is_open"),
     Output("goto-webpage", "children"),
     Input("tab-group", "value")
 )
 def toggle_tabs_collapse(tab_value):
-    keys = ['manual', 'mlcoach', 'clinic']
+    keys = ['instruction', 'manual', 'mlcoach', 'clinic']
     tabs = {key: False for key in keys}
     tabs[tab_value] = True
     
-    goto_webpage = {'manual': False, 'mlcoach': True, 'clinic': True}
-    button_name = 'Go to MLCoach Webpage'
+    show_label_buttons = True
+    if tab_value == 'instruction':
+        show_label_buttons = False
+    
+    goto_webpage = {'instruction': False, 'manual': False, 'mlcoach': True, 'clinic': True}
+    button_name = 'Go to MLCoach'
     if tab_value == 'clinic':
-        button_name = 'Go to DataClinic Webpage'
+        button_name = 'Go to DataClinic'
      
-    return tabs['manual'], tabs['mlcoach'], tabs['clinic'], goto_webpage[tab_value], button_name
+    return tabs['instruction'], tabs['manual'], tabs['mlcoach'], tabs['clinic'], \
+           show_label_buttons, goto_webpage[tab_value], button_name
 
 
 app.clientside_callback(
