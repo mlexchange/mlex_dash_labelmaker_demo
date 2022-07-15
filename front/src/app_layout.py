@@ -36,9 +36,9 @@ label_method = html.Div([
                 labelStyle={'font-size': '13px', 'width': '85px', 'margin':'1px'},
                 options=[
                     {"label": "Instruction", "value": "instruction"},
-                    {"label": "Manual", "value": "manual"},
-                    {"label": "MLCoach", "value": "mlcoach"},
                     {"label": "DataClinic", "value": "clinic"},
+                    {"label": "Manual", "value": "manual"},
+                    {"label": "MLCoach", "value": "mlcoach"}
                 ],
                 value="instruction")
         ],
@@ -57,13 +57,14 @@ label_method = html.Div([
     # Labeling manually
     dbc.Collapse(
         children = [dbc.Label('1. Please use the File Manager on the left to import/load the dataset of interest.'),
-                    dbc.Label('2. Click the Manual tab to manually label images.'),
-                    dbc.Label('3. After saving manual labels, click the MLCoach tab. \
-                              First use the "Go to" button to open MLCoach and do supervised model training using the manual labels there. \
-                              Then come back to the MLCoach tab to label the full dataset.'),
-                    dbc.Label('4. Or after step 1, click the DataClinic tab. \
-                              Use the "Go to" button to open DataClinic and do unsupervised labeling there. \
-                              Then come back to the DataClinic tab to load the results and manually correct the labels if needed.')
+                    dbc.Label('2. Click the DataClinic tab. Use the "Go to" button to open DataClinic and train unsupervised learning algorithms to estimate image similarity. \
+                               Then, come back to the DataClinic tab in Label Maker to load the results and label batches of similar images.'),
+                    dbc.Label('3. Click the Manual tab to manually label images or make corrections to the previous step. \
+                               Save the current labels by clicking the button Save Labels to Disk.'),
+                    dbc.Label('4. Click the MLCoach tab. Use the "Go to" button to open MLCoach and do supervised learning for image classification using the previously saved labels. \
+                               Then, come back to the MLCoach tab in Label Maker to load the results and label the full dataset using their estimated probabilities. \
+                               Click the Manual tab to manually label images or make corrections to the previous step.'),
+                    dbc.Label('5. Finally, save all the labels by clicking the button Save Labels to Disk.')
         ],
         id="instruction-collapse",
         is_open=True
