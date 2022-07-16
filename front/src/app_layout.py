@@ -33,13 +33,14 @@ label_method = html.Div([
                 inputClassName="btn-check",
                 labelClassName="btn btn-outline-primary",
                 labelCheckedClassName="active",
-                labelStyle={'font-size': '13px', 'width': '85px', 'margin':'0px'},
+                labelStyle={'font-size': '13px', 'width': '85px', 'margin':'1px'},
                 options=[
-                    {"label": "Manual", "value": "manual"},
-                    {"label": "MLCoach", "value": "mlcoach"},
+                    {"label": "Instruction", "value": "instruction"},
                     {"label": "DataClinic", "value": "clinic"},
+                    {"label": "Manual", "value": "manual"},
+                    {"label": "MLCoach", "value": "mlcoach"}
                 ],
-                value="manual")
+                value="instruction")
         ],
         className="radio-group",
         style ={'font-size': '0.5px','margin-bottom': '10px'},
@@ -47,28 +48,53 @@ label_method = html.Div([
         # Labeling with MLCoach
     dbc.Collapse(
         children = [
-                    dbc.Button('Go to MLCoach Webpage', id='goto-webpage', outline="True",
+                    dbc.Button('Go to MLCoach', id='goto-webpage', outline="True",
                                color='primary', size="sm", style={'width': '100%', 'margin-bottom': '1rem', 'margin-top': '0.5rem'})
                     ],
         id="goto-webpage-collapse",
         is_open=False
     ),
-    # manual tab is default button group
-    html.Div(id='label-buttons', children=create_label_component(LABEL_LIST, del_button=True), style={'margin-bottom': '0.5rem'}),
     # Labeling manually
     dbc.Collapse(
-        children = [dcc.Input(id='add-label-name',
-                              placeholder="Input new label name",
-                              style={'width': '100%', 'margin-bottom': '10px'}),
-                    dbc.Row(dbc.Col(dbc.Button('Add New Label',
-                                               id='modify-list',
-                                               outline="True",
-                                               color='primary',
-                                               size="sm",
-                                               n_clicks=0,
-                                               style={'width': '100%'})))],
-        id="manual-collapse",
+        children = [dbc.Label('1. Please use the File Manager on the left to import/load the dataset of interest.'),
+                    dbc.Label('2. Click the DataClinic tab. Use the "Go to" button to open DataClinic and train unsupervised learning algorithms to estimate image similarity. \
+                               Then, come back to the DataClinic tab in Label Maker to load the results and label batches of similar images.'),
+                    dbc.Label('3. Click the Manual tab to manually label images or make corrections to the previous step. \
+                               Save the current labels by clicking the button Save Labels to Disk.'),
+                    dbc.Label('4. Click the MLCoach tab. Use the "Go to" button to open MLCoach and do supervised learning for image classification using the previously saved labels. \
+                               Then, come back to the MLCoach tab in Label Maker to load the results and label the full dataset using their estimated probabilities. \
+                               Click the Manual tab to manually label images or make corrections to the previous step.'),
+                    dbc.Label('5. Finally, save all the labels by clicking the button Save Labels to Disk.')
+        ],
+        id="instruction-collapse",
         is_open=True
+    ),
+    dbc.Collapse(
+        children = [
+                    dbc.Row([
+                        dbc.Col(dcc.Input(
+                            id='add-label-name',
+                            placeholder="Input new label here",
+                            style={'width': '100%', 'margin-bottom': '10px', 'margin-top': '5px'}), width=8),
+                        dbc.Col(dbc.Button(
+                            'Add Label',
+                            id='modify-list',
+                            outline="True",
+                            size = 'sm',
+                            color='primary',
+                            n_clicks=0,
+                            style={'width': '100%', 'margin-bottom': '10px', 'margin-top': '5px'}), width=4) ],
+                        justify = 'center'
+                        )
+        ],
+        id="manual-collapse",
+        is_open=False
+    ),
+    # manual tab is default button group
+    dbc.Collapse(
+        children = html.Div(id='label-buttons', children=create_label_component(LABEL_LIST, del_button=True), style={'margin-bottom': '0.5rem'}),
+        id="label-buttons-collapse",
+        is_open=False
     ),
     # Labeling with MLCoach
     dbc.Collapse(
@@ -314,18 +340,28 @@ data_access = html.Div([
 file_explorer = html.Div(
     [
         dbc.Button(
-            "Open File Manager",
+            "Toggle File Manager",
             id="collapse-button",
             size="lg",
-            className="mb-3",
+            className="mtb-2",
             color="secondary",
             outline=True,
             n_clicks=0,
         ),
+        dbc.Button(
+            "Clear Images",
+            id="clear-data",
+            size="lg",
+            className="m-2",
+            color="secondary",
+            outline=True,
+            n_clicks=0,
+            #style={'width': '100%', 'justify-content': 'center'}
+        ),
         dbc.Collapse(
             data_access,
             id="collapse",
-            is_open=False,
+            is_open=True,
         ),
     ]
 )

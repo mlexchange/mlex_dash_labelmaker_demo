@@ -2,6 +2,7 @@ import os, io
 import shutil, pathlib, base64, math, copy, zipfile
 import numpy as np
 import requests
+import uuid
 
 import dash
 from dash.dependencies import Input, Output, State, MATCH, ALL
@@ -51,24 +52,31 @@ def file_mover_collapse(n, is_open):
     return is_open
 
 @app.callback(
+    Output("instruction-collapse", "is_open"),
     Output("manual-collapse", "is_open"),
     Output("mlcoach-collapse", "is_open"),
     Output("data-clinic-collapse", "is_open"),
+    Output("label-buttons-collapse", "is_open"),
     Output("goto-webpage-collapse", "is_open"),
     Output("goto-webpage", "children"),
     Input("tab-group", "value")
 )
 def toggle_tabs_collapse(tab_value):
-    keys = ['manual', 'mlcoach', 'clinic']
+    keys = ['instruction', 'manual', 'mlcoach', 'clinic']
     tabs = {key: False for key in keys}
     tabs[tab_value] = True
     
-    goto_webpage = {'manual': False, 'mlcoach': True, 'clinic': True}
-    button_name = 'Go to MLCoach Webpage'
+    show_label_buttons = True
+    if tab_value == 'instruction':
+        show_label_buttons = False
+    
+    goto_webpage = {'instruction': False, 'manual': False, 'mlcoach': True, 'clinic': True}
+    button_name = 'Go to MLCoach'
     if tab_value == 'clinic':
-        button_name = 'Go to DataClinic Webpage'
+        button_name = 'Go to DataClinic'
      
-    return tabs['manual'], tabs['mlcoach'], tabs['clinic'], goto_webpage[tab_value], button_name
+    return tabs['instruction'], tabs['manual'], tabs['mlcoach'], tabs['clinic'], \
+           show_label_buttons, goto_webpage[tab_value], button_name
 
 
 app.clientside_callback(
@@ -141,6 +149,7 @@ def upload_zip(iscompleted, upload_filename, upload_id):
 @app.callback(
     Output('files-table', 'data'),
     Output('docker-file-paths', 'data'),
+    Input('clear-data', 'n_clicks'),
     Input('browse-format', 'value'),
     Input('browse-dir', 'n_clicks'),
     Input('import-dir', 'n_clicks'),
@@ -151,11 +160,12 @@ def upload_zip(iscompleted, upload_filename, upload_id):
     Input('my-toggle-switch', 'value'),
     State('dest-dir-name', 'value')
 )
-def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, 
-                  move_dir_n_clicks, rows, selected_paths, docker_path, dest):
+def file_manager(clear_data, browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, 
+                move_dir_n_clicks, rows, selected_paths, docker_path, dest):
     '''
     This callback displays manages the actions of file manager
     Args:
+        clear_data:         Clear loaded images
         browse_format:      File extension to browse
         browse_n_clicks:    Browse button
         import_n_clicks:    Import button
@@ -205,8 +215,13 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
                 
             selected_files = []
             files = filename_list(DOCKER_DATA, browse_format)
+    
+    if changed_id == 'clear-data.n_clicks':
+        selected_files = []
+    
+    params = {'key': 'datapath'}
+    resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=selected_files)
 
-    resp = requests.post("http://labelmaker-api:8005/api/v0/datapath", json=selected_files)
     if docker_path:
         return files, selected_files
     else:
@@ -267,7 +282,11 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
                 list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
             else:
                 list_filename.append(file_path['file_path'])
-    
+        
+        params = {'key': 'filenames'}
+        resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=list_filename)
+        #resp = requests.post("http://labelmaker-api:8005/api/v0/filenames", json=list_filename)
+        
         num_imgs = len(list_filename)
         if  changed_id == 'import-dir.n_clicks' or \
             changed_id == 'confirm-delete.n_clicks' or \
@@ -428,6 +447,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
     '''
     This callback displays images in the front-end
     Args:
+        clear_data:             Clear loaded images
         image_order:            Order of the images according to the selected action (sort, hide, new data, etc)
         thumbnail_slider_value: Number of images per row
         button_prev_page:       Go to previous page
@@ -465,7 +485,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
 
     children = []
     num_imgs = 0
-    if import_n_clicks and bool(rows):
+    if import_n_clicks and bool(file_paths):
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
@@ -821,11 +841,15 @@ def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data,
     if labels_name_data is not None and import_n_clicks and bool(rows):
         if len(labels_name_data)>0:
             print('Saving labels')
+            # create root directory
+            root = pathlib.Path(DOCKER_DATA / 'labelmaker_outputs' /str(uuid.uuid4()))
+            params1 = {'key': 'datapath'}
+            payload = [{'file_path': str(root), 'file_type': 'dir'}]
+            resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params1, json=payload)
+            total_filename_list = []
             for label_index in labels_name_data:
                 filename_list = labels_name_data[label_index]
                 if len(filename_list)>0:
-                    # create root directory
-                    root = pathlib.Path(DOCKER_DATA / 'labelmaker_outputs')
                     label_dir = root / pathlib.Path(label_dict[int(label_index)])
                     label_dir.mkdir(parents=True, exist_ok=True)
                     # save all files under the current label into the directory
@@ -842,6 +866,11 @@ def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data,
                             i += 1 
                         im_fname = label_dir / pathlib.Path(filename)
                         im.save(im_fname)
+                        total_filename_list.append(str(im_fname))
+            
+            params2 = {'key': 'filenames'}
+            resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params2, json=total_filename_list)
+    
     return []
 
 
