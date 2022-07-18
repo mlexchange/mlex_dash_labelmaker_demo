@@ -192,12 +192,13 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
                 # no more images, on hanging row
                 break
             content = list_of_contents[index]
-            filename = local_to_docker_path(list_of_names[index], DOCKER_HOME, LOCAL_HOME, type='str')
+            filename = list_of_names[index]
+            docker_filename = local_to_docker_path(filename, DOCKER_HOME, LOCAL_HOME, type='str')
             if show_prob:
                 # warning
                 # this section is needed bc the filenames in mlcoach do not match
-                if filename in filenames:
-                    probs = str(file.loc[file['filename']==filename].T.iloc[1:].to_string(header=None))
+                if docker_filename in filenames:
+                    probs = str(file.loc[file['filename']==docker_filename].T.iloc[1:].to_string(header=None))
             if data_clinic:
                 row_child.append(dbc.Col(parse_contents_data_clinic(content,
                                                                     filename,
