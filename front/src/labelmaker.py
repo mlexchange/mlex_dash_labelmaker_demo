@@ -218,9 +218,6 @@ def file_manager(clear_data, browse_format, browse_n_clicks, import_n_clicks, de
     
     if changed_id == 'clear-data.n_clicks':
         selected_files = []
-    
-    params = {'key': 'datapath'}
-    resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=selected_files)
 
     if docker_path:
         return files, selected_files
@@ -276,6 +273,8 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
 
     changed_id = dash.callback_context.triggered[0]['prop_id']
     if import_n_clicks and bool(rows):
+        params = {'key': 'datapath'}
+        resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=file_paths)
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
@@ -285,7 +284,6 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
         
         params = {'key': 'filenames'}
         resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=list_filename)
-        #resp = requests.post("http://labelmaker-api:8005/api/v0/filenames", json=list_filename)
         
         num_imgs = len(list_filename)
         if  changed_id == 'import-dir.n_clicks' or \
