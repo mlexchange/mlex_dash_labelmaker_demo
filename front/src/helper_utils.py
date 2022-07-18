@@ -1,12 +1,13 @@
 import os
 from dash import html
 import dash_bootstrap_components as dbc
+import pathlib
 import plotly.express as px
 import requests
 from file_manager import local_to_docker_path
-from app_layout import DOCKER_DATA
 
 LOCAL_DATA = str(os.environ['DATA_DIR'])
+DOCKER_DATA = pathlib.Path.home() / 'data'
 DOCKER_HOME = str(DOCKER_DATA) + '/'
 LOCAL_HOME = str(LOCAL_DATA)
 
