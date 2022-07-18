@@ -185,11 +185,10 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
                 # no more images, on hanging row
                 break
             content = list_of_contents[index]
-            name = list_of_names[index]
+            filename = list_of_names[index]
             if show_prob:
                 # warning
                 # this section is needed bc the filenames in mlcoach do not match
-                filename = '/'.join(name.split(os.sep)[-2:])
                 if filename in filenames:
                     probs = str(file.loc[file['filename']==filename].T.iloc[1:].to_string(header=None))
             if data_clinic:
@@ -235,9 +234,9 @@ def get_trained_models_list(user, datapath, tab):
     model_list = requests.get(f'http://job-service:8080/api/v0/jobs?&user={user}&mlex_app={tab}').json()
     trained_models = [{'label': 'Default', 'value': 'data'+filename}]
     for model in model_list:
-        if model['job_kwargs']['kwargs']['dataset'][0]==datapath and \
+        if model['job_kwargs']['kwargs']['dataset']==datapath[0]['file_path'] and \
                 model['job_kwargs']['kwargs']['job_type'].split(' ')[0]=='prediction_model':
-            if os.path.exists(model['job_kwargs']['cmd'].split(' ')[3]+filename):  # check if the file exists
+            if os.path.exists(model['job_kwargs']['cmd'].split(' ')[4]+filename):  # check if the file exists
                 trained_models.append({'label': model['job_kwargs']['kwargs']['job_type'],
-                                       'value': model['job_kwargs']['cmd'].split(' ')[3]+filename})
+                                       'value': model['job_kwargs']['cmd'].split(' ')[4]+filename})
     return trained_models
