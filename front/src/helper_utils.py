@@ -3,6 +3,8 @@ from dash import html
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import requests
+from file_manager import local_to_docker_path
+from labelmaker import DOCKER_HOME, LOCAL_HOME
 
 
 def get_color_from_label(label, color_cycle):
@@ -185,7 +187,7 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
                 # no more images, on hanging row
                 break
             content = list_of_contents[index]
-            filename = list_of_names[index]
+            filename = local_to_docker_path(list_of_names[index], DOCKER_HOME, LOCAL_HOME, type='str')
             if show_prob:
                 # warning
                 # this section is needed bc the filenames in mlcoach do not match
