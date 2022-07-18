@@ -193,14 +193,14 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
                     probs = str(file.loc[file['filename']==filename].T.iloc[1:].to_string(header=None))
             if data_clinic:
                 row_child.append(dbc.Col(parse_contents_data_clinic(content,
-                                                                    name,
+                                                                    filename,
                                                                     j * n_cols + i),
                                                      width="{}".format(12 // n_cols),
                                          )
                                  )
             else:
                 row_child.append(dbc.Col(parse_contents(content,
-                                                        name,
+                                                        filename,
                                                         j * n_cols + i,
                                                         probs),
                                          width="{}".format(12 // n_cols),
