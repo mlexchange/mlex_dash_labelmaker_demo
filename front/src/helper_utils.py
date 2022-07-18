@@ -4,7 +4,11 @@ import dash_bootstrap_components as dbc
 import plotly.express as px
 import requests
 from file_manager import local_to_docker_path
-from labelmaker import DOCKER_HOME, LOCAL_HOME
+from app_layout import DOCKER_DATA
+
+LOCAL_DATA = str(os.environ['DATA_DIR'])
+DOCKER_HOME = str(DOCKER_DATA) + '/'
+LOCAL_HOME = str(LOCAL_DATA)
 
 
 def get_color_from_label(label, color_cycle):
