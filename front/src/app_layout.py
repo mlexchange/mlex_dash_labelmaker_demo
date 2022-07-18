@@ -17,7 +17,7 @@ app = dash.Dash(__name__, external_stylesheets = external_stylesheets, suppress_
 
 header = templates.header()
 
-LABEL_LIST = {0:'Arc', 1:'Peaks', 2:'Rings', 3:'Rods'}
+LABEL_LIST = {0:'Label 1', 1:'Label 2'}
 DOCKER_DATA = pathlib.Path.home() / 'data'
 
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
@@ -439,7 +439,7 @@ app.layout = html.Div(
                                 dbc.CardHeader('Display Settings'),
                                 dbc.CardBody([additional_options_html])
                             ])
-                        ], width=3),
+                        ], width=4),
                     ],
                     justify='center'
                 ),
