@@ -354,16 +354,12 @@ def update_pop_window(find_similar_images, docker_path, data_clinic_model, thumb
                 filenames.append(thumbnail_name_children[index])
             else:
                 filenames.append(local_to_docker_path(thumbnail_name_children[index], DOCKER_HOME, LOCAL_HOME, type='str'))
-
-        CLINIC_PATH = '/'.join(local_to_docker_path(thumbnail_name_children[0], DOCKER_HOME, LOCAL_HOME, type='str').split('/')[:-2])
-        for name in filenames:
-            filename = '/'.join(name.split(os.sep)[-2:])
+        for filename in filenames:
             if data_clinic_model:
                 df_clinic = pd.read_csv(data_clinic_model)
                 row_dataframe = df_clinic.iloc[df_clinic.set_index('filename').index.get_loc(filename)]
                 row_filenames = df_clinic.iloc[np.argsort(row_dataframe.values[1:])[:top_n_search]]['filename'].tolist()
                 for row_filename in row_filenames:
-                    row_filename = CLINIC_PATH + '/' + row_filename
                     clinic_file_list.append(row_filename)
                     with open(row_filename, "rb") as file:
                         img = base64.b64encode(file.read())
@@ -663,13 +659,11 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
             df_prob = pd.read_csv(mlcoach_model)
             try:
                 filenames = df_prob['filename'][df_prob[label_dict[label_class_value]]>threshold/100].tolist()
-                MLCOACH_PATH = '/'.join(docker_to_local_path(thumbnail_name_children[0], DOCKER_HOME, LOCAL_HOME,
-                                                             type='str').split('/')[:-2])
                 for indx, filename in enumerate(filenames):
                     selected_thumbs.append(indx)
                     # the next line is needed bc the filenames in mlcoach do not match (only good for selecting single
                     # folder/subfolder )
-                    selected_thumbs_filename.append(MLCOACH_PATH+'/'+filename)
+                    selected_thumbs_filename.append(filename)
             except Exception as e:
                 print(f'Exception {e}')
     

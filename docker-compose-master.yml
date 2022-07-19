@@ -1,0 +1,77 @@
+version: '3'
+
+services:
+
+########################## LABELMAKER ##########################
+  labelmaker:
+    restart: "unless-stopped"
+    container_name: "dash-label"
+    build: 
+      context: 'front/'
+      dockerfile: 'docker/Dockerfile'
+    command: 'python src/labelmaker.py'
+    environment:
+      DATA_DIR: "${PWD}/data/"
+    volumes:
+      - "./data:/app/work/data"
+      - "./front/src:/app/work/src"
+    ports:
+      - '8057:8057'
+    networks:
+      - computing_api_default
+
+  api:
+    restart: "unless-stopped"
+    container_name: "labelmaker-api"
+    build:
+      context: "api/"
+      dockerfile: "docker/Dockerfile"
+    volumes:
+      - ./api/src:/app/api/src
+    ports:
+      - "8005:8005"
+    networks:
+      - computing_api_default
+
+##########################  MLCOACH   ##########################
+
+  mlcoach:
+    restart: "unless-stopped"
+    container_name: "mlcoach"
+    build:
+      context: "../mlex_mlcoach"
+      dockerfile: "docker/Dockerfile"
+    command: "python mlcoach/src/frontend.py"
+    environment:
+      DATA_DIR: "${PWD}/data/"
+    volumes:
+      - ${PWD}/data:/app/work/data
+      - ${PWD}/../mlex_mlcoach/src:/app/work/mlcoach/src
+    ports:
+      - "8062:8062"
+    networks:
+      - computing_api_default
+
+########################  DATA CLINIC ##########################
+
+  data_clinic:
+    restart: "unless-stopped"
+    container_name: "data_clinic"
+    build:
+      context: "../mlex_data_clinic"
+      dockerfile: "docker/Dockerfile"
+    command: "python data_clinic/src/frontend.py"
+    environment:
+      DATA_DIR: "${PWD}/data/"
+    volumes:
+      - ${PWD}/data:/app/work/data
+      - ${PWD}/../mlex_data_clinic/src:/app/work/data_clinic/src
+    ports:
+      - "8072:8072"
+    networks:
+      - computing_api_default
+
+
+networks:
+  computing_api_default:
+    external: true
