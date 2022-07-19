@@ -4,14 +4,13 @@ services:
 
 ########################## LABELMAKER ##########################
   labelmaker:
-    image: mlexchange1/labelmaker:latest
+    image: mlexchange1/labelmaker:1.0
     restart: "unless-stopped"
     container_name: "dash-label"
     environment:
       DATA_DIR: "${PWD}/data/"
     volumes:
-      - "./data:/app/work/data"
-      - "./front/src:/app/work/src"
+      - ./data:/app/work/data
     ports:
       - '8057:8057'
     networks:
@@ -21,8 +20,6 @@ services:
     image: mlexchange1/labelmaker-api:latest
     restart: "unless-stopped"
     container_name: "labelmaker-api"
-    volumes:
-      - ./api/src:/app/api/src
     ports:
       - "8005:8005"
     networks:
@@ -31,14 +28,13 @@ services:
 ##########################  MLCOACH   ##########################
 
   mlcoach:
-    image: mlexchange1/mlcoach:latest
+    image: mlexchange1/mlcoach:1.0
     restart: "unless-stopped"
     container_name: "mlcoach"
     environment:
       DATA_DIR: "${PWD}/data/"
     volumes:
       - ${PWD}/data:/app/work/data
-      - ${PWD}/../mlex_mlcoach/src:/app/work/mlcoach/src
     ports:
       - "8062:8062"
     networks:
@@ -47,14 +43,13 @@ services:
 ########################  DATA CLINIC ##########################
 
   data_clinic:
-    image: mlexchange1/dataclinic:latest
+    image: mlexchange1/dataclinic:1.0
     restart: "unless-stopped"
     container_name: "data_clinic"
     environment:
       DATA_DIR: "${PWD}/data/"
     volumes:
       - ${PWD}/data:/app/work/data
-      - ${PWD}/../mlex_data_clinic/src:/app/work/data_clinic/src
     ports:
       - "8072:8072"
     networks:
