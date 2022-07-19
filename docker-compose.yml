@@ -22,8 +22,6 @@ services:
         build:
           context: "api/"
           dockerfile: "docker/Dockerfile"
-        volumes:
-          - ./api/src:/app/api/src
         ports:
           - "8005:8005"
         networks:
