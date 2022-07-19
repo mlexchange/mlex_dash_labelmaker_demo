@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  model1:
+    image: mlexchange1/unsupervised-classifier:latest
+
+  model2:
+    image: mlexchange1/tensorflow-neural-networks:latest
+
+
+networks:
+  computing_api_default:
+    external: true

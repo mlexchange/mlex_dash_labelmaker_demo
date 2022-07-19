@@ -4,12 +4,9 @@ services:
 
 ########################## LABELMAKER ##########################
   labelmaker:
+    image: mlexchange1/labelmaker:latest
     restart: "unless-stopped"
     container_name: "dash-label"
-    build: 
-      context: 'front/'
-      dockerfile: 'docker/Dockerfile'
-    command: 'python src/labelmaker.py'
     environment:
       DATA_DIR: "${PWD}/data/"
     volumes:
@@ -21,11 +18,9 @@ services:
       - computing_api_default
 
   api:
+    image: mlexchange1/labelmaker-api:latest
     restart: "unless-stopped"
     container_name: "labelmaker-api"
-    build:
-      context: "api/"
-      dockerfile: "docker/Dockerfile"
     volumes:
       - ./api/src:/app/api/src
     ports:
@@ -36,12 +31,9 @@ services:
 ##########################  MLCOACH   ##########################
 
   mlcoach:
+    image: mlexchange1/mlcoach:latest
     restart: "unless-stopped"
     container_name: "mlcoach"
-    build:
-      context: "../mlex_mlcoach"
-      dockerfile: "docker/Dockerfile"
-    command: "python mlcoach/src/frontend.py"
     environment:
       DATA_DIR: "${PWD}/data/"
     volumes:
@@ -55,12 +47,9 @@ services:
 ########################  DATA CLINIC ##########################
 
   data_clinic:
+    image: mlexchange1/dataclinic:latest
     restart: "unless-stopped"
     container_name: "data_clinic"
-    build:
-      context: "../mlex_data_clinic"
-      dockerfile: "docker/Dockerfile"
-    command: "python data_clinic/src/frontend.py"
     environment:
       DATA_DIR: "${PWD}/data/"
     volumes:
