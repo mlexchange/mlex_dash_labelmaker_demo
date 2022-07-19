@@ -35,7 +35,7 @@ label_method = html.Div([
                 labelCheckedClassName="active",
                 labelStyle={'font-size': '13px', 'width': '85px', 'margin':'1px'},
                 options=[
-                    {"label": "Instruction", "value": "instruction"},
+                    {"label": "Instructions", "value": "instruction"},
                     {"label": "DataClinic", "value": "clinic"},
                     {"label": "Manual", "value": "manual"},
                     {"label": "MLCoach", "value": "mlcoach"}
@@ -421,6 +421,9 @@ browser_cache =html.Div(
 
 
 #APP LAYOUT
+app.title = 'Label Maker'
+app._favicon = 'mlex.ico'
+
 app.layout = html.Div(
     [
         header,
