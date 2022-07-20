@@ -348,17 +348,22 @@ def update_pop_window(find_similar_images, docker_path, data_clinic_model, thumb
         top_n_search = int(top_n_search)+1
     
     if bool(clicked_indice):
-        for index in clicked_indice:
-            index = int(index)
+        for ind in clicked_indice:
+            ind = int(ind)
             if docker_path:
-                filenames.append(thumbnail_name_children[index])
+                filenames.append(thumbnail_name_children[ind])
             else:
-                filenames.append(local_to_docker_path(thumbnail_name_children[index], DOCKER_HOME, LOCAL_HOME, type='str'))
+                filenames.append(local_to_docker_path(thumbnail_name_children[ind], DOCKER_HOME, LOCAL_HOME, type='str'))
+        
         for filename in filenames:
             if data_clinic_model:
                 df_clinic = pd.read_csv(data_clinic_model)
                 row_dataframe = df_clinic.iloc[df_clinic.set_index('filename').index.get_loc(filename)]
                 row_filenames = df_clinic.iloc[np.argsort(row_dataframe.values[1:])[:top_n_search]]['filename'].tolist()
+                if filename not in row_filenames:
+                    row_filenames.insert(0, filename)
+                    row_filenames = row_filenames[:-1]
+                    
                 for row_filename in row_filenames:
                     clinic_file_list.append(row_filename)
                     with open(row_filename, "rb") as file:
