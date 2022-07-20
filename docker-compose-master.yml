@@ -4,7 +4,7 @@ services:
 
 ########################## LABELMAKER ##########################
   labelmaker:
-    image: mlexchange1/labelmaker:1.1
+    image: mlexchange1/labelmaker:1.2
     restart: "unless-stopped"
     container_name: "dash-label"
     environment:
@@ -28,7 +28,7 @@ services:
 ##########################  MLCOACH   ##########################
 
   mlcoach:
-    image: mlexchange1/mlcoach:1.0
+    image: mlexchange1/mlcoach:1.1
     restart: "unless-stopped"
     container_name: "mlcoach"
     environment:
