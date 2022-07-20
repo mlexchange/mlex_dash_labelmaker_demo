@@ -674,6 +674,12 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
     
     elif changed_id == 'clinic-label.n_clicks':
         for key, name_list in clinic_filenames.items():
+            ## remove the previously assigned label before assigning new one
+            for current_key in current_labels_name.keys():
+                for file in name_list:
+                    if file in current_labels_name[current_key]:
+                        current_labels_name[current_key].remove(file)
+            ##
             if key in current_labels_name.keys():
                 current_labels_name[key].extend(name_list)
             else:
@@ -750,7 +756,6 @@ def update_list(tab_value, n_clicks, n_clicks2, clinic_add_label_button, mlcoach
         label_dict:             List of labels
         del_label:              Index of the deleted label
     '''
-    print(label_dict)
     label_dict = {int(key): value for key,value in label_dict.items()}
     indx = -1
     changed_id = dash.callback_context.triggered[-1]['prop_id']
