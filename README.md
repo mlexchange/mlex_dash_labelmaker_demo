@@ -1,21 +1,47 @@
 # Dash LabelMaker
-
 Simple labeling application with a Dash UI.
 
 ## Running
 To run this demo, please start the following services in the order:
 
-* mlex_computing_api
-* mlex_dash_segmentation_demo
+* [mlex_computing_api](https://github.com/mlexchange/mlex_computing_api)
+* [mlex_content_registry](https://github.com/mlexchange/mlex_content_registry)
 
-To start a service, go to the source code folder and execute the following:
+### Running as labeling pipeline (Labelmaker + Data Clinic + MLCoach)
+To start this multi-app labeling service, go to the source code folder and execute the following:
+```
+docker-compose -f docker-compose-models.yml --pull
+docker-compose -f docker-compose-master.yml up
+```
+Go to `http://localhost:8057` in web browser and follow the instructions on each tab.
+
+### Running as a standalone application (Labelmaker only)
+To start this labeling service, go to the source code folder and execute the following:
 ```
 docker-compose up --build
 ```
 Go to `http://localhost:8057` in web browser.
 
+Please note that starting the service in this way will not provide connectivity to Data Clinic and MLCoach.
+
 ## Ingest data with MLExchange file manager
-Put your dataset inside the **data folder** or use **MLExchange data connector** to transfer data to this folder (in future). 
+
+### Dataset Description
+Currently, the file manager supports directory based data definition, similar to the following example:
+
+```
+data_directory
+│
+│   image001.jpeg
+│   image002.jpeg
+│   ...
+
+```
+
+The supported image formats are: TIFF, TIF, JPG, JPEG, and PNG.
+
+### Instructions
+Put your dataset inside the **data folder** or use **MLExchange data connector** to transfer data to this folder (future release). 
 This folder is mounted to the working directory in the container, and it is your **home data dir (HOME)**. 
 Then go to the webpage and click on **Open File Manager** to lauch MLExchange file manager. It offers several options for users to ingest/manipualte data.   
 
@@ -53,22 +79,29 @@ Removing an assigned label (un-label):
 2. Click the "un-label" button
 
 ### Label from MLCoach  
-Choose MLCoah tab on the right side bar. 
-The probability of each label will be shown under each image. 
-It allows users to label by a probibility threshold. 
-To label iamges:  
+Choose MLCoach tab on the right sidebar. This options allows users to label images by using a trained MLCoach model and
+a given probability threshold. 
 
-1. Click on the label (button) and set a probability threshold.  
-2. Click Label with Threshold button.
+To label images:  
 
-The images will be automatically labeled based on the threshold. After which, users can manually unlabel and re-label following **Label Manually** procedures.
+1. Choose an MLCoach model from the dropdown. The probability of each label will be shown under each image according to 
+the selected model.
+2. Click on the label-name (e.g. "Label 1") and set a probability threshold.  
+3. Click "Label with Threshold" button.
 
-### Label from DataClinic
-Choose DataCinic tab on the right side bar.
-MLExchange Data clinic will produce unsupervised similarity results of all images.
-This tab allows users to tag the selected images and their top N most simialr images under the same label(s).
+The images will be automatically labeled based on the threshold. After which, users can manually un-label and re-label
+following **Label Manually** procedures.
 
-Please follow the instructions in the app side bar. Likewise, users can also manually unlabel and re-label following **Label Manually** procedures afterwards.
+For further details on the operation of MLCoach, please refer to its [documentation](https://github.com/mlexchange/mlex_mlcoach).
+
+### Label from Data Clinic
+Choose Data Clinic tab on the right sidebar. This tab allows users to tag the selected images and their top N most 
+similar images under the same label(s) by using a trained Data Clinic model.
+
+Please follow the instructions in the app sidebar. Likewise, users can also manually un-label and re-label following
+**Label Manually** procedures afterwards.
+
+For further details on the operation of Data Clinic, please refer to its [documentation](https://github.com/mlexchange/mlex_data_clinic).
 
 
 
