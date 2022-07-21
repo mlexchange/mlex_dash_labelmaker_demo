@@ -19,5 +19,8 @@ RUN pip3 install --upgrade pip &&\
 
 WORKDIR /app/work
 ENV HOME /app/work
+COPY src src
 ENV PYTHONUNBUFFERED=1
+
 CMD ["bash"]
+CMD python3 src/labelmaker.py
