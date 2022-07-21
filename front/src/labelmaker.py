@@ -83,9 +83,9 @@ app.clientside_callback(
     """
     function(n_clicks, tab_value) {
         if (tab_value == 'mlcoach') {
-            window.open('http://localhost:8062');
+            window.open('https://mlcoach.mlexchange.als.lbl.gov');
         } else if (tab_value == 'clinic') {
-            window.open('http://localhost:8072');
+            window.open('https://dataclinic.mlexchange.als.lbl.gov');
         } 
         return '';
     }
@@ -111,7 +111,7 @@ def toggle_modal(n1, n2, is_open):
     Output("modal-window", "is_open"),
     Input("find-similar-unsupervised", "n_clicks"),
     Input("clinic-add-label-button", "n_clicks"), 
-    Input('docker-file-paths','data'), 
+    State('docker-file-paths','data'), 
     State("modal-window", "is_open")
 )
 def data_clinic_window(n1, n2, docker_file_paths, is_open):
@@ -335,6 +335,7 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
 )
 def update_pop_window(find_similar_images, docker_path, data_clinic_model, thumb_clicked, \
                       thumbnail_name_children, input_value, top_n_search):
+    changed_id = dash.callback_context.triggered[0]['prop_id']
     clicked_indice = [i for i, e in enumerate(thumb_clicked) if e != 0]
     filenames = []
     clinic_file_list = []
@@ -359,6 +360,10 @@ def update_pop_window(find_similar_images, docker_path, data_clinic_model, thumb
                 df_clinic = pd.read_csv(data_clinic_model)
                 row_dataframe = df_clinic.iloc[df_clinic.set_index('filename').index.get_loc(filename)]
                 row_filenames = df_clinic.iloc[np.argsort(row_dataframe.values[1:])[:top_n_search]]['filename'].tolist()
+                if filename not in row_filenames:
+                     row_filenames.insert(0, filename)
+                     row_filenames = row_filenames[:-1]
+
                 for row_filename in row_filenames:
                     clinic_file_list.append(row_filename)
                     with open(row_filename, "rb") as file:
@@ -404,12 +409,12 @@ def update_data_clinic_filenames(clinic_label, label_dict, clinic_file_list, inp
     for i,filename in enumerate(clinic_file_list):
         if i % top_n_search == 0:
             j += 1
-            if input_values[j] in label_dict_r:
-                if label_dict_r[input_values[j]] not in clinic_filenames:
-                    clinic_filenames[label_dict_r[input_values[j]]] = []
+            if input_values[j].replace(' ', '_') in label_dict_r:
+                if label_dict_r[input_values[j].replace(' ', '_')] not in clinic_filenames:
+                    clinic_filenames[label_dict_r[input_values[j].replace(' ', '_')]] = []
         
         if n_clicks[i] is None or n_clicks[i] % 2 == 0:
-            clinic_filenames[label_dict_r[input_values[j]]].append(filename)
+            clinic_filenames[label_dict_r[input_values[j].replace(' ', '_')]].append(filename)
     
     return clinic_filenames
 
@@ -669,6 +674,12 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
     
     elif changed_id == 'clinic-label.n_clicks':
         for key, name_list in clinic_filenames.items():
+            ## remove the previously assigned label before assigning new one
+            for current_key in current_labels_name.keys():
+                for file in name_list:
+                    if file in current_labels_name[current_key]:
+                        current_labels_name[current_key].remove(file)
+            ##
             if key in current_labels_name.keys():
                 current_labels_name[key].extend(name_list)
             else:
@@ -751,7 +762,7 @@ def update_list(tab_value, n_clicks, n_clicks2, clinic_add_label_button, mlcoach
     changed_id = dash.callback_context.triggered[-1]['prop_id']
     mlcoach_models = dash.no_update
     data_clinic_models = dash.no_update
-    if changed_id == 'tab-group.value':
+    if 'tab-group.value' == changed_id or 'docker-file-paths.data' in changed_id:
         if tab_value == 'mlcoach':
             mlcoach_models = get_trained_models_list(USER, datapath, tab_value)
         if tab_value == 'clinic':
@@ -774,8 +785,8 @@ def update_list(tab_value, n_clicks, n_clicks2, clinic_add_label_button, mlcoach
     if changed_id == 'clinic-add-label-button.n_clicks':
         for new_label in input_labels:
             if new_label is not None:
-                if new_label not in label_dict.values():
-                    label_dict[len(label_dict.keys())] = new_label
+                if new_label.replace(' ', '_') not in label_dict.values():
+                    label_dict[len(label_dict.keys())] = new_label.replace(' ', '_')
 
     add_clicks = n_clicks
     if 'delete-label-button' in changed_id and any(n_clicks2):
@@ -798,7 +809,7 @@ def update_list(tab_value, n_clicks, n_clicks2, clinic_add_label_button, mlcoach
                     last_key += 1
             if key_to_add == max(label_dict.keys()):
                 key_to_add = max(label_dict.keys())+1
-            label_dict[key_to_add] = add_label_name
+            label_dict[key_to_add] = add_label_name.replace(' ', '_')
         else:
             label_dict[max(label_dict.keys())+1] = add_label_name
     
