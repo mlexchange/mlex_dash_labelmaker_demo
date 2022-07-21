@@ -335,7 +335,6 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
 )
 def update_pop_window(find_similar_images, docker_path, data_clinic_model, thumb_clicked, \
                       thumbnail_name_children, input_value, top_n_search):
-    print(f'thumbnail_name_children in popwindow {thumbnail_name_children}')
     clicked_indice = [i for i, e in enumerate(thumb_clicked) if e != 0]
     filenames = []
     clinic_file_list = []
