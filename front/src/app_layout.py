@@ -17,7 +17,7 @@ app = dash.Dash(__name__, external_stylesheets = external_stylesheets, suppress_
 
 header = templates.header()
 
-LABEL_LIST = {0:'Label 1', 1:'Label 2'}
+LABEL_LIST = {0:'Label_1', 1:'Label_2'}
 DOCKER_DATA = pathlib.Path.home() / 'data'
 
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
@@ -194,7 +194,7 @@ data_access = html.Div([
                           dbc.Label('1. Upload a new file or a zipped folder:', className='mr-2'),
                           html.Div([ du.Upload(
                                             id="dash-uploader",
-                                            max_file_size=1800,  # 1800 Mb
+                                            max_file_size=60000,  # 1800 Mb
                                             cancel_button=True,
                                             pause_button=True
                                     )],

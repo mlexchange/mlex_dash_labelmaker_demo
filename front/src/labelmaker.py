@@ -111,7 +111,7 @@ def toggle_modal(n1, n2, is_open):
     Output("modal-window", "is_open"),
     Input("find-similar-unsupervised", "n_clicks"),
     Input("clinic-add-label-button", "n_clicks"), 
-    Input('docker-file-paths','data'), 
+    State('docker-file-paths','data'),
     State("modal-window", "is_open")
 )
 def data_clinic_window(n1, n2, docker_file_paths, is_open):
@@ -409,12 +409,12 @@ def update_data_clinic_filenames(clinic_label, label_dict, clinic_file_list, inp
     for i,filename in enumerate(clinic_file_list):
         if i % top_n_search == 0:
             j += 1
-            if input_values[j] in label_dict_r:
-                if label_dict_r[input_values[j]] not in clinic_filenames:
-                    clinic_filenames[label_dict_r[input_values[j]]] = []
+            if input_values[j].replace(' ', '_') in label_dict_r:
+                if label_dict_r[input_values[j].replace(' ', '_')] not in clinic_filenames:
+                    clinic_filenames[label_dict_r[input_values[j].replace(' ', '_')]] = []
         
         if n_clicks[i] is None or n_clicks[i] % 2 == 0:
-            clinic_filenames[label_dict_r[input_values[j]]].append(filename)
+            clinic_filenames[label_dict_r[input_values[j].replace(' ', '_')]].append(filename)
     
     return clinic_filenames
 
@@ -761,7 +761,7 @@ def update_list(tab_value, n_clicks, n_clicks2, clinic_add_label_button, mlcoach
     changed_id = dash.callback_context.triggered[-1]['prop_id']
     mlcoach_models = dash.no_update
     data_clinic_models = dash.no_update
-    if changed_id == 'tab-group.value':
+    if changed_id == 'tab-group.value' or 'docker-file-paths.data' in changed_id:
         if tab_value == 'mlcoach':
             mlcoach_models = get_trained_models_list(USER, datapath, tab_value)
         if tab_value == 'clinic':
@@ -784,8 +784,8 @@ def update_list(tab_value, n_clicks, n_clicks2, clinic_add_label_button, mlcoach
     if changed_id == 'clinic-add-label-button.n_clicks':
         for new_label in input_labels:
             if new_label is not None:
-                if new_label not in label_dict.values():
-                    label_dict[len(label_dict.keys())] = new_label
+                if new_label.replace(' ', '_') not in label_dict.values():
+                    label_dict[len(label_dict.keys())] = new_label.replace(' ', '_')
 
     add_clicks = n_clicks
     if 'delete-label-button' in changed_id and any(n_clicks2):
@@ -808,7 +808,7 @@ def update_list(tab_value, n_clicks, n_clicks2, clinic_add_label_button, mlcoach
                     last_key += 1
             if key_to_add == max(label_dict.keys()):
                 key_to_add = max(label_dict.keys())+1
-            label_dict[key_to_add] = add_label_name
+            label_dict[key_to_add] = add_label_name.replace(' ', '_')
         else:
             label_dict[max(label_dict.keys())+1] = add_label_name
     
