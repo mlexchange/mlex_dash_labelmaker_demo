@@ -99,7 +99,9 @@ label_method = html.Div([
     # Labeling with MLCoach
     dbc.Collapse(
         children = [dbc.Label('Trained models:'),
-                    dcc.Dropdown(id='mlcoach-model-list'),
+                    dbc.Row([dbc.Col(dcc.Dropdown(id='mlcoach-model-list')),
+                             dbc.Col(dbc.Button('Refresh', id='mlcoach-refresh', outline="True",
+                                 color='primary', size="sm", style={'width': '100%', 'margin-top': '1px'}))]),
                     dbc.Label('Probability Threshold', style={'width': '100%', 'margin-top': '20px'}),
                     dcc.Slider(id='probability-threshold',
                                min=0,
@@ -127,7 +129,9 @@ label_method = html.Div([
                                       then click Add Labels button (bottom left) .', className='mr-2'),
                         dbc.Label('4. Click Label button.', className='mr-2'),
                         dbc.Label('Trained models:'),
-                        dcc.Dropdown(id='data-clinic-model-list'),
+                        dbc.Row([dbc.Col(dcc.Dropdown(id='data-clinic-model-list')),
+                             dbc.Col(dbc.Button('Refresh', id='data-clinic-refresh', outline="True",
+                                 color='primary', size="sm", style={'width': '100%', 'margin-top': '1px'}))]),
                         dbc.Input(id='n-similar-images', placeholder='Input num of similar images to find',
                                   style={'width': '100%', 'margin-top': '20px'}),
                         dbc.Button('Find Similar Images', id='find-similar-unsupervised', outline="True",

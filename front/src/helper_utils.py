@@ -46,7 +46,7 @@ def create_label_component(label_dict, color_cycle=px.colors.qualitative.Dark24,
                                    id={'type': 'label-button', 'index': i},
                                    size="sm",
                                    style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
-                                          'color':'white', 'width': '100%', 'margin-bottom': '5px'}
+                                          'color':'black', 'width': '100%', 'margin-bottom': '5px'}
                                    ),
                         width=8
                     ),
@@ -55,7 +55,7 @@ def create_label_component(label_dict, color_cycle=px.colors.qualitative.Dark24,
                                    id={'type': 'delete-label-button', 'index': i},
                                    size="sm",
                                    style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
-                                          'color':'white', 'width': '100%', 'margin-bottom': '5px'}),
+                                          'color':'black', 'width': '100%', 'margin-bottom': '5px'}),
                         width=4
                     ),
                 ],
@@ -69,7 +69,7 @@ def create_label_component(label_dict, color_cycle=px.colors.qualitative.Dark24,
                                id={'type': 'label-button', 'index': i},
                                size="sm",
                                style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
-                                      'color': 'white', 'width': '100%', 'margin-bottom': '5px'}
+                                      'color': 'black', 'width': '100%', 'margin-bottom': '5px'}
                                )
                 ),
             )
@@ -184,6 +184,9 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
     probs = None
     if show_prob:
         filenames = list(file['filename'])
+        for ind, filename in enumerate(filenames):
+            filenames[ind] = filename.split(os.sep)[-1]
+        file['filename'] = filenames
     for j in range(n_rows):
         row_child = []
         for i in range(n_cols):
@@ -197,8 +200,12 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
             if show_prob:
                 # warning
                 # this section is needed bc the filenames in mlcoach do not match
+                docker_filename = docker_filename.split(os.sep)[-1]  # match by filename - not full path
+                
                 if docker_filename in filenames:
                     probs = str(file.loc[file['filename']==docker_filename].T.iloc[1:].to_string(header=None))
+                else:
+                    probs = ''
             if data_clinic:
                 row_child.append(dbc.Col(parse_contents_data_clinic(content,
                                                                     filename,
@@ -242,10 +249,12 @@ def get_trained_models_list(user, datapath, tab):
     model_list = requests.get(f'http://job-service:8080/api/v0/jobs?&user={user}&mlex_app={tab}').json()
     trained_models = [{'label': 'Default', 'value': 'data'+filename}]
     for model in model_list:
-        if datapath:
-            if model['job_kwargs']['kwargs']['dataset']==datapath[0]['file_path'] and \
-                    model['job_kwargs']['kwargs']['job_type'].split(' ')[0]=='prediction_model':
-                if os.path.exists(model['job_kwargs']['cmd'].split(' ')[4]+filename):  # check if the file exists
-                    trained_models.append({'label': model['job_kwargs']['kwargs']['job_type'],
+        # if datapath:
+            #if model['job_kwargs']['kwargs']['dataset']==datapath[0]['file_path'] and \
+            #        model['job_kwargs']['kwargs']['job_type'].split(' ')[0]=='prediction_model':
+        if model['job_kwargs']['kwargs']['job_type'].split(' ')[0]=='prediction_model':
+            if os.path.exists(model['job_kwargs']['cmd'].split(' ')[4]+filename):  # check if the file exists
+                trained_models.append({'label': model['job_kwargs']['kwargs']['job_type'],
                                            'value': model['job_kwargs']['cmd'].split(' ')[4]+filename})
+    trained_models.reverse()
     return trained_models
