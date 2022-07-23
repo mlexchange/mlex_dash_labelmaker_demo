@@ -107,17 +107,17 @@ def toggle_modal(n1, n2, is_open):
         return not is_open
     return is_open
 
-@app.callback(
-    Output("modal-window", "is_open"),
-    Input("find-similar-unsupervised", "n_clicks"),
-    Input("clinic-add-label-button", "n_clicks"), 
-    State('docker-file-paths','data'), 
-    State("modal-window", "is_open")
-)
-def data_clinic_window(n1, n2, docker_file_paths, is_open):
-    if n1 or n2:
-        return not is_open
-    return is_open
+# @app.callback(
+#     Output("modal-window", "is_open"),
+#     Input("find-similar-unsupervised", "n_clicks"),
+#     Input("clinic-add-label-button", "n_clicks"), 
+#     State('docker-file-paths','data'), 
+#     State("modal-window", "is_open")
+# )
+# def data_clinic_window(n1, n2, docker_file_paths, is_open):
+#     if n1 or n2:
+#         return not is_open
+#     return is_open
 
 
 @app.callback(
@@ -227,6 +227,8 @@ def file_manager(clear_data, browse_format, browse_n_clicks, import_n_clicks, de
 
 @app.callback(
     Output('image-order','data'),
+    Input('find-similar-unsupervised', 'n_clicks'),
+    Input('my-toggle-switch', 'value'),
     Input('docker-file-paths','data'),
     Input('import-dir', 'n_clicks'),
     Input('import-format', 'value'),
@@ -235,13 +237,17 @@ def file_manager(clear_data, browse_format, browse_n_clicks, import_n_clicks, de
     Input('button-sort', 'n_clicks'),
     Input('confirm-delete','n_clicks'),
     Input('move-dir', 'n_clicks'),
+    State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
+    State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
+    State('data-clinic-model-list', 'value'),
     State('docker-labels-name', 'data'),
     State('label-dict', 'data'),
     State('image-order','data'),
+    State('n-similar-images', 'value'),
     prevent_initial_call=True)
-def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_n_clicks,
-                  button_sort_n_clicks, delete_n_clicks, move_dir_n_clicks, 
-                  labels_name_data, label_dict, image_order):
+def display_index(find_similar_images, docker_path, file_paths, import_n_clicks, import_format, rows, button_hide_n_clicks,
+                  button_sort_n_clicks, delete_n_clicks, move_dir_n_clicks, thumb_clicked, thumbnail_name_children, data_clinic_model,
+                  labels_name_data, label_dict, image_order, top_n_search):
     '''
     This callback arranges the image order according to the following actions:
         - New content is uploaded
@@ -263,6 +269,7 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
         image_order:            Order of the images according to the selected action (sort, hide, new data, etc)
         data_access_open:       Closes the reactive component to select the data access (upload vs. directory)
     '''
+    clicked_indice = [i for i, e in enumerate(thumb_clicked) if e != 0]
     supported_formats = []
     import_format = import_format.split(',')
     if import_format[0] == '*':
@@ -272,7 +279,34 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
             supported_formats.append(ext.split('.')[1])
 
     changed_id = dash.callback_context.triggered[0]['prop_id']
-    if import_n_clicks and bool(rows):
+    if 'find-similar-unsupervised.n_clicks' in changed_id:
+        filenames = []
+        if top_n_search is None:
+            top_n_search = TOP_N_SEARCH
+        else:
+            top_n_search = int(top_n_search)+1
+        # print('HERE2') 
+        if bool(clicked_indice):
+            for ind in clicked_indice:
+                ind = int(ind)
+                if docker_path:
+                    filenames.append(thumbnail_name_children[ind])
+                else:
+                    filenames.append(local_to_docker_path(thumbnail_name_children[ind], DOCKER_HOME, LOCAL_HOME, type='str'))
+            for filename in filenames:
+                #print('HERE')
+                #print(data_clinic_model)
+                if data_clinic_model:
+                    df_clinic = pd.read_csv(data_clinic_model)
+                    # print(f'File: {df_clinic}')
+                    row_dataframe = df_clinic.iloc[df_clinic.set_index('filename').index.get_loc(filename)]
+                    print(f'row_dataframe {row_dataframe}')
+                    image_order1 = [int(order) for order in row_dataframe.values[1:][:top_n_search].tolist()]
+                    image_order = [int(order) for order in row_dataframe.values[1:].tolist()]
+                    
+                    print(f'image_order {image_order}')
+        
+    elif import_n_clicks and bool(rows):
         params = {'key': 'datapath'}
         resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=file_paths)
         list_filename = []
@@ -422,7 +456,7 @@ def update_data_clinic_filenames(clinic_label, label_dict, clinic_file_list, inp
         if n_clicks[i] is None or n_clicks[i] % 2 == 0:
             if input_values[j]:
                 clinic_filenames[label_dict_r[input_values[j].replace(' ', '_')]].append(filename)
-    # print(f'filenames {clinic_file_list}')
+
     return clinic_filenames
 
 
@@ -507,6 +541,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
             new_contents = []
             new_filenames = []
             for i in range(start_indx, max_indx):
+                print(f'i {i}, list_filename {len(list_filename)}, image_order {len(image_order)}')
                 filename = list_filename[image_order[i]]
                 with open(filename, "rb") as file:
                     img = base64.b64encode(file.read())
