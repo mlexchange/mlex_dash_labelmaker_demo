@@ -65,6 +65,8 @@ def toggle_tabs_collapse(tab_value):
     keys = ['instruction', 'manual', 'mlcoach', 'clinic']
     tabs = {key: False for key in keys}
     tabs[tab_value] = True
+    if tab_value == 'clinic':
+        tabs['manual'] = True
     
     show_label_buttons = True
     if tab_value == 'instruction':
@@ -820,10 +822,6 @@ def update_list(tab_value, n_clicks, mlcoach_refresh, data_clinic_refresh, n_cli
         if tab_value == 'clinic':
             data_clinic_models = get_trained_models_list(USER, datapath, tab_value)
         print(data_clinic_models)
-
-    del_button = False 
-    if tab_value == 'manual':
-        del_button = True
     
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'mlcoach-model-list.value' in changed_id:
@@ -866,7 +864,7 @@ def update_list(tab_value, n_clicks, mlcoach_refresh, data_clinic_refresh, n_cli
         else:
             label_dict[max(label_dict.keys())+1] = add_label_name
     
-    return [create_label_component(label_dict, COLOR_CYCLE, del_button=del_button), 0, label_dict, indx,
+    return [create_label_component(label_dict, COLOR_CYCLE, del_button=True), 0, label_dict, indx,
             mlcoach_models, data_clinic_models]
 
 
