@@ -850,21 +850,24 @@ def update_list(tab_value, n_clicks, mlcoach_refresh, data_clinic_refresh, n_cli
             
     if add_clicks > 0:
         add_label_name = add_label_name.replace(' ', '_')
-        if add_label_name not in label_dict.values():
-            if len(label_dict.keys()) < max(label_dict.keys())+1:
-                key_to_add = 0
-                last_key = -1
-                for key in sorted(label_dict.keys()):
-                    if key > last_key + 1:
-                        key_to_add = last_key +1
-                        break
-                    else:
-                        last_key += 1
-                if key_to_add == max(label_dict.keys()):
-                    key_to_add = max(label_dict.keys())+1
-                label_dict[key_to_add] = add_label_name
-            else:
-                label_dict[max(label_dict.keys())+1] = add_label_name
+        if len(label_dict.keys())>0:
+            if add_label_name not in label_dict.values():
+                if len(label_dict.keys()) < max(label_dict.keys())+1:
+                    key_to_add = 0
+                    last_key = -1
+                    for key in sorted(label_dict.keys()):
+                        if key > last_key + 1:
+                            key_to_add = last_key +1
+                            break
+                        else:
+                            last_key += 1
+                    if key_to_add == max(label_dict.keys()):
+                        key_to_add = max(label_dict.keys())+1
+                    label_dict[key_to_add] = add_label_name
+                else:
+                    label_dict[max(label_dict.keys())+1] = add_label_name
+        else:
+            label_dict = {0: add_label_name}
     
     return [create_label_component(label_dict, COLOR_CYCLE, del_button=True), 0, label_dict, indx,
             mlcoach_models, data_clinic_models]
