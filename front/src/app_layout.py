@@ -122,22 +122,23 @@ label_method = html.Div([
         children = [dbc.CardHeader("Instructions Data Clinic"),
                     dbc.CardBody([
                         dbc.Label('1. Select a trained model to start.', className='mr-2'),
-                        dbc.Label('2. Please click on image(s) and enter the number of similar images to find. \
-                                      Then click Find Similar Images button below.', className='mr-2'),
-                        dbc.Label('3. In pop-up window, input label for each row , \
-                                      and (if needed) click on wrongly grouped images to remove them, \
-                                      then click Add Labels button (bottom left) .', className='mr-2'),
-                        dbc.Label('4. Click Label button.', className='mr-2'),
+                        dbc.Label('2. Click on the image of interest. Then click Find Similar Images button below.', className='mr-2'),
+                        dbc.Label('3. The image display updates according to the trained model results. Label as usual.', className='mr-2'),
+                        dbc.Label('4. To exit this similarity based display, click Stop Find Similar Images.', className='mr-2'),
                         dbc.Label('Trained models:'),
                         dbc.Row([dbc.Col(dcc.Dropdown(id='data-clinic-model-list')),
                              dbc.Col(dbc.Button('Refresh', id='data-clinic-refresh', outline="True",
                                  color='primary', size="sm", style={'width': '100%', 'margin-top': '1px'}))]),
                         dbc.Input(id='n-similar-images', placeholder='Input num of similar images to find',
-                                  style={'width': '100%', 'margin-top': '20px'}),
-                        dbc.Button('Find Similar Images', id='find-similar-unsupervised', outline="True",
-                               color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'}),
+                                  style={'width': '100%', 'margin-top': '20px', "display": "none"}),
+                        dbc.Row([dbc.Col(dbc.Button('Find Similar Images', 
+                                                    id='find-similar-unsupervised', outline="True",
+                                                    color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'})),
+                                 dbc.Col(dbc.Button('Stop Find Similar Images', id='exit-similar-unsupervised', outline="True",
+                                                    color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'}))]),
+                        daq.Indicator(id='on-off-display', label='Find Similar Images: OFF', color='#596D4E', size=30, style={'margin-top': '20px'}),
                         dbc.Button('Label', id='clinic-label', outline="True",
-                               color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'})
+                               color='primary', size="sm", style={'width': '100%', 'margin-top': '20px', "display": "none"})
                     ]),
         ],
         id="data-clinic-collapse",
@@ -419,7 +420,8 @@ browser_cache =html.Div(
             dcc.Store(id='dummy-data', data=0),
             dcc.Store(id='dummy1', data=0),
             dcc.Store(id='clinic-file-list', data=[]),
-            dcc.Store(id='clinic-filenames', data=[])
+            dcc.Store(id='clinic-filenames', data=[]),
+            dcc.Store(id='previous-tab', data=['init'])
         ],
     )
 

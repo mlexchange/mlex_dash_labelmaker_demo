@@ -117,6 +117,7 @@ def parse_contents(contents, filename, index, probs=None):
             id={'type': 'thumbnail-card', 'index': index},
             children=[
                 html.A(id={'type': 'thumbnail-image', 'index': index},
+                       n_clicks=0,   
                        children=dbc.CardImg(id={'type': 'thumbnail-src', 'index': index},
                                             src=contents,
                                             bottom=False)),
@@ -146,20 +147,21 @@ def parse_contents_data_clinic(contents, filename, index):
     '''
     img_card = html.Div(
         dbc.Card(
-            id={'type': 'thumbnail-card-data-clinic', 'index': index},
+            id={'type': 'thumbnail-card', 'index': index},
             children=[
-                html.A(id={'type': 'thumbnail-image-data-clinic', 'index': index},
-                       children=dbc.CardImg(id={'type': 'thumbnail-src-data-clinic', 'index': index},
+                html.A(id={'type': 'thumbnail-image', 'index': index},
+                       n_clicks=1,
+                       children=dbc.CardImg(id={'type': 'thumbnail-src', 'index': index},
                                             src=contents,
                                             bottom=False)),
                 dbc.CardBody([
-                    html.P(id={'type':'thumbnail-name-data-clinic', 'index': index}, children=filename, style={'font-size': '12px'}),
+                    html.P(id={'type':'thumbnail-name', 'index': index}, children=filename, style={'font-size': '12px'}),
                 ])
             ],
             outline=False,
             color='primary'
         ),
-        id={'type': 'thumbnail-wrapper-data-clinic', 'index': index},
+        id={'type': 'thumbnail-wrapper', 'index': index},
         style={'display': 'block'}
     )
     return img_card
@@ -223,9 +225,9 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
                                  )
             visible.append(1)
         
-        if data_clinic:
-            row_child.insert(0,dbc.Input(id={'type':'clinic-label-input', 'index':j}, 
-                                         placeholder="Input Label for this row", className="mb-3"))
+        #if data_clinic:
+        #    row_child.insert(0,dbc.Input(id={'type':'clinic-label-input', 'index':j}, 
+        #                                 placeholder="Input Label for this row", className="mb-3"))
             
         children.append(dbc.Row(row_child))
     return children
