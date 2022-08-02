@@ -3,7 +3,6 @@ from dash import dcc, html, dash_table
 import dash_bootstrap_components as dbc
 import dash_daq as daq
 import dash_uploader as du
-from dash.dependencies import Input, Output, State, MATCH, ALL
 
 from flask import Flask
 import pathlib
@@ -22,6 +21,7 @@ DOCKER_DATA = pathlib.Path.home() / 'data'
 
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
+
 
 # REACTIVE COMPONENTS FOR LABELING METHOD
 label_method = html.Div([
@@ -45,7 +45,7 @@ label_method = html.Div([
         className="radio-group",
         style ={'font-size': '0.5px','margin-bottom': '10px'},
     ),
-        # Labeling with MLCoach
+    # Labeling with MLCoach
     dbc.Collapse(
         children = [
                     dbc.Button('Go to MLCoach', id='goto-webpage', outline="True",
@@ -337,7 +337,6 @@ data_access = html.Div([
                         ]),
     ],
     id="data-access",
-    #is_open=True
     )
 ])
 
@@ -370,27 +369,6 @@ file_explorer = html.Div(
         ),
     ]
 )
-
-
-data_clinic_display = dbc.Modal(
-    [
-        dbc.ModalHeader(dbc.ModalTitle("Top similar images")),
-        dbc.ModalBody([html.Div(id='output-image-find')]),
-        dbc.ModalFooter([
-            dbc.Button(
-                "Add Labels", id='clinic-add-label-button', color='primary', outline=True, 
-                className="ms-auto", n_clicks=0),
-        ],
-        style={'display': 'flex', 'margin-right': '950px'}
-        ),
-    ],
-    id="modal-window",
-    size="xl",
-    scrollable=True,
-    centered=True,
-    is_open=False
-)
-
 
 
 # DISPLAY DATASET
@@ -437,7 +415,6 @@ app.layout = html.Div(
             [
                 dbc.Row(
                     [
-                        data_clinic_display,
                         dbc.Col(display, width=8),
                         dbc.Col([
                             dbc.Card([
@@ -458,7 +435,4 @@ app.layout = html.Div(
         html.Div(browser_cache)
     ]
 )
-
-
-
 
