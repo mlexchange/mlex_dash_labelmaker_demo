@@ -36,8 +36,8 @@ label_method = html.Div([
                 labelStyle={'font-size': '13px', 'width': '85px', 'margin':'1px'},
                 options=[
                     {"label": "Instructions", "value": "instruction"},
-                    {"label": "DataClinic", "value": "clinic"},
                     {"label": "Manual", "value": "manual"},
+                    {"label": "DataClinic", "value": "clinic"},
                     {"label": "MLCoach", "value": "mlcoach"}
                 ],
                 value="instruction")
@@ -92,7 +92,9 @@ label_method = html.Div([
     ),
     # manual tab is default button group
     dbc.Collapse(
-        children = html.Div(id='label-buttons', children=create_label_component(LABEL_LIST, del_button=True), style={'margin-bottom': '0.5rem'}),
+        children = html.Div(id='label-buttons',
+                            children=create_label_component(LABEL_LIST),
+                            style={'margin-bottom': '0.5rem'}),
         id="label-buttons-collapse",
         is_open=False
     ),
@@ -103,14 +105,13 @@ label_method = html.Div([
                              dbc.Col(dbc.Button('Refresh', id='mlcoach-refresh', outline="True",
                                  color='primary', size="sm", style={'width': '100%', 'margin-top': '1px'}))]),
                     dbc.Label('Probability Threshold', style={'width': '100%', 'margin-top': '20px'}),
+                    dcc.Dropdown(id='mlcoach-label-name'),
                     dcc.Slider(id='probability-threshold',
                                min=0,
                                max=100,
                                value=51,
                                tooltip={"placement": "top", "always_visible": True},
                                marks={0: '0', 25: '25', 50: '50', 75: '75', 100: '100'}),
-                    dbc.Row([dbc.Col(dbc.Label('Region to Label')),
-                             dbc.Col(html.P(id='chosen-label'))]),
                     dbc.Button('Label with Threshold', id='mlcoach-label', outline="True",
                                color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'})
                     ],
@@ -160,6 +161,21 @@ additional_options_html = html.Div(
             dbc.Row(html.P('')),
             dbc.Row(dbc.Col(dbc.Button('Hide', id='button-hide', outline='True',
                                        color='primary', size="sm", style={'width': '100%'}))),
+            dbc.Row(html.P('')),
+            dbc.Row(dbc.Col(dbc.Button('Unlabel All', id='un-label-all', outline='True',
+                            color='primary', size="sm", style={'width': '100%'}))),
+            dbc.Modal([
+                dbc.ModalHeader(dbc.ModalTitle("Warning")),
+                dbc.ModalBody("Labels cannot be recovered after deletion. Do you still want to proceed?"),
+                dbc.ModalFooter([
+                    dbc.Button(
+                        "Unlabel", id="confirm-un-label-all", color='danger', outline=False,
+                        className="ms-auto", n_clicks=0),
+                ]),
+            ], id="modal-un-label",
+                is_open=False,
+                style = {'color': 'red'}
+            ),
             dbc.Row(html.P('')),
             dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk',
                                        outline='True', color='primary', size="sm", style={'width': '100%'}))),
