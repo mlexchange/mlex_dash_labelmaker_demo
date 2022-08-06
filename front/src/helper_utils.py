@@ -240,12 +240,9 @@ def get_trained_models_list(user, datapath, tab):
     model_list = requests.get(f'http://job-service:8080/api/v0/jobs?&user={user}&mlex_app={tab}').json()
     trained_models = [{'label': 'Default', 'value': 'data'+filename}]
     for model in model_list:
-        # if datapath:
-            #if model['job_kwargs']['kwargs']['dataset']==datapath[0]['file_path'] and \
-            #        model['job_kwargs']['kwargs']['job_type'].split(' ')[0]=='prediction_model':
         if model['job_kwargs']['kwargs']['job_type'].split(' ')[0]=='prediction_model':
             if os.path.exists(model['job_kwargs']['cmd'].split(' ')[4]+filename):  # check if the file exists
-                trained_models.append({'label': model['job_kwargs']['kwargs']['job_type'],
+                trained_models.append({'label': model['description'],
                                            'value': model['job_kwargs']['cmd'].split(' ')[4]+filename})
     trained_models.reverse()
     return trained_models
