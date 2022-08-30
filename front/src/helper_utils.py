@@ -1,5 +1,5 @@
 import os
-from dash import html
+from dash import dcc, html
 import dash_bootstrap_components as dbc
 import pathlib
 import plotly.express as px
@@ -24,7 +24,7 @@ def get_color_from_label(label, color_cycle):
     return color_cycle[int(label)]
 
 
-def create_label_component(label_dict, color_cycle=px.colors.qualitative.Dark24, del_button=False):
+def create_label_component(label_dict, color_cycle=px.colors.qualitative.Dark24, mlcoach=False):
     '''
     This function updates the reactive component that contains the label buttons when
         - A new label is added
@@ -32,12 +32,13 @@ def create_label_component(label_dict, color_cycle=px.colors.qualitative.Dark24,
     Args:
         label_dict:     Dictionary of label names, e.g., [0: 'label',...]
         color_cycle:    List of label colors
-        del_button:     Bool that indicates if the labels can be deleted
+        mlcoach:        Bool that indicates if the labels should be arranged as a dropdown
     Returns:
         Reactive components with updated label buttons (sorted by label key number)
     '''
     comp_list = []
-    if del_button:
+    progress = []
+    if not mlcoach:
         for i in sorted(label_dict.keys()):
             comp_row = dbc.Row(
                 [
@@ -46,53 +47,45 @@ def create_label_component(label_dict, color_cycle=px.colors.qualitative.Dark24,
                                    id={'type': 'label-button', 'index': i},
                                    size="sm",
                                    style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
-                                          'color':'black', 'width': '100%', 'margin-bottom': '5px'}
+                                          'color':'black', 'width': '97%', 'margin-right': '5px'}
                                    ),
-                        width=8
+                        width=11
                     ),
                     dbc.Col(
                         dbc.Button('\u2716',
                                    id={'type': 'delete-label-button', 'index': i},
                                    size="sm",
                                    style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
-                                          'color':'black', 'width': '100%', 'margin-bottom': '5px'}),
-                        width=4
+                                          'color':'black', 'width': '100%'}),
+                        width=1
                     ),
                 ],
+                className="g-0",
             )
             comp_list.append(comp_row)
+            progress.append(dbc.Progress(id={'type': 'label-percentage', 'index': i},
+                                         style={'background-color': color_cycle[i], 'color':'black'}, bar=True))
     else:
+        options = []
+        for elem in label_dict:
+            options.append({'value': elem, 'label': label_dict[elem]})
+        comp_list = [dcc.Dropdown(id={'type': 'mlcoach-label-name', 'index': 0}, options=options)]
         for i in sorted(label_dict.keys()):
-            comp_row = dbc.Row(
-                dbc.Col(
-                    dbc.Button(label_dict[i],
-                               id={'type': 'label-button', 'index': i},
-                               size="sm",
-                               style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
-                                      'color': 'black', 'width': '100%', 'margin-bottom': '5px'}
-                               )
-                ),
-            )
-            comp_list.append(comp_row)
-    
-    comp_list.append(
-        dbc.Button('Unlabel the Selected',
-                   id='un-label',
-                   className="ms-auto",
-                   color = 'primary',
-                   size="sm",
-                   outline=True,
-                   style={'width': '100%', 'margin-bottom': '0px', 'margin-top': '10px'})
-    )
-    comp_list.append(
-        dbc.Button('Unlabel All',
-                   id='un-label-all',
-                   className="ms-auto",
-                   color = 'primary',
-                   size="sm",
-                   outline=True,
-                   style={'width': '100%', 'margin-bottom': '10px', 'margin-top': '5px'})
-    )
+            progress.append(dbc.Progress(id={'type': 'label-percentage', 'index': i},
+                                         style={'background-color': color_cycle[i], 'color':'black'}, bar=True))
+
+    comp_list = comp_list + \
+                [dbc.Button('Unlabel the Selected',
+                            id='un-label',
+                            className="ms-auto",
+                            color = 'primary',
+                            size="sm",
+                            outline=True,
+                            style={'width': '100%', 'margin-bottom': '10px', 'margin-top': '10px'}),
+                 dbc.Label('Labeled images:'),
+                 dbc.Progress(progress),
+                 dbc.Label(id='total_labeled', style={'margin-top': '5px'})
+                 ]
     
     return comp_list
 
@@ -224,10 +217,6 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
                                          )
                                  )
             visible.append(1)
-        
-        #if data_clinic:
-        #    row_child.insert(0,dbc.Input(id={'type':'clinic-label-input', 'index':j}, 
-        #                                 placeholder="Input Label for this row", className="mb-3"))
             
         children.append(dbc.Row(row_child))
     return children
@@ -251,12 +240,9 @@ def get_trained_models_list(user, datapath, tab):
     model_list = requests.get(f'http://job-service:8080/api/v0/jobs?&user={user}&mlex_app={tab}').json()
     trained_models = [{'label': 'Default', 'value': 'data'+filename}]
     for model in model_list:
-        # if datapath:
-            #if model['job_kwargs']['kwargs']['dataset']==datapath[0]['file_path'] and \
-            #        model['job_kwargs']['kwargs']['job_type'].split(' ')[0]=='prediction_model':
         if model['job_kwargs']['kwargs']['job_type'].split(' ')[0]=='prediction_model':
             if os.path.exists(model['job_kwargs']['cmd'].split(' ')[4]+filename):  # check if the file exists
-                trained_models.append({'label': model['job_kwargs']['kwargs']['job_type'],
+                trained_models.append({'label': model['description'],
                                            'value': model['job_kwargs']['cmd'].split(' ')[4]+filename})
     trained_models.reverse()
     return trained_models

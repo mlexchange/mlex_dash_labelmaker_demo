@@ -3,7 +3,6 @@ from dash import dcc, html, dash_table
 import dash_bootstrap_components as dbc
 import dash_daq as daq
 import dash_uploader as du
-from dash.dependencies import Input, Output, State, MATCH, ALL
 
 from flask import Flask
 import pathlib
@@ -23,6 +22,7 @@ DOCKER_DATA = pathlib.Path.home() / 'data'
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 
+
 # REACTIVE COMPONENTS FOR LABELING METHOD
 label_method = html.Div([
     html.Div(
@@ -36,8 +36,8 @@ label_method = html.Div([
                 labelStyle={'font-size': '13px', 'width': '85px', 'margin':'1px'},
                 options=[
                     {"label": "Instructions", "value": "instruction"},
-                    {"label": "DataClinic", "value": "clinic"},
                     {"label": "Manual", "value": "manual"},
+                    {"label": "DataClinic", "value": "clinic"},
                     {"label": "MLCoach", "value": "mlcoach"}
                 ],
                 value="instruction")
@@ -45,7 +45,7 @@ label_method = html.Div([
         className="radio-group",
         style ={'font-size': '0.5px','margin-bottom': '10px'},
     ),
-        # Labeling with MLCoach
+    # Labeling with MLCoach
     dbc.Collapse(
         children = [
                     dbc.Button('Go to MLCoach', id='goto-webpage', outline="True",
@@ -92,7 +92,9 @@ label_method = html.Div([
     ),
     # manual tab is default button group
     dbc.Collapse(
-        children = html.Div(id='label-buttons', children=create_label_component(LABEL_LIST, del_button=True), style={'margin-bottom': '0.5rem'}),
+        children = html.Div(id='label-buttons',
+                            children=create_label_component(LABEL_LIST),
+                            style={'margin-bottom': '0.5rem'}),
         id="label-buttons-collapse",
         is_open=False
     ),
@@ -103,14 +105,13 @@ label_method = html.Div([
                              dbc.Col(dbc.Button('Refresh', id='mlcoach-refresh', outline="True",
                                  color='primary', size="sm", style={'width': '100%', 'margin-top': '1px'}))]),
                     dbc.Label('Probability Threshold', style={'width': '100%', 'margin-top': '20px'}),
+                    dcc.Dropdown(id='mlcoach-label-name'),
                     dcc.Slider(id='probability-threshold',
                                min=0,
                                max=100,
                                value=51,
                                tooltip={"placement": "top", "always_visible": True},
                                marks={0: '0', 25: '25', 50: '50', 75: '75', 100: '100'}),
-                    dbc.Row([dbc.Col(dbc.Label('Region to Label')),
-                             dbc.Col(html.P(id='chosen-label'))]),
                     dbc.Button('Label with Threshold', id='mlcoach-label', outline="True",
                                color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'})
                     ],
@@ -160,6 +161,21 @@ additional_options_html = html.Div(
             dbc.Row(html.P('')),
             dbc.Row(dbc.Col(dbc.Button('Hide', id='button-hide', outline='True',
                                        color='primary', size="sm", style={'width': '100%'}))),
+            dbc.Row(html.P('')),
+            dbc.Row(dbc.Col(dbc.Button('Unlabel All', id='un-label-all', outline='True',
+                            color='primary', size="sm", style={'width': '100%'}))),
+            dbc.Modal([
+                dbc.ModalHeader(dbc.ModalTitle("Warning")),
+                dbc.ModalBody("Labels cannot be recovered after deletion. Do you still want to proceed?"),
+                dbc.ModalFooter([
+                    dbc.Button(
+                        "Unlabel", id="confirm-un-label-all", color='danger', outline=False,
+                        className="ms-auto", n_clicks=0),
+                ]),
+            ], id="modal-un-label",
+                is_open=False,
+                style = {'color': 'red'}
+            ),
             dbc.Row(html.P('')),
             dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk',
                                        outline='True', color='primary', size="sm", style={'width': '100%'}))),
@@ -337,7 +353,6 @@ data_access = html.Div([
                         ]),
     ],
     id="data-access",
-    #is_open=True
     )
 ])
 
@@ -370,27 +385,6 @@ file_explorer = html.Div(
         ),
     ]
 )
-
-
-data_clinic_display = dbc.Modal(
-    [
-        dbc.ModalHeader(dbc.ModalTitle("Top similar images")),
-        dbc.ModalBody([html.Div(id='output-image-find')]),
-        dbc.ModalFooter([
-            dbc.Button(
-                "Add Labels", id='clinic-add-label-button', color='primary', outline=True, 
-                className="ms-auto", n_clicks=0),
-        ],
-        style={'display': 'flex', 'margin-right': '950px'}
-        ),
-    ],
-    id="modal-window",
-    size="xl",
-    scrollable=True,
-    centered=True,
-    is_open=False
-)
-
 
 
 # DISPLAY DATASET
@@ -437,7 +431,6 @@ app.layout = html.Div(
             [
                 dbc.Row(
                     [
-                        data_clinic_display,
                         dbc.Col(display, width=8),
                         dbc.Col([
                             dbc.Card([
@@ -458,7 +451,4 @@ app.layout = html.Div(
         html.Div(browser_cache)
     ]
 )
-
-
-
 
