@@ -8,6 +8,7 @@ from dash.dependencies import Input, Output, State, MATCH, ALL
 import pandas as pd
 import PIL
 import plotly.express as px
+from tiled.client import from_uri
 
 from helper_utils import get_color_from_label, create_label_component, draw_rows, get_trained_models_list
 from app_layout import app, DOCKER_DATA, UPLOAD_FOLDER_ROOT
@@ -25,6 +26,7 @@ USER = 'admin'
 LOCAL_DATA = str(os.environ['DATA_DIR'])
 DOCKER_HOME = str(DOCKER_DATA) + '/'
 LOCAL_HOME = str(LOCAL_DATA)
+TILED_CLIENT = from_uri('http://tiled-server:8888/api?api_key=901978d3a27f02e6e550c38951f4336fcb576b9348c1c276450690a55f62e745')
 
 #================================== callback functions ===================================
 @app.callback(
@@ -177,7 +179,7 @@ def upload_zip(iscompleted, upload_filename):
     Input('my-toggle-switch', 'value'),
     State('dest-dir-name', 'value')
 )
-def file_manager(clear_data, browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, 
+def load_dataset(clear_data, browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, 
                 move_dir_n_clicks, rows, selected_paths, docker_path, dest):
     '''
     This callback displays manages the actions of file manager
@@ -279,6 +281,7 @@ def display_indicator(n_clicks):
     Input('confirm-delete','n_clicks'),
     Input('move-dir', 'n_clicks'),
     Input('tab-group', 'value'),
+    Input('tiled-button', 'n_clicks'),
 
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks_timestamp'),
@@ -289,7 +292,8 @@ def display_indicator(n_clicks):
     prevent_initial_call=True)
 def display_index(exit_similar_images, find_similar_images, docker_path, file_paths, import_n_clicks, import_format,
                   rows, button_hide_n_clicks, button_sort_n_clicks, delete_n_clicks, move_dir_n_clicks, tab_selection,
-                  thumbnail_name_children, timestamp, data_clinic_model, labels_name_data, label_dict, image_order):
+                  tiled_n_clicks, thumbnail_name_children, timestamp, data_clinic_model, labels_name_data, label_dict,
+                  image_order):
     '''
     This callback arranges the image order according to the following actions:
         - New content is uploaded
@@ -308,6 +312,7 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
         delete_n_clicks:            Button for deleting selected file paths
         move_dir_n_clicks:          Button for moving dir
         tab_selection:              Current tab [Manual, Data Clinic, MLCoach]
+        tiled_n_clicks:             Tiled button has been clicked
         thumbnail_name_children:    Filenames of images in current page
         timestamp:                  Timestamps of selected images in current page - to find similar images. Currently,
                                     one 1 image is selected for this operation
@@ -417,6 +422,10 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
                     new_indx[-1].append(i)
 
             image_order = list(itertools.chain(*new_indx))
+    
+    elif 'tiled-button.n_clicks' in changed_id:
+        image_order = range(len(TILED_CLIENT))
+
     else:
         image_order = []
 
@@ -445,11 +454,12 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
     State('import-dir', 'n_clicks'),
     State('docker-labels-name', 'data'),
     State('tab-group', 'value'),
-    State('previous-tab', 'data')],
+    State('previous-tab', 'data'),
+    State('tiled-button', 'n_clicks')],
     prevent_initial_call=True)
 def update_output(image_order, thumbnail_slider_value, button_prev_page, button_next_page, rows, import_format,
                   file_paths, docker_path, ml_coach_is_open, mlcoach_model, find_similar_images, current_page,
-                  import_n_clicks, labels_name_data, tab_selection, previous_tab):
+                  import_n_clicks, labels_name_data, tab_selection, previous_tab, tiled_n_clicks):
     '''
     This callback displays images in the front-end
     Args:
@@ -469,6 +479,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         labels_name_data:       Dictionary of labeled images (docker path), as follows: {label: list of image filenames}
         tab_selection:          Current tab [Manual, Data Clinic, MLCoach]
         previous_tab:           List of previous tab selection [Manual, Data Clinic, MLCoach]
+        tiled_n_clicks:         Number of clicks on Tiled button
     Returns:
         children:               Images to be displayed in front-end according to the current page index and # of columns
         prev_page:              Enable/Disable previous page button if current_page==0
@@ -500,51 +511,64 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
 
     children = []
     num_imgs = 0
-    if import_n_clicks and bool(file_paths):
-        list_filename = []
-        for file_path in file_paths:
-            if file_path['file_type'] == 'dir':
-                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
-            else:
-                list_filename.append(file_path['file_path'])
-    
-        # plot images according to current page index and number of columns
+    if (import_n_clicks and bool(file_paths)) or tiled_n_clicks>0:
         num_imgs = len(image_order)
-        if num_imgs>0:
-            start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
-            max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
-            new_contents = []
-            new_filenames = []
-            for i in range(start_indx, max_indx):
-                filename = list_filename[image_order[i]]
-                with open(filename, "rb") as file:
-                    img = base64.b64encode(file.read())
-                    file_ext = filename[filename.find('.')+1:]
-                    new_contents.append('data:image/'+file_ext+';base64,'+img.decode("utf-8"))
-                if docker_path:
+        if tiled_n_clicks>0:
+            list_filename = list(TILED_CLIENT)
+            # plot images according to current page index and number of columns
+            if num_imgs>0:
+                start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
+                max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
+                new_contents = []
+                new_filenames = []
+                for i in range(start_indx, max_indx):
+                    filename = list_filename[image_order[i]]
+                    img = TILED_CLIENT.values_indexer[image_order[i]].read()
+                    new_contents.append('data:image/tiff;base64,'+img.decode("utf-8"))
                     new_filenames.append(list_filename[image_order[i]])
+        else:
+            list_filename = []
+            for file_path in file_paths:
+                if file_path['file_type'] == 'dir':
+                    list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
                 else:
-                    new_filenames.append(docker_to_local_path(list_filename[image_order[i]], DOCKER_HOME,
-                                                              LOCAL_HOME, 'str'))
-            if mlcoach_model and tab_selection=='mlcoach':
-                df_prob = pd.read_csv(mlcoach_model)
-                children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value,
-                                     ml_coach_is_open, df_prob)
-            elif find_similar_images:
-                pre_highlight = True
-                filenames = local_to_docker_path(new_filenames, DOCKER_HOME, LOCAL_HOME, 'list')
-                for name in filenames:                  # if there is one label in page, do not pre-highlight
-                    for label_key in labels_name_data:
-                        if name in labels_name_data[label_key]:
-                            pre_highlight = False
-                            break
-                if find_similar_images>0 and pre_highlight:
-                    children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value, 
-                            data_clinic=True)
-                else:
-                    children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value)
+                    list_filename.append(file_path['file_path'])
+            # plot images according to current page index and number of columns
+            if num_imgs>0:
+                start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
+                max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
+                new_contents = []
+                new_filenames = []
+                for i in range(start_indx, max_indx):
+                    filename = list_filename[image_order[i]]
+                    with open(filename, "rb") as file:
+                        img = base64.b64encode(file.read())
+                        file_ext = filename[filename.find('.')+1:]
+                        new_contents.append('data:image/'+file_ext+';base64,'+img.decode("utf-8"))
+                    if docker_path:
+                        new_filenames.append(list_filename[image_order[i]])
+                    else:
+                        new_filenames.append(docker_to_local_path(list_filename[image_order[i]], DOCKER_HOME,
+                                                                LOCAL_HOME, 'str'))
+        if mlcoach_model and tab_selection=='mlcoach':
+            df_prob = pd.read_csv(mlcoach_model)
+            children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value,
+                                    ml_coach_is_open, df_prob)
+        elif find_similar_images:
+            pre_highlight = True
+            filenames = local_to_docker_path(new_filenames, DOCKER_HOME, LOCAL_HOME, 'list')
+            for name in filenames:                  # if there is one label in page, do not pre-highlight
+                for label_key in labels_name_data:
+                    if name in labels_name_data[label_key]:
+                        pre_highlight = False
+                        break
+            if find_similar_images>0 and pre_highlight:
+                children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value, 
+                        data_clinic=True)
             else:
                 children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value)
+        else:
+            children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value)
 
     return children, current_page==0, math.ceil((num_imgs//thumbnail_slider_value)/NUMBER_OF_ROWS)<=current_page+1, \
            current_page

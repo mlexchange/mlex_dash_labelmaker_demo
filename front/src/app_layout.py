@@ -369,6 +369,15 @@ file_explorer = html.Div(
             n_clicks=0,
         ),
         dbc.Button(
+            "Tiled",
+            id="tiled-button",
+            size="lg",
+            className="mtb-2",
+            color="secondary",
+            outline=True,
+            n_clicks=0,
+        ),
+        dbc.Button(
             "Clear Images",
             id="clear-data",
             size="lg",
