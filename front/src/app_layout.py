@@ -207,7 +207,7 @@ file_paths_table = html.Div(
     )
 
 
-# UPLOAD DATASET OR USE PRE-DEFINED DIRECTORY
+# UPLOAD DATASET
 data_access = html.Div([
     dbc.Card([
         dbc.CardBody(id='data-body',
@@ -342,7 +342,15 @@ data_access = html.Div([
                             id="file-mover-collapse",
                             is_open=False,
                         ),
-                        html.Div([ html.Div([dbc.Label('4. Show Local/Docker Path')], style = {'margin-right': '10px'}),
+                        html.Div([ html.Div([dbc.Label('4. (Optional) Load data through Tiled')], style = {'margin-right': '10px'}),
+                                    daq.BooleanSwitch(
+                                        id='tiled-switch',
+                                        on=False,
+                                        color="#9B51E0",
+                                    )],
+                            style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'margin': '10px', 'margin-left': '0px'},
+                        ),
+                        html.Div([ html.Div([dbc.Label('5. (Optional) Show Local/Docker Path')], style = {'margin-right': '10px'}),
                                     daq.ToggleSwitch(
                                         id='my-toggle-switch',
                                         value=False
@@ -363,16 +371,7 @@ file_explorer = html.Div(
             "Toggle File Manager",
             id="collapse-button",
             size="lg",
-            className="mtb-2",
-            color="secondary",
-            outline=True,
-            n_clicks=0,
-        ),
-        dbc.Button(
-            "Tiled",
-            id="tiled-button",
-            size="lg",
-            className="mtb-2",
+            className="m-2",
             color="secondary",
             outline=True,
             n_clicks=0,

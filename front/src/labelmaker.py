@@ -1,4 +1,4 @@
-import os, itertools
+import io, os, itertools, time
 import shutil, pathlib, base64, math, zipfile
 import requests
 import uuid
@@ -7,10 +7,13 @@ import dash
 from dash.dependencies import Input, Output, State, MATCH, ALL
 import pandas as pd
 import PIL
+from PIL import Image
 import plotly.express as px
 from tiled.client import from_uri
+from tiled.client.array import ArrayClient
+from tiled.client.cache import Cache
 
-from helper_utils import get_color_from_label, create_label_component, draw_rows, get_trained_models_list
+from helper_utils import get_color_from_label, create_label_component, draw_rows, get_trained_models_list   
 from app_layout import app, DOCKER_DATA, UPLOAD_FOLDER_ROOT
 from file_manager import filename_list, move_a_file, move_dir, add_paths_from_dir, \
                          check_duplicate_filename, docker_to_local_path, local_to_docker_path
@@ -26,7 +29,8 @@ USER = 'admin'
 LOCAL_DATA = str(os.environ['DATA_DIR'])
 DOCKER_HOME = str(DOCKER_DATA) + '/'
 LOCAL_HOME = str(LOCAL_DATA)
-TILED_CLIENT = from_uri('http://tiled-server:8888/api?api_key=901978d3a27f02e6e550c38951f4336fcb576b9348c1c276450690a55f62e745')
+TILED_KEY = str(os.environ['TILED_KEY'])
+TILED_CLIENT = from_uri(f'http://tiled-server:8000/api?api_key={TILED_KEY}', cache=Cache.on_disk('data/cache'))
 
 #================================== callback functions ===================================
 @app.callback(
@@ -281,7 +285,7 @@ def display_indicator(n_clicks):
     Input('confirm-delete','n_clicks'),
     Input('move-dir', 'n_clicks'),
     Input('tab-group', 'value'),
-    Input('tiled-button', 'n_clicks'),
+    Input('tiled-switch', 'on'),
 
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks_timestamp'),
@@ -292,7 +296,7 @@ def display_indicator(n_clicks):
     prevent_initial_call=True)
 def display_index(exit_similar_images, find_similar_images, docker_path, file_paths, import_n_clicks, import_format,
                   rows, button_hide_n_clicks, button_sort_n_clicks, delete_n_clicks, move_dir_n_clicks, tab_selection,
-                  tiled_n_clicks, thumbnail_name_children, timestamp, data_clinic_model, labels_name_data, label_dict,
+                  tiled_on, thumbnail_name_children, timestamp, data_clinic_model, labels_name_data, label_dict,
                   image_order):
     '''
     This callback arranges the image order according to the following actions:
@@ -312,7 +316,7 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
         delete_n_clicks:            Button for deleting selected file paths
         move_dir_n_clicks:          Button for moving dir
         tab_selection:              Current tab [Manual, Data Clinic, MLCoach]
-        tiled_n_clicks:             Tiled button has been clicked
+        tiled_on:                   Tiled has been selected to load the dataset
         thumbnail_name_children:    Filenames of images in current page
         timestamp:                  Timestamps of selected images in current page - to find similar images. Currently,
                                     one 1 image is selected for this operation
@@ -375,11 +379,21 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
         params = {'key': 'datapath'}
         resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=file_paths)
         list_filename = []
-        for file_path in file_paths:
-            if file_path['file_type'] == 'dir':
-                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
-            else:
-                list_filename.append(file_path['file_path'])
+        if tiled_on and len(file_paths)>0:    # load through tiled
+            file_path = file_paths[0]['file_path'].replace(DOCKER_HOME, '')
+            subdir = file_path.split('/')
+            tiled_client = TILED_CLIENT
+            for local_dir in subdir:
+                tiled_client = tiled_client[local_dir]
+            tmp_list = list(tiled_client)
+            if isinstance(tiled_client[tmp_list[0]], ArrayClient):
+                list_filename = tmp_list
+        else:           # load through file reading
+            for file_path in file_paths:
+                if file_path['file_type'] == 'dir':
+                    list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
+                else:
+                    list_filename.append(file_path['file_path'])
         
         params = {'key': 'filenames'}
         resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=list_filename)
@@ -397,12 +411,12 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
                 labeled_names = list(itertools.chain(*labels_name_data.values()))
                 unlabeled_indx = []
                 for i in range(num_imgs):
-                    if list_filename[i] not in labeled_names:
+                    if file_paths[0]['file_path']+'/'+list_filename[i]+'.tiff' not in labeled_names:
                         unlabeled_indx.append(i)
                 image_order = unlabeled_indx
             else:
                 image_order = list(range(num_imgs))
-
+        
         elif changed_id == 'exit-similar-unsupervised.n_clicks' or tab_selection=='mlcoach':
             button_hide = 0
             similar_img_clicks = 0
@@ -415,17 +429,13 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
             for i in range(num_imgs):
                 unlabeled = True
                 for key_label in labels_name_data:
-                    if list_filename[i] in labels_name_data[key_label]:
+                    if file_paths[0]['file_path']+'/'+list_filename[i]+'.tiff' in labels_name_data[key_label]:
                         new_indx[int(key_label)].append(i)
                         unlabeled = False
                 if unlabeled:
                     new_indx[-1].append(i)
 
             image_order = list(itertools.chain(*new_indx))
-    
-    elif 'tiled-button.n_clicks' in changed_id:
-        image_order = range(len(TILED_CLIENT))
-
     else:
         image_order = []
 
@@ -446,6 +456,7 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
     Input('import-format', 'value'),
     Input('docker-file-paths','data'),
     Input('my-toggle-switch', 'value'),
+    Input('tiled-switch', 'on'),
     Input('mlcoach-collapse', 'is_open'),
     Input('mlcoach-model-list', 'value'),
     
@@ -454,12 +465,11 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
     State('import-dir', 'n_clicks'),
     State('docker-labels-name', 'data'),
     State('tab-group', 'value'),
-    State('previous-tab', 'data'),
-    State('tiled-button', 'n_clicks')],
+    State('previous-tab', 'data')],
     prevent_initial_call=True)
 def update_output(image_order, thumbnail_slider_value, button_prev_page, button_next_page, rows, import_format,
-                  file_paths, docker_path, ml_coach_is_open, mlcoach_model, find_similar_images, current_page,
-                  import_n_clicks, labels_name_data, tab_selection, previous_tab, tiled_n_clicks):
+                  file_paths, docker_path, tiled_on, ml_coach_is_open, mlcoach_model, find_similar_images, current_page,
+                  import_n_clicks, labels_name_data, tab_selection, previous_tab):
     '''
     This callback displays images in the front-end
     Args:
@@ -471,6 +481,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         import_format:          File format for import
         file_paths:             Absolute file paths selected from path table
         docker_path:            Showing file path in Docker environment
+        tiled_on:               Tiled has been selected to load the dataset
         ml_coach_is_open:       MLCoach is the labeling method
         mlcoach_model:          Selected MLCoach model
         find_similar_images:    Find similar images button, n_clicks
@@ -479,7 +490,6 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         labels_name_data:       Dictionary of labeled images (docker path), as follows: {label: list of image filenames}
         tab_selection:          Current tab [Manual, Data Clinic, MLCoach]
         previous_tab:           List of previous tab selection [Manual, Data Clinic, MLCoach]
-        tiled_n_clicks:         Number of clicks on Tiled button
     Returns:
         children:               Images to be displayed in front-end according to the current page index and # of columns
         prev_page:              Enable/Disable previous page button if current_page==0
@@ -511,34 +521,42 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
 
     children = []
     num_imgs = 0
-    if (import_n_clicks and bool(file_paths)) or tiled_n_clicks>0:
+    if (import_n_clicks and bool(file_paths)) or changed_id == 'tiled-switch.on':
         num_imgs = len(image_order)
-        if tiled_n_clicks>0:
-            list_filename = list(TILED_CLIENT)
-            # plot images according to current page index and number of columns
-            if num_imgs>0:
-                start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
-                max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
-                new_contents = []
-                new_filenames = []
+        start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
+        max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
+        new_contents = []
+        new_filenames = []
+        if num_imgs>0:
+            if tiled_on:    # load through tiled
+                file_path = file_paths[0]['file_path'].replace(DOCKER_HOME, '')
+                subdir = file_path.split('/')
+                tiled_client = TILED_CLIENT
+                for local_dir in subdir:
+                    tiled_client = tiled_client[local_dir]
+                list_filename = list(tiled_client)
+                start = time.time()
                 for i in range(start_indx, max_indx):
-                    filename = list_filename[image_order[i]]
-                    img = TILED_CLIENT.values_indexer[image_order[i]].read()
-                    new_contents.append('data:image/tiff;base64,'+img.decode("utf-8"))
-                    new_filenames.append(list_filename[image_order[i]])
-        else:
-            list_filename = []
-            for file_path in file_paths:
-                if file_path['file_type'] == 'dir':
-                    list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
-                else:
-                    list_filename.append(file_path['file_path'])
-            # plot images according to current page index and number of columns
-            if num_imgs>0:
-                start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
-                max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
-                new_contents = []
-                new_filenames = []
+                    rawBytes = io.BytesIO()
+                    img = tiled_client.values_indexer[image_order[i]].export(rawBytes, format='jpeg')
+                    rawBytes.seek(0)        # return to the start of the file
+                    img = base64.b64encode(rawBytes.read())
+                    new_contents.append(f'data:image/png;base64,{img.decode("utf-8")}')
+                    if docker_path:
+                        new_filenames.append(file_paths[0]['file_path']+'/'+list_filename[image_order[i]]+'.tiff')
+                    else:
+                        new_filenames.append(docker_to_local_path(file_paths[0]['file_path']+'/'+list_filename[image_order[i]]+'.tiff', 
+                                             DOCKER_HOME, LOCAL_HOME, 'str'))
+                end = time.time()
+                print(f'Total time: {end - start}')
+            else:           # load through file reading
+                list_filename = []
+                for file_path in file_paths:
+                    if file_path['file_type'] == 'dir':
+                        list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
+                    else:
+                        list_filename.append(file_path['file_path'])
+                # plot images according to current page index and number of columns
                 for i in range(start_indx, max_indx):
                     filename = list_filename[image_order[i]]
                     with open(filename, "rb") as file:
@@ -987,7 +1005,7 @@ def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data, la
                             if i:
                                 filename = f_name + '_%s'%i + '.' + f_ext
                             i += 1 
-                        im_fname = label_dir / pathlib.Path(filename)
+                        im_fname = os.path.join(label_dir, pathlib.Path(filename))
                         im.save(im_fname)
                         total_filename_list.append(str(im_fname))
             params2 = {'key': 'filenames'}
@@ -996,5 +1014,5 @@ def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data, la
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=8057)
+    app.run_server(debug=True, host='0.0.0.0', port=8067)
 
