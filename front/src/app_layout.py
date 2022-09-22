@@ -2,15 +2,19 @@ import dash
 from dash import dcc, html, dash_table
 import dash_bootstrap_components as dbc
 import dash_daq as daq
+from dash_extensions import EventListener
 import dash_uploader as du
 
 from flask import Flask
 import pathlib
+import plotly.express as px
 import templates
 from helper_utils import create_label_component
 
 
-external_stylesheets = [dbc.themes.BOOTSTRAP]
+external_stylesheets = [dbc.themes.BOOTSTRAP, 
+                        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'
+                        ]
 server = Flask(__name__)
 app = dash.Dash(__name__, external_stylesheets = external_stylesheets, suppress_callback_exceptions=True)
 
@@ -33,14 +37,14 @@ label_method = html.Div([
                 inputClassName="btn-check",
                 labelClassName="btn btn-outline-primary",
                 labelCheckedClassName="active",
-                labelStyle={'font-size': '13px', 'width': '85px', 'margin':'1px'},
+                labelStyle={'font-size': '13px', 'width': '85px', 'margin':'1px', 'width': '100%'},
                 options=[
-                    {"label": "Instructions", "value": "instruction"},
                     {"label": "Manual", "value": "manual"},
                     {"label": "DataClinic", "value": "clinic"},
                     {"label": "MLCoach", "value": "mlcoach"}
                 ],
-                value="instruction")
+                style={'width': '100%'},
+                value="manual")
         ],
         className="radio-group",
         style ={'font-size': '0.5px','margin-bottom': '10px'},
@@ -48,26 +52,30 @@ label_method = html.Div([
     # Labeling with MLCoach
     dbc.Collapse(
         children = [
-                    dbc.Button('Go to MLCoach', id='goto-webpage', outline="True",
-                               color='primary', size="sm", style={'width': '100%', 'margin-bottom': '1rem', 'margin-top': '0.5rem'})
+                    dbc.Row(
+                        [
+                            dbc.Col(dbc.Button('Go to MLCoach', 
+                                                id='goto-webpage', 
+                                                outline="True",
+                                                color='primary', 
+                                                size="sm", 
+                                                style={'width': '100%', 'margin-bottom': '1rem', 'margin-top': '0.5rem'}),
+                                    width=11,
+                                    style={ 'margin-right': '2%', 'width': '90%'}),
+                            dbc.Col(dbc.Button(className="fa fa-question",
+                                               id='tab-help-button',
+                                               outline="True",
+                                               color='primary', 
+                                               size="sm", 
+                                               style={'width': '100%', 'margin-bottom': '1rem', 'margin-top': '0.5rem'}),
+                                    width=1,
+                                    style={'width': '8%'})
+                        ],
+                        className="g-0"
+                    )
                     ],
         id="goto-webpage-collapse",
         is_open=False
-    ),
-    # Labeling manually
-    dbc.Collapse(
-        children = [dbc.Label('1. Please use the File Manager on the left to import/load the dataset of interest.'),
-                    dbc.Label('2. Click the DataClinic tab. Use the "Go to" button to open DataClinic and train unsupervised learning algorithms to estimate image similarity. \
-                               Then, come back to the DataClinic tab in Label Maker to load the results and label batches of similar images.'),
-                    dbc.Label('3. Click the Manual tab to manually label images or make corrections to the previous step. \
-                               Save the current labels by clicking the button Save Labels to Disk.'),
-                    dbc.Label('4. Click the MLCoach tab. Use the "Go to" button to open MLCoach and do supervised learning for image classification using the previously saved labels. \
-                               Then, come back to the MLCoach tab in Label Maker to load the results and label the full dataset using their estimated probabilities. \
-                               Click the Manual tab to manually label images or make corrections to the previous step.'),
-                    dbc.Label('5. Finally, save all the labels by clicking the button Save Labels to Disk.')
-        ],
-        id="instruction-collapse",
-        is_open=True
     ),
     dbc.Collapse(
         children = [
@@ -120,12 +128,7 @@ label_method = html.Div([
     ),
     # Labeling with Data Clinic
     dbc.Collapse(
-        children = [dbc.CardHeader("Instructions Data Clinic"),
-                    dbc.CardBody([
-                        dbc.Label('1. Select a trained model to start.', className='mr-2'),
-                        dbc.Label('2. Click on the image of interest. Then click Find Similar Images button below.', className='mr-2'),
-                        dbc.Label('3. The image display updates according to the trained model results. Label as usual.', className='mr-2'),
-                        dbc.Label('4. To exit this similarity based display, click Stop Find Similar Images.', className='mr-2'),
+        children = [dbc.CardBody([
                         dbc.Label('Trained models:'),
                         dbc.Row([dbc.Col(dcc.Dropdown(id='data-clinic-model-list')),
                              dbc.Col(dbc.Button('Refresh', id='data-clinic-refresh', outline="True",
@@ -175,10 +178,7 @@ additional_options_html = html.Div(
             ], id="modal-un-label",
                 is_open=False,
                 style = {'color': 'red'}
-            ),
-            dbc.Row(html.P('')),
-            dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk',
-                                       outline='True', color='primary', size="sm", style={'width': '100%'}))),
+            )
         ]
 )
 
@@ -213,7 +213,7 @@ data_access = html.Div([
         dbc.CardBody(id='data-body',
                       children=[
                           dbc.Label('1. Upload a new file or a zipped folder:', className='mr-2'),
-                          html.Div([ du.Upload(
+                          html.Div([du.Upload(
                                             id="dash-uploader",
                                             max_file_size=60000,  # 1800 Mb
                                             cancel_button=True,
@@ -228,17 +228,13 @@ data_access = html.Div([
                                         'margin-right': '20px'},
                           ),
                           dbc.Label('2. Choose files/directories:', className='mr-2'),
-                          html.Div(
-                                  [dbc.Button("Browse",
-                                             id="browse-dir",
-                                             className="ms-auto",
-                                             color="secondary",
-                                             size='sm',
-                                             outline=True,
-                                             n_clicks=0,
-                                             style={'width': '15%', 'margin': '5px'}),
-                                   html.Div([
-                                        dcc.Dropdown(
+                          dbc.Row([
+                            dbc.Col(
+                                dbc.Row([
+                                    dbc.Col(dbc.InputGroupText("Browse Format: ",
+                                                               style={'height': '2.5rem', 'width': '100%'}),
+                                            width=5),
+                                    dbc.Col(dcc.Dropdown(
                                                 id='browse-format',
                                                 options=[
                                                     {'label': 'dir', 'value': 'dir'},
@@ -249,61 +245,70 @@ data_access = html.Div([
                                                     {'label': '.txt', 'value': '*.txt'},
                                                     {'label': '.csv', 'value': '*.csv'},
                                                 ],
-                                                value='*')
-                                            ],
-                                            style={"width": "15%", 'margin-right': '60px'}
-                                    ),
-                                  dbc.Button("Delete the Selected",
+                                                value='dir',
+                                                style={'height': '2.5rem', 'width': '100%'}),
+                                            width=7)
+                                ], className="g-0"),
+                                width=4,
+                            ),
+                            dbc.Col([
+                                dbc.Button("Delete the Selected",
                                              id="delete-files",
                                              className="ms-auto",
                                              color="danger",
                                              size='sm',
                                              outline=True,
                                              n_clicks=0,
-                                             style={'width': '22%', 'margin-right': '10px'}
+                                             style={'width': '100%', 'height': '2.5rem'}
                                     ),
-                                   dbc.Modal(
-                                        [
-                                            dbc.ModalHeader(dbc.ModalTitle("Warning")),
-                                            dbc.ModalBody("Files cannot be recovered after deletion. Do you still want to proceed?"),
-                                            dbc.ModalFooter([
-                                                dbc.Button(
-                                                    "Delete", id="confirm-delete", color='danger', outline=False, 
-                                                    className="ms-auto", n_clicks=0
-                                                ),
-                                            ]),
-                                        ],
-                                        id="modal",
-                                        is_open=False,
-                                        style = {'color': 'red'}
-                                    ), 
-                                   dbc.Button("Import",
+                                dbc.Modal([
+                                    dbc.ModalHeader(dbc.ModalTitle("Warning")),
+                                    dbc.ModalBody("Files cannot be recovered after deletion. Do you still want to proceed?"),
+                                    dbc.ModalFooter([
+                                        dbc.Button(
+                                            "Delete", id="confirm-delete", color='danger', outline=False, 
+                                            className="ms-auto", n_clicks=0
+                                        )])
+                                    ],
+                                    id="modal",
+                                    is_open=False,
+                                    style = {'color': 'red'}
+                                )
+                            ], width=2),
+                            dbc.Col(
+                                dbc.Row([
+                                    dbc.Col(dbc.InputGroupText("Import Format: ",
+                                                       style={'height': '2.5rem', 'width': '100%'}),
+                                            width=5),
+                                    dbc.Col(dcc.Dropdown(
+                                            id='import-format',
+                                            options=[
+                                                {'label': 'all files (*)', 'value': '*'},
+                                                {'label': '.png', 'value': '*.png'},
+                                                {'label': '.jpg/jpeg', 'value': '*.jpg,*.jpeg'},
+                                                {'label': '.tif/tiff', 'value': '*.tif,*.tiff'},
+                                                {'label': '.txt', 'value': '*.txt'},
+                                                {'label': '.csv', 'value': '*.csv'},
+                                            ],
+                                            value='*',
+                                            style={'height': '2.5rem', 'width': '100%'}),
+                                            width=7)
+                                ], className="g-0"),
+                                width=4
+                            ),
+                            dbc.Col(
+                                dbc.Button("Import",
                                              id="import-dir",
                                              className="ms-auto",
                                              color="secondary",
                                              size='sm',
                                              outline=True,
                                              n_clicks=0,
-                                             style={'width': '22%', 'margin': '5px'}
-                                   ),
-                                   html.Div([
-                                        dcc.Dropdown(
-                                                id='import-format',
-                                                options=[
-                                                    {'label': 'all files (*)', 'value': '*'},
-                                                    {'label': '.png', 'value': '*.png'},
-                                                    {'label': '.jpg/jpeg', 'value': '*.jpg,*.jpeg'},
-                                                    {'label': '.tif/tiff', 'value': '*.tif,*.tiff'},
-                                                    {'label': '.txt', 'value': '*.txt'},
-                                                    {'label': '.csv', 'value': '*.csv'},
-                                                ],
-                                                value='*')
-                                            ],
-                                            style={"width": "15%"}
-                                    ),
-                                 ],
-                                style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'margin-bottom': '10px'},
+                                             style={'width': '100%', 'height': '2.5rem'}
                                 ),
+                                width=2,
+                            ),
+                          ]),        
                         dbc.Label('3. (Optional) Move a file or folder into a new directory:', className='mr-2'),
                         dbc.Button(
                             "Open File Mover",
@@ -399,13 +404,44 @@ file_explorer = html.Div(
 display = html.Div(
     [
         file_explorer,
-        html.Div(id='output-image-upload'),
+        dcc.Loading(id="loading-display",
+                    parent_className='transparent-loader-wrapper',
+                    children=[html.Div(id='output-image-upload')],
+                    # fullscreen=True,
+                    style={'visibility': 'hidden'},
+                    type="circle"),
         dbc.Row([
             dbc.Col(dbc.Row(dbc.Button('<', id='prev-page', style={'width': '10%'}, disabled=True), justify='end')),
             dbc.Col(dbc.Row(dbc.Button('>', id='next-page', style={'width': '10%'}, disabled=True), justify='start'))
         ],justify='center'
-        )
+        ),
+        dbc.Modal(id={'type': 'full-screen-modal', 'index': 0},
+                  size="xl", 
+                  is_open=False),
+        dbc.Modal(id='color-picker-modal',
+                  children=[daq.ColorPicker(id='label-color-picker',
+                                        label='Choose label color',
+                                        value=dict(hex='#119DFF')),
+                        dbc.Button('Submit', id='submit-color-button', style={'width': '100%'})
+                        ],
+                  is_open=False
+                  )
     ]
+)
+
+
+# REACTIVE COMPONENTS FOR STORING PURPOSES
+store_options = html.Div(
+        [
+            dbc.Row(dbc.Col(dbc.Button('Load Labels from Splash-ML', id='button-load-splash',
+                                       outline='True', color='success', size="sm", style={'width': '100%'}))),
+            dbc.Row(html.P('')),
+            dbc.Row(dbc.Col(dbc.Button('Save Labels to Splash-ML', id='button-save-splash',
+                                       outline='True', color='primary', size="sm", style={'width': '100%'}))),
+            dbc.Row(html.P('')),
+            dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk',
+                                       outline='True', color='primary', size="sm", style={'width': '100%'}))),
+        ]
 )
 
 
@@ -423,7 +459,8 @@ browser_cache =html.Div(
             dcc.Store(id='dummy1', data=0),
             dcc.Store(id='clinic-file-list', data=[]),
             dcc.Store(id='clinic-filenames', data=[]),
-            dcc.Store(id='previous-tab', data=['init'])
+            dcc.Store(id='previous-tab', data=['init']),
+            dcc.Store(id='color-cycle', data=px.colors.qualitative.Light24)
         ],
     )
 
@@ -446,9 +483,13 @@ app.layout = html.Div(
                                 dbc.CardBody([label_method])
                             ]),
                             dbc.Card([
+                                dbc.CardHeader('Store Settings'),
+                                dbc.CardBody([store_options])
+                            ]),
+                            dbc.Card([
                                 dbc.CardHeader('Display Settings'),
                                 dbc.CardBody([additional_options_html])
-                            ])
+                            ]),
                         ], width=4),
                     ],
                     justify='center'
@@ -459,4 +500,3 @@ app.layout = html.Div(
         html.Div(browser_cache)
     ]
 )
-

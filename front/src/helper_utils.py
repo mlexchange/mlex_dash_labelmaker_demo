@@ -1,6 +1,7 @@
 import os
 from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash_extensions import EventListener
 import pathlib
 import plotly.express as px
 import requests
@@ -24,7 +25,7 @@ def get_color_from_label(label, color_cycle):
     return color_cycle[int(label)]
 
 
-def create_label_component(label_dict, color_cycle=px.colors.qualitative.Dark24, mlcoach=False):
+def create_label_component(label_dict, color_cycle=px.colors.qualitative.Light24, mlcoach=False):
     '''
     This function updates the reactive component that contains the label buttons when
         - A new label is added
@@ -47,17 +48,29 @@ def create_label_component(label_dict, color_cycle=px.colors.qualitative.Dark24,
                                    id={'type': 'label-button', 'index': i},
                                    size="sm",
                                    style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
-                                          'color':'black', 'width': '97%', 'margin-right': '5px'}
+                                          'color':'black', 'width': '100%'}
                                    ),
-                        width=11
+                        width=10,
+                        style={'margin-right': '2%', 'width': '80%'}
                     ),
                     dbc.Col(
-                        dbc.Button('\u2716',
+                        dbc.Button(className="fa fa-paint-brush",
+                                   id={'type': 'color-label-button', 'index': i},
+                                   size="sm",
+                                   n_clicks_timestamp=0,
+                                   style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
+                                          'color':'black', 'width': '100%'}),
+                        width=1,
+                        style={ 'margin-right': '2%', 'width': '8%'}
+                    ),
+                    dbc.Col(
+                        dbc.Button(className="fa fa-times",
                                    id={'type': 'delete-label-button', 'index': i},
                                    size="sm",
                                    style={'background-color': color_cycle[i], 'border-color': color_cycle[i],
                                           'color':'black', 'width': '100%'}),
-                        width=1
+                        width=1,
+                        style={'width': '8%'}
                     ),
                 ],
                 className="g-0",
@@ -90,74 +103,52 @@ def create_label_component(label_dict, color_cycle=px.colors.qualitative.Dark24,
     return comp_list
 
 
-def parse_contents(contents, filename, index, probs=None):
+def parse_contents(contents, filename, index, probs=None, data_clinic=False):
     '''
-    This function creates the reactive components to display 1 image with it's thumbnail card
+    This function creates the reactive components to display thumbnail images
     Args:
-        contents:   Image contents
-        filename:   Filename
-        index:      Index of the reactive component
-        probs:      String of probabilities
+        contents:       Image contents
+        filename:       Filename
+        index:          Index of the reactive component
+        probs:          String of probabilities
+        data_clinic:    Bool indicating if the images should be pre-selected for data clinic mode
     Returns:
         reactive_component
     '''
     text=''
     if probs:
         text = 'Label \t Probability\n' + '--------\n' + probs
+    if data_clinic:
+        init_clicks = 1
+    else:
+        init_clicks = 0
     # ====== label results =======
     img_card = html.Div(
-        dbc.Card(
-            id={'type': 'thumbnail-card', 'index': index},
-            children=[
-                html.A(id={'type': 'thumbnail-image', 'index': index},
-                       n_clicks=0,   
-                       children=dbc.CardImg(id={'type': 'thumbnail-src', 'index': index},
-                                            src=contents,
-                                            bottom=False)),
-                dbc.CardBody([
-                    html.P(id={'type':'thumbnail-name', 'index': index}, children=filename, style={'font-size': '12px'}),
-                    html.P(children=text, style={'whiteSpace': 'pre-wrap', 'font-size': '12px'})
-                ])
-            ],
-            outline=False,
-            color='white'
-        ),
+        EventListener(
+            children=[dbc.Card(
+                                id={'type': 'thumbnail-card', 'index': index},
+                                children=[
+                                        html.A(id={'type': 'thumbnail-image', 'index': index},
+                                            n_clicks=init_clicks,   
+                                            children=dbc.CardImg(id={'type': 'thumbnail-src', 'index': index},
+                                                                 src=contents,
+                                                                 bottom=False)),
+                                        dbc.CardBody([
+                                            html.P(id={'type':'thumbnail-name', 'index': index}, 
+                                                   children=filename, 
+                                                   style={'font-size': '12px'}),
+                                            html.P(children=text, style={'whiteSpace': 'pre-wrap', 'font-size': '12px'})
+                                        ])],
+                                outline=False,
+                                color='white')],
+            id={'type': 'double-click-entry', 'index': index}, 
+            events=[{"event": "dblclick", "props": ["srcElement.className", "srcElement.innerText"]}], 
+            logging=True),
         id={'type': 'thumbnail-wrapper', 'index': index},
         style={'display': 'block'}
     )
     return img_card
 
-
-def parse_contents_data_clinic(contents, filename, index):
-    '''
-    This function creates the reactive components to display 1 image with it's thumbnail card
-    Args:
-        contents:   Image contents
-        filename:   Filename
-        index:      Index of the reactive component
-    Returns:
-        reactive_component
-    '''
-    img_card = html.Div(
-        dbc.Card(
-            id={'type': 'thumbnail-card', 'index': index},
-            children=[
-                html.A(id={'type': 'thumbnail-image', 'index': index},
-                       n_clicks=1,
-                       children=dbc.CardImg(id={'type': 'thumbnail-src', 'index': index},
-                                            src=contents,
-                                            bottom=False)),
-                dbc.CardBody([
-                    html.P(id={'type':'thumbnail-name', 'index': index}, children=filename, style={'font-size': '12px'}),
-                ])
-            ],
-            outline=False,
-            color='primary'
-        ),
-        id={'type': 'thumbnail-wrapper', 'index': index},
-        style={'display': 'block'}
-    )
-    return img_card
 
 def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, file=None, data_clinic=False):
     '''
@@ -201,23 +192,15 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
                     probs = str(file.loc[file['filename']==docker_filename].T.iloc[1:].to_string(header=None))
                 else:
                     probs = ''
-            if data_clinic:
-                row_child.append(dbc.Col(parse_contents_data_clinic(content,
-                                                                    filename,
-                                                                    j * n_cols + i),
-                                                     width="{}".format(12 // n_cols),
-                                         )
-                                 )
-            else:
-                row_child.append(dbc.Col(parse_contents(content,
-                                                        filename,
-                                                        j * n_cols + i,
-                                                        probs),
-                                         width="{}".format(12 // n_cols),
-                                         )
-                                 )
+            row_child.append(dbc.Col(parse_contents(content,
+                                                    filename,
+                                                    j * n_cols + i,
+                                                    probs,
+                                                    data_clinic),
+                                     width="{}".format(12 // n_cols),
+                                    )
+                             )
             visible.append(1)
-            
         children.append(dbc.Row(row_child))
     return children
 
@@ -246,3 +229,32 @@ def get_trained_models_list(user, datapath, tab):
                                            'value': model['job_kwargs']['cmd'].split(' ')[4]+filename})
     trained_models.reverse()
     return trained_models
+
+
+def adapt_tiled_filename(filename, dir):
+    '''
+    This function takes the filename retrieved from tiled and add the full directory path and file extension
+    '''
+    return dir + '/' + filename + '.tiff'
+
+
+def parse_full_screen_content(contents, filename):
+    '''
+    This function creates the reactive components to display an image full screen
+    Args:
+        contents:   Image contents
+        filename:   Filename
+    Returns:
+        reactive_component
+    '''
+    img_card = [html.A(id='full-screen-image',
+                       n_clicks=0,
+                       children=dbc.CardImg(id='full-screen-src',
+                                            src=contents,
+                                            bottom=False)),
+                dbc.CardBody([html.P(id='full-screen-name', 
+                                     children=filename, 
+                                     style={'font-size': '12px'})
+                                     ])
+                ]
+    return img_card
