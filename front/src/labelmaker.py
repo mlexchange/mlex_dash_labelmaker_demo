@@ -958,6 +958,7 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
                 for file in name_list:
                     if file in current_labels_name[current_key]:
                         current_labels_name[current_key].remove(file)
+                        labeled_amount[list_labels_indx.index(int(current_key))] -= 1
             ##
             if key in current_labels_name.keys():
                 current_labels_name[key].extend(name_list)
@@ -974,6 +975,13 @@ def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, 
             if select_value is not None:
                 # add selected thumbs to the label key corresponding to last pressed button
                 if select_value % 2 == 1:
+                    ## remove the previously assigned label before assigning new one
+                    for current_key in current_labels_name.keys():
+                        docker_filename = local_to_docker_path(filename, DOCKER_HOME, LOCAL_HOME, 'str')
+                        if docker_filename in current_labels_name[current_key]:
+                            current_labels_name[current_key].remove(docker_filename)
+                            labeled_amount[list_labels_indx.index(int(current_key))] -= 1
+                    ##
                     selected_thumbs.append(index)
                     selected_thumbs_filename.append(filename)
 
