@@ -20,7 +20,7 @@ app = dash.Dash(__name__, external_stylesheets = external_stylesheets, suppress_
 
 header = templates.header()
 
-LABEL_LIST = {0:'Label_1', 1:'Label_2'}
+LABEL_LIST = {'Label_1': [], 'Label_2': []}
 DOCKER_DATA = pathlib.Path.home() / 'data'
 
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
@@ -101,7 +101,7 @@ label_method = html.Div([
     # manual tab is default button group
     dbc.Collapse(
         children = html.Div(id='label-buttons',
-                            children=create_label_component(LABEL_LIST),
+                            children=create_label_component(LABEL_LIST.keys()),
                             style={'margin-bottom': '0.5rem'}),
         id="label-buttons-collapse",
         is_open=False
@@ -140,9 +140,7 @@ label_method = html.Div([
                                                     color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'})),
                                  dbc.Col(dbc.Button('Stop Find Similar Images', id='exit-similar-unsupervised', outline="True",
                                                     color='primary', size="sm", style={'width': '100%', 'margin-top': '20px'}))]),
-                        daq.Indicator(id='on-off-display', label='Find Similar Images: OFF', color='#596D4E', size=30, style={'margin-top': '20px'}),
-                        dbc.Button('Label', id='clinic-label', outline="True",
-                               color='primary', size="sm", style={'width': '100%', 'margin-top': '20px', "display": "none"})
+                        daq.Indicator(id='on-off-display', label='Find Similar Images: OFF', color='#596D4E', size=30, style={'margin-top': '20px'})
                     ]),
         ],
         id="data-clinic-collapse",
@@ -422,8 +420,8 @@ display = html.Div(
                   children=[daq.ColorPicker(id='label-color-picker',
                                         label='Choose label color',
                                         value=dict(hex='#119DFF')),
-                        dbc.Button('Submit', id='submit-color-button', style={'width': '100%'})
-                        ],
+                            dbc.Button('Submit', id='submit-color-button', style={'width': '100%'})
+                            ],
                   is_open=False
                   )
     ]
@@ -441,6 +439,12 @@ store_options = html.Div(
             dbc.Row(html.P('')),
             dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk',
                                        outline='True', color='primary', size="sm", style={'width': '100%'}))),
+            dbc.Modal([dbc.ModalBody(id='storage-body-modal'),
+                       dbc.ModalFooter(dbc.Button('OK',
+                                                  id='close-storage-modal'))],
+                      id="storage-modal",
+                      is_open=False,
+                    )
         ]
 )
 
@@ -448,17 +452,13 @@ store_options = html.Div(
 browser_cache =html.Div(
         id="no-display",
         children=[
-            dcc.Store(id='docker-labels-name', data={}),
+            dcc.Store(id='docker-labels-name', data=LABEL_LIST),
             dcc.Store(id='docker-file-paths', data=[]),
-            dcc.Store(id='save-results-buffer', data=[]),
-            dcc.Store(id='label-dict', data=LABEL_LIST),
             dcc.Store(id='current-page', data=0),
             dcc.Store(id='image-order', data=[]),
             dcc.Store(id='del-label', data=-1),
             dcc.Store(id='dummy-data', data=0),
             dcc.Store(id='dummy1', data=0),
-            dcc.Store(id='clinic-file-list', data=[]),
-            dcc.Store(id='clinic-filenames', data=[]),
             dcc.Store(id='previous-tab', data=['init']),
             dcc.Store(id='color-cycle', data=px.colors.qualitative.Light24)
         ],
