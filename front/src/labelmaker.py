@@ -886,12 +886,13 @@ def update_trained_model_list(tab_value, mlcoach_refresh_n_clicks, data_clinic_r
     State('mlcoach-label-name', 'value'),
     State('tiled-switch', 'on'),
     State({'type': 'label-button', 'index': ALL}, 'children'),
+    State('my-toggle-switch', 'value'),
     prevent_initial_call=True
 )
 def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all_button, mlcoach_label_button, mlcoach_model, 
                               load_splash_n_clicks, tab_value, modify_list_n_clicks, del_label_n_clicks, docker_file_paths, color_cycle,
                               add_label_name, image_order, thumbnail_image_index, thumbnail_image_select_value, thumbnail_name_children,
-                              current_labels_name, threshold, mlcoach_label, tiled_on, label_button_children):
+                              current_labels_name, threshold, mlcoach_label, tiled_on, label_button_children, docker_path):
     '''
     This callback updates the dictionary of labeled images when:
         - A new image is labeled
@@ -927,6 +928,7 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
         mlcoach_label:                  Selected label from trained model in mlcoach
         tiled_on:                       Tiled has been selected to load the dataset
         label_button_children:          List of label text in label buttons
+        docker_path:                    [Bool] show docker path T/F
     Returns:
         label_buttons:                  Reactive component with the updated list of labels
         mlcoach_model_list:             List of trained models in mlcoach
@@ -963,11 +965,12 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
                dash.no_update, [dash.no_update]*num_labels, [dash.no_update]*num_labels, dash.no_update 
 
     # Check if unlabel all is selected
-    if changed_id == 'confirm-un-label-all.n_clicks' or 'docker-file-paths.data' in changed_id:
-        for label in current_labels_name.keys():
-            current_labels_name[label] = []
-        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
-        return dash.no_update, dash.no_update, current_labels_name, progress_values, progress_labels, total_num_labeled 
+    if 'my-toggle-switch.value' not in changed_id: 
+        if changed_id == 'confirm-un-label-all.n_clicks' or 'docker-file-paths.data' in changed_id:
+            for label in current_labels_name.keys():
+                current_labels_name[label] = []
+            progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
+            return dash.no_update, dash.no_update, current_labels_name, progress_values, progress_labels, total_num_labeled 
     
     if 'mlcoach-model-list.value' in changed_id:
         num_labels = len(current_labels_name)
