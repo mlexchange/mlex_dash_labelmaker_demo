@@ -18,10 +18,11 @@ from tiled.client.array import ArrayClient
 from tiled.client.cache import Cache as TiledCache
 
 from helper_utils import get_color_from_label, create_label_component, draw_rows, get_trained_models_list, adapt_tiled_filename, \
-                         parse_full_screen_content   
+                         parse_full_screen_content, load_from_splash, save_to_splash, get_labeling_progress, mlcoach_labeling, \
+                         manual_labeling
 from app_layout import app, DOCKER_DATA, UPLOAD_FOLDER_ROOT
-from file_manager import filename_list, move_a_file, move_dir, add_paths_from_dir, \
-                         check_duplicate_filename, docker_to_local_path, local_to_docker_path
+from file_manager import filename_list, move_a_file, move_dir, add_paths_from_dir, check_duplicate_filename, docker_to_local_path, \
+                         local_to_docker_path
 
 
 # Font and background colors associated with each theme
@@ -114,8 +115,10 @@ def toggle_help_modal(main_n_clicks, tab_n_clicks, is_open, tab_value):
 
 @app.callback(
     Output("collapse", "is_open"),
+
     Input("collapse-button", "n_clicks"),
     Input('import-dir', 'n_clicks'),
+
     State("collapse", "is_open")
 )
 def toggle_collapse(n, import_n_clicks, is_open):
@@ -145,6 +148,7 @@ def file_mover_collapse(n, is_open):
     Output('previous-tab', 'data'),
 
     Input("tab-group", "value"),
+
     State("previous-tab", "data")
 )
 def toggle_tabs_collapse(tab_value, previous_tab):
@@ -188,8 +192,10 @@ app.clientside_callback(
 
 @app.callback(
     Output("modal", "is_open"),
+
     Input("delete-files", "n_clicks"),
     Input("confirm-delete", "n_clicks"),  
+
     State("modal", "is_open")
 )
 def toggle_modal(n1, n2, is_open):
@@ -200,8 +206,10 @@ def toggle_modal(n1, n2, is_open):
 
 @app.callback(
     Output("modal-un-label", "is_open"),
+
     Input("un-label-all", "n_clicks"),
     Input("confirm-un-label-all", "n_clicks"),
+
     State("modal-un-label", "is_open")
 )
 def toggle_modal_unlabel(n1, n2, is_open):
@@ -326,6 +334,7 @@ def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks,
 @app.callback(
     Output('on-off-display', 'color'),
     Output('on-off-display', 'label'),
+
     Input('find-similar-unsupervised', 'n_clicks'),
 )
 def display_indicator(n_clicks):
@@ -368,13 +377,11 @@ def display_indicator(n_clicks):
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks_timestamp'),
     State('data-clinic-model-list', 'value'),
     State('docker-labels-name', 'data'),
-    State('label-dict', 'data'),
     State('image-order','data'),
     prevent_initial_call=True)
 def display_index(exit_similar_images, find_similar_images, docker_path, file_paths, import_n_clicks, import_format,
                   rows, button_hide_n_clicks, button_sort_n_clicks, delete_n_clicks, move_dir_n_clicks, tab_selection,
-                  tiled_on, thumbnail_name_children, timestamp, data_clinic_model, labels_name_data, label_dict,
-                  image_order):
+                  tiled_on, thumbnail_name_children, timestamp, data_clinic_model, labels_name_data, image_order):
     '''
     This callback arranges the image order according to the following actions:
         - New content is uploaded
@@ -399,7 +406,6 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
                                     one 1 image is selected for this operation
         data_clinic_model:          Selected data clinic model
         labels_name_data:           Dictionary of labeled images (docker path), as follows: {label: list of image filenames}
-        label_dict:                 Dict of label names (tag name), e.g., {0: 'label',...}
         image_order:                Order of the images according to the selected action (sort, hide, new data, etc)
 
     Returns:
@@ -450,6 +456,7 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
             if data_clinic_model:
                 df_clinic = pd.read_csv(data_clinic_model)
                 row_dataframe = df_clinic.iloc[df_clinic.set_index('filename').index.get_loc(filename)]
+                print(f'Row dataframe {row_dataframe.values[1:].tolist()}')
                 image_order = [int(order) for order in row_dataframe.values[1:].tolist()]
                 image_order = [x for x in image_order if x not in set(match_ind)]       # filter labeled images
         else:
@@ -488,10 +495,10 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
         if changed_id == 'button-sort.n_clicks':
             button_hide = 0
             similar_img_clicks = 0
-            new_indx = [[] for i in range(len(label_dict.keys()) + 1)]
-            for key_label in labels_name_data:
+            new_indx = [[] for i in range(len(labels_name_data) + 1)]
+            for indx, key_label in enumerate(labels_name_data):
                 key_filenames = list(set(list_filename) & set(labels_name_data[key_label]))
-                new_indx[int(key_label)] = [i for i, el in enumerate(list_filename) if el in key_filenames]
+                new_indx[indx] = [i for i, el in enumerate(list_filename) if el in key_filenames]
             image_order = list(itertools.chain(*new_indx))
             unlabeled = [i for i in list(range(num_imgs)) if i not in image_order]
             image_order = image_order + unlabeled
@@ -635,8 +642,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
                         pre_highlight = False
                         break
             if find_similar_images>0 and pre_highlight:
-                children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value, 
-                        data_clinic=True)
+                children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value, data_clinic=True)
             else:
                 children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value)
         else:
@@ -676,9 +682,9 @@ def select_thumbnail(value, labels_name_data, docker_path, thumbnail_name_childr
     if not docker_path:
         name =  local_to_docker_path(name, DOCKER_HOME, LOCAL_HOME, 'str')
     color = ''
-    for label_key in labels_name_data:
+    for label_indx, label_key in enumerate(labels_name_data):
         if name in labels_name_data[label_key]:
-            color = get_color_from_label(label_key, color_cycle)
+            color = get_color_from_label(label_indx, color_cycle)
             break
     print(f'Total time to select image: {time.time() - start}')
     if value is None or (dash.callback_context.triggered[0]['prop_id'] == 'un-label.n_clicks' and color==''):
@@ -691,9 +697,11 @@ def select_thumbnail(value, labels_name_data, docker_path, thumbnail_name_childr
 
 @app.callback(
     Output({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
+
     Input({'type': 'label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input('un-label', 'n_clicks'),
     Input('confirm-un-label-all', 'n_clicks'),
+
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
     prevent_initial_call=True
 )
@@ -769,6 +777,7 @@ def full_screen_thumbnail(double_click, thumbnail_name_children, tiled_on, docke
 
 @app.callback(
     Output('color-picker-modal', 'is_open'),
+
     Input({'type': 'color-label-button', 'index': ALL}, 'n_clicks'),
     Input('submit-color-button', 'n_clicks'),
     prevent_initial_call=True
@@ -791,7 +800,9 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
 
 @app.callback(
     Output('color-cycle', 'data'),
+
     Input('submit-color-button', 'n_clicks'),
+
     State({'type': 'color-label-button', 'index': ALL}, 'n_clicks_timestamp'),
     State('label-color-picker', 'value'),
     State('color-cycle', 'data'),
@@ -814,367 +825,276 @@ def change_label_color(submit_n_clicks, color_label_t_clicks, new_color, color_c
 
 
 @app.callback(
+    Output('mlcoach-model-list', 'options'),
+    Output('data-clinic-model-list', 'options'),
+
+    Input("tab-group", "value"),
+    Input('mlcoach-refresh', 'n_clicks'),
+    Input('data-clinic-refresh', 'n_clicks'),
+    prevent_initial_call=True
+)
+def update_trained_model_list(tab_value, mlcoach_refresh_n_clicks, data_clinic_refresh_n_clicks):
+    '''
+    This callback updates the list of trained models
+    Args:
+        tab_value:                      Tab option
+        mlcoach_refresh_n_clicks:       Button to refresh the list of mlcoach trained models
+        data_clinic_refresh_n_clicks:   Button to refresh the list of data clinic trained models
+    Returns:
+        mlcoach_model_list:             List of trained models in mlcoach
+        data_clinic_model_list:         List of trained models in data clinic
+    '''
+    if tab_value == 'mlcoach':
+        mlcoach_models = get_trained_models_list(USER, tab_value)
+        print(mlcoach_models)
+        data_clinic_models = dash.no_update
+    elif tab_value == 'clinic':
+        mlcoach_models = dash.no_update
+        data_clinic_models = get_trained_models_list(USER, tab_value)
+    else:
+        return dash.no_update, dash.no_update
+    return mlcoach_models, data_clinic_models
+
+
+@app.callback(
+    Output('label-buttons', 'children'),
+    Output('mlcoach-label-name', 'options'),
     Output('docker-labels-name', 'data'),
     Output({'type': 'label-percentage', 'index': ALL}, 'value'),
     Output({'type': 'label-percentage', 'index': ALL}, 'label'),
     Output('total_labeled', 'children'),
 
-    Input('del-label', 'data'),
     Input({'type': 'label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input('un-label', 'n_clicks'),
     Input('confirm-un-label-all', 'n_clicks'),
     Input('mlcoach-label', 'n_clicks'),
-    Input('clinic-label', 'n_clicks'),
     Input('mlcoach-model-list', 'value'),
+    Input('button-load-splash', 'n_clicks'),
+    Input("tab-group", "value"),
+    Input('modify-list', 'n_clicks'),
+    Input({'type': 'delete-label-button', 'index': ALL}, 'n_clicks_timestamp'),
+    Input('docker-file-paths', 'data'),
+    Input('color-cycle', 'data'),
 
+    State('add-label-name', 'value'),
     State('image-order', 'data'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'id'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
     State('docker-labels-name', 'data'),
     State('probability-threshold', 'value'),
-    State('label-dict', 'data'),
-    State('clinic-filenames', 'data'),
-    State('docker-file-paths', 'data'),
-    State({'type': 'label-percentage', 'index': ALL}, 'label'),
-    State({'type': 'label-percentage', 'index': ALL}, 'id'),
     State('mlcoach-label-name', 'value'),
     State('tiled-switch', 'on'),
+    State({'type': 'label-button', 'index': ALL}, 'children'),
     prevent_initial_call=True
 )
-def label_selected_thumbnails(del_label, label_button_n_clicks, unlabel_button, unlabel_all_button,
-                              mlcoach_label_button, clinic_label_button, mlcoach_model, image_order,
-                              thumbnail_image_index, thumbnail_image_select_value, thumbnail_name_children,
-                              current_labels_name, threshold, label_dict, clinic_filenames, docker_file_paths,
-                              labeled_amount, labeled_amount_indx, mlcoach_label, tiled_on):
+def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all_button, mlcoach_label_button, mlcoach_model, 
+                              load_splash_n_clicks, tab_value, modify_list_n_clicks, del_label_n_clicks, docker_file_paths, color_cycle,
+                              add_label_name, image_order, thumbnail_image_index, thumbnail_image_select_value, thumbnail_name_children,
+                              current_labels_name, threshold, mlcoach_label, tiled_on, label_button_children):
     '''
     This callback updates the dictionary of labeled images when:
         - A new image is labeled
         - An existing image changes labels
         - An image is unlabeled
+        - Information is loaded from splash-ml
+    This callback also updates the label list on the right column according to:
+        - New trained models (unsupervised or supervised) have been selected
+        - New labels have been added
+        - Labels have been deleted
+        - A new color cycle has been selected
     Args:
-        del_label:                      Delete label button
-        label_button_n_clicks:          Label button
+        label_button_n_clicks:          List of timestamps of the clicked label-buttons
         unlabel_button:                 Un-label button
         unlabel_all_button:             Unlabel all button
-        mlcoach_label_button:           Button to label with mlcoach results
-        clinic_label_button:            Label button under DataClinic tab
+        mlcoach_label_button:           Triggers labeling with mlcoach results
         mlcoach_model:                  Selected MLCoach model
+        load_splash_n_clicks:           Triggers loading labeled datasets with splash-ml
+        tab_value:                      Tab option
+        modify_list_n_clicks:           Button to add a new label (tag name)
+        mlcoach_refresh_n_clicks:       Button to refresh the list of mlcoach trained models
+        data_clinic_refresh_n_clicks:   Button to refresh the list of data clinic trained models
+        del_label_n_clicks:             List of n_clicks to delete a label button
+        docker_file_paths:              Absolute (docker) file paths selected from path table   
+        color_cycle:                    Color cycle per label
+        add_label_name:                 Label to add (tag name)
+        image_order:                    
         thumbnail_image_index:          Index of the thumbnail image
         thumbnail_image_select_value:   Selected thumbnail image (n_clicks)
         thumbnail_name_children:        Filename of the selected thumbnail image
-        current_labels_name:            Dictionary of labeled images, e.g., {0: [image filenames],...}
-        threshold:                      Threshold value
-        label_dict:                     Dict of label names (tag name), e.g., {0: 'label',...}
-        clinic_filenames:               Dictionary of labeled images from DataClinic pop window, e.g., {0: [image filenames],...}
-        docker_file_paths:              Absolute (docker) file paths selected from path table
-        labeled_amount:                 Current amount of labeled images per label
+        current_labels_name:            Dictionary of labeled images, e.g., {label: list of image filenames}
+        threshold:                      Threshold value                                                  
+        mlcoach_label:                  Selected label from trained model in mlcoach
+        tiled_on:                       Tiled has been selected to load the dataset
+        label_button_children:          List of label text in label buttons
     Returns:
-        labels_data:                    Dictionary of labeled images, e.g., {label: list of image filenames}
-        label_perc_value
-        label_perc_label
-        total_labeled
+        label_buttons:                  Reactive component with the updated list of labels
+        mlcoach_model_list:             List of trained models in mlcoach
+        data_clinic_model_list:         List of trained models in data clinic
+        mlcoach_label:                  Selected label from trained model in mlcoach
+        docker_labels_names:            Dictionary with labeling information, e.g. {'label1': ['filename1', 'filename2'], 'label2': [], ...}
+        label_perc_value:               Numerical values that indicate the percentage of images labeled per class/label
+        label_perc_label:               Same as above, but string
+        total_labeled:                  Message to indicate how many images have been labeled
     '''
-    start = time.time()
-    list_labels_indx = [elem['index'] for elem in labeled_amount_indx]
-    label_dict = {int(key): value for key,value in label_dict.items()}
     changed_id = dash.callback_context.triggered[-1]['prop_id']
-    progress_values = [dash.no_update] * len(labeled_amount)
-    labelmaker_filenames = load_filenames(docker_file_paths, tiled_on)
 
     # Check if a label has been deleted
-    if changed_id == 'del-label.data' or changed_id == 'image-order.data':
-        progress_labels = [dash.no_update] * len(labeled_amount)
-        if del_label > -1:
-            if str(del_label) in current_labels_name.keys():
-                current_labels_name.pop(str(del_label))
-        num_labeled_imgs = len(list(itertools.chain.from_iterable(list(current_labels_name.values()))))
-        if num_labeled_imgs != 0:
-            labeled_amount = [0] * len(labeled_amount)
-            for name in current_labels_name.keys():
-                labeled_amount[list_labels_indx.index(int(name))] = len(current_labels_name[name])
-            progress_values = [100 * a / num_labeled_imgs for a in labeled_amount]
-            progress_labels = list(map(str, labeled_amount))
-        labeled_img = f'Labeled {num_labeled_imgs} out of {len(labelmaker_filenames)} images.'
-        return current_labels_name, progress_values, progress_labels, labeled_img
-
-    # initialize the values of the # of labeled images if the list of labels is updated
-    if None not in labeled_amount:
-        labeled_amount = list(map(int, labeled_amount))
-    else:
-        labeled_amount = [0] * len(labeled_amount)
-        for name in current_labels_name.keys():
-            labeled_amount[list_labels_indx.index(int(name))] = len(current_labels_name[name])
-
-    # check if unlabel all is selected
-    if dash.callback_context.triggered[0]['prop_id'] == 'confirm-un-label-all.n_clicks':
-        current_labels_name = {}
-        return current_labels_name, [0] * len(labeled_amount), ['0'] * len(labeled_amount), \
-               f'Labeled 0 images out of {len(labelmaker_filenames)}'
+    if 'delete-label-button' in changed_id or changed_id == 'image-order.data':
+        num_labels = len(current_labels_name)
+        indx = np.argmax(del_label_n_clicks)
+        current_labels_name.pop(label_button_children[indx])
+        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
+        return create_label_component(current_labels_name.keys(), color_cycle, progress_values=progress_values, progress_labels=progress_labels), dash.no_update, \
+               current_labels_name, [dash.no_update]*num_labels, [dash.no_update]*num_labels, total_num_labeled
     
-    label_class_value = -1
-    # figures out the latest-clicked label button index
-    if bool(label_button_n_clicks):
-        label_class_value = sorted(label_dict.keys())[max(enumerate(label_button_n_clicks),\
-                                                      key=lambda t: 0 if t[1] is None else t[1])[0]]
-    selected_thumbs = []
-    selected_thumbs_filename = []
-    # add empty list to browser cache to store indices of thumbs
-    if label_class_value != -1 and str(label_class_value) not in current_labels_name.keys():
-        current_labels_name[str(label_class_value)] = []
+    # Check if a new label has been added
+    if 'modify-list.n_clicks' in changed_id:
+        num_labels = len(current_labels_name)
+        current_labels_name[add_label_name] = []
+        return create_label_component(current_labels_name.keys(), color_cycle), dash.no_update, current_labels_name, [dash.no_update]*num_labels, \
+               [dash.no_update]*num_labels, dash.no_update 
+    
+    # Check if there is a new color cycle
+    if 'color-cycle.data' in changed_id:
+        num_labels = len(current_labels_name)
+        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
+        return create_label_component(current_labels_name.keys(), color_cycle, progress_values=progress_values, progress_labels=progress_labels), dash.no_update, \
+               dash.no_update, [dash.no_update]*num_labels, [dash.no_update]*num_labels, dash.no_update 
 
-    # labeling with mlcoach
+    # Check if unlabel all is selected
+    if changed_id == 'confirm-un-label-all.n_clicks' or 'docker-file-paths.data' in changed_id:
+        for label in current_labels_name.keys():
+            current_labels_name[label] = []
+        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
+        return dash.no_update, dash.no_update, current_labels_name, progress_values, progress_labels, total_num_labeled 
+    
+    if 'mlcoach-model-list.value' in changed_id:
+        num_labels = len(current_labels_name)
+        mlcoach_options = {}
+        if mlcoach_model:
+            df_prob = pd.read_csv(mlcoach_model)
+            mlcoach_labels = list(df_prob.columns[1:])
+            additional_labels = list(set(mlcoach_labels) - set(list(current_labels_name.keys())))
+            for additional_label in additional_labels:
+                current_labels_name[additional_label] = []
+            mlcoach_options = [{'label':name, 'value':name} for name in mlcoach_labels]
+        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
+        return create_label_component(current_labels_name.keys(), color_cycle, progress_values=progress_values, progress_labels=progress_labels), mlcoach_options, \
+               current_labels_name, [dash.no_update]*num_labels, [dash.no_update]*num_labels, dash.no_update 
+
+    # Labeling with mlcoach
     if changed_id == 'mlcoach-label.n_clicks':
         if mlcoach_model:
-            label_class_value = mlcoach_label
-            if str(label_class_value) not in current_labels_name.keys():
-                current_labels_name[str(label_class_value)] = []
-            df_prob = pd.read_csv(mlcoach_model)
-            tmp_filenames = []
-            for ind, filename in enumerate(list(df_prob['filename'])):
-                 tmp_filenames.append(filename.split(os.sep)[-1])
-            df_prob['filename'] = tmp_filenames
-            labeled_filenames = list(itertools.chain.from_iterable(list(current_labels_name.values())))
-            tmp_labeled_filenames = []
-            for ind, filename in enumerate(labeled_filenames):
-                tmp_labeled_filenames.append(filename.split(os.sep)[-1])
-            try:
-                filenames = df_prob['filename'][df_prob[label_dict[label_class_value]]>threshold/100].tolist()
-                for indx, filename in enumerate(filenames):
-                    if filename not in tmp_labeled_filenames and tmp_example+'/'+filename in labelmaker_filenames\
-                            and tmp_example+'/'+filename not in selected_thumbs_filename:
-                        selected_thumbs.append(indx)
-                        # the next line is needed bc the filenames in mlcoach do not match (only good for selecting single
-                        # folder/subfolder )
-                        selected_thumbs_filename.append(tmp_example+'/'+filename)
-            except Exception as e:
-                print(f'Exception {e}')
+            labelmaker_filenames = load_filenames(docker_file_paths, tiled_on)
+            current_labels_name = mlcoach_labeling(current_labels_name, mlcoach_model, mlcoach_label, labelmaker_filenames, threshold)
 
-    # labeling with data clinic
-    elif changed_id == 'clinic-label.n_clicks':
-        for key, name_list in clinic_filenames.items():
-            ## remove the previously assigned label before assigning new one
-            for current_key in current_labels_name.keys():
-                for file in name_list:
-                    if file in current_labels_name[current_key]:
-                        current_labels_name[current_key].remove(file)
-                        labeled_amount[list_labels_indx.index(int(current_key))] -= 1
-            ##
-            if key in current_labels_name.keys():
-                current_labels_name[key].extend(name_list)
-            else:
-                current_labels_name[key] = name_list
-            ind = current_labels_name.index(key)
-            labeled_amount[ind] =+ 1
-
-    # manual labeling
-    else:
-        for thumb_id, select_value, filename in zip(thumbnail_image_index, thumbnail_image_select_value,
-                                                    thumbnail_name_children):
-            index = thumb_id['index']
-            if select_value is not None:
-                # add selected thumbs to the label key corresponding to last pressed button
-                if select_value % 2 == 1:
-                    ## remove the previously assigned label before assigning new one
-                    for current_key in current_labels_name.keys():
-                        docker_filename = local_to_docker_path(filename, DOCKER_HOME, LOCAL_HOME, 'str')
-                        if docker_filename in current_labels_name[current_key]:
-                            current_labels_name[current_key].remove(docker_filename)
-                            labeled_amount[list_labels_indx.index(int(current_key))] -= 1
-                    ##
-                    selected_thumbs.append(index)
-                    selected_thumbs_filename.append(filename)
-
-    # get docker path to selected images
-    selected_thumbs_filename = local_to_docker_path(selected_thumbs_filename, DOCKER_HOME, LOCAL_HOME, 'list')
-
-    # if unlabel, remove the selected filenames from the labeled data
-    if dash.callback_context.triggered[0]['prop_id'] == 'un-label.n_clicks':
-        for thumb_name in selected_thumbs_filename:
-            for key, names in zip(current_labels_name.keys(), current_labels_name.values()):
-                if thumb_name in names:
-                    names.remove(thumb_name)
-                    labeled_amount[list_labels_indx.index(int(key))] -= 1
-    else:   # otherwise, add them to it's respective label
-        if str(label_class_value) in current_labels_name.keys():
-            current_labels_name[str(label_class_value)].extend(selected_thumbs_filename)
-            labeled_amount[list_labels_indx.index(label_class_value)] += len(selected_thumbs_filename)
-
-    num_labeled_imgs = len(list(itertools.chain.from_iterable(list(current_labels_name.values()))))
-    if num_labeled_imgs!=0:
-        progress_values = list(100*np.array(labeled_amount)/num_labeled_imgs)
-
-    print(f'Labeling callback takes {time.time()-start}')
-    return current_labels_name, progress_values, list(map(str, labeled_amount)), \
-           f'Labeled {num_labeled_imgs} out of {len(labelmaker_filenames)} images.'
-
-
-@app.callback(
-    [Output('label-buttons', 'children'),
-     Output('modify-list', 'n_clicks'),
-     Output('label-dict', 'data'),
-     Output('del-label', 'data'),
-     Output('mlcoach-model-list', 'options'),
-     Output('data-clinic-model-list', 'options'),
-     Output('mlcoach-label-name', 'options')],
-
-    Input("tab-group", "value"),
-    Input('modify-list', 'n_clicks'),
-    Input('mlcoach-refresh', 'n_clicks'),
-    Input('data-clinic-refresh', 'n_clicks'),
-    Input({'type': 'delete-label-button', 'index': ALL}, 'n_clicks'),
-    Input('mlcoach-model-list', 'value'),
-    Input('docker-file-paths', 'data'),
-    Input('color-cycle', 'data'),
-
-    State('add-label-name', 'value'),
-    State('label-dict', 'data'),
-    State('docker-labels-name', 'data'),
-    State({'type': 'clinic-label-input', 'index': ALL}, 'value'),
-    prevent_initial_call=True
-)
-def update_list(tab_value, n_clicks, mlcoach_refresh, data_clinic_refresh, n_clicks2, mlcoach_model, datapath,
-                color_cycle, add_label_name, label_dict, labels_name_data, input_labels):
-    '''
-    This callback updates the list of labels. In the case a label is deleted, the index of this label is saved in
-    cache so that the list of assigned labels can be updated in the next callback
-    Args:
-        tab_value:                  Tab option
-        n_clicks:                   Button to add a new label (tag name)
-        n_clicks2:                  Delete the associated label (tag name)
-        add_label_name:             Label to add (tag name)
-        label_dict:                 Dict of label names (tag name), e.g., {0:'label',...}
-        labels_name_data:           Dictionary of labeled images (docker path), as follows: {label: list of image filenames}
-        input_labels:               A list of ordered labels from Add Label button in DataClinic pop window
-    Returns:
-        label_component:        Reactive component with the updated list of labels
-        modify_lists.n_clicks:  Number of clicks for the modify list button
-        label_dict:             List of labels
-        del_label:              Index of the deleted label
-    '''
-    label_dict = {int(key): value for key,value in label_dict.items()}
-    indx = -1
-    changed_id = dash.callback_context.triggered[-1]['prop_id']
-    mlcoach_models = dash.no_update
-    data_clinic_models = dash.no_update
-    if 'tab-group.value' == changed_id or 'docker-file-paths.data' in changed_id or \
-            'mlcoach-refresh.n_clicks' in changed_id or 'data-clinic-refresh.n_clicks' in changed_id:
-        if tab_value == 'mlcoach':
-            mlcoach_models = get_trained_models_list(USER, datapath, tab_value)
-        if tab_value == 'clinic':
-            data_clinic_models = get_trained_models_list(USER, datapath, tab_value)
+    # Labeling from splash-ml
+    elif changed_id == 'button-load-splash.n_clicks':
+        num_labels = len(current_labels_name)
+        labelmaker_filenames = load_filenames(docker_file_paths, tiled_on)
+        splash_labels = load_from_splash(labelmaker_filenames)
+        additional_labels =  list(set(list(current_labels_name.keys())) - set(splash_labels.keys()))
+        current_labels_name = splash_labels
+        for additional_label in additional_labels:
+            current_labels_name[additional_label] = []
+        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
+        return create_label_component(current_labels_name.keys(), color_cycle, progress_values=progress_values, progress_labels=progress_labels), dash.no_update, \
+               current_labels_name, [dash.no_update]*num_labels, [dash.no_update]*num_labels, dash.no_update
     
-    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    if 'mlcoach-model-list.value' in changed_id:
-        if mlcoach_model:
-            df_prob = pd.read_csv(mlcoach_model)
-            mlcoach_labels = list(set(list(df_prob.columns[1:])) - set(list(label_dict.values())))
-            current_num_keys = len(list(label_dict.keys()))
-            num_keys = range(current_num_keys + len(mlcoach_labels))
-            num_keys = list(set(num_keys) - set(list(label_dict.keys())))
-            label_dict.update(({key: value for key, value in zip(num_keys, list(mlcoach_labels))}))
+    # Labeling manually
+    else:
+        selected_thumbs_filename = manual_labeling(current_labels_name, thumbnail_image_index, thumbnail_image_select_value, \
+                                                   thumbnail_name_children)
+        # get docker path to selected images
+        selected_thumbs_filename = local_to_docker_path(selected_thumbs_filename, DOCKER_HOME, LOCAL_HOME, 'list')
 
-    if changed_id == 'clinic-add-label-button.n_clicks':
-        for new_label in input_labels:
-            if new_label is not None:
-                if new_label.replace(' ', '_') not in label_dict.values():
-                    label_dict[len(label_dict.keys())] = new_label.replace(' ', '_')
+        # if unlabel, remove the selected filenames from the labeled data
+        if dash.callback_context.triggered[0]['prop_id'] == 'un-label.n_clicks':
+            for thumb_name in selected_thumbs_filename:
+                for key, names in zip(current_labels_name.keys(), current_labels_name.values()):
+                    if thumb_name in names:
+                        names.remove(thumb_name)
+        else:   # otherwise, add them to it's respective label
+            if bool(label_button_n_clicks):         # figures out the latest-clicked label button index
+                indx = np.argmax(label_button_n_clicks)
+                label_class_value = label_button_children[indx]
+            current_labels_name[label_class_value].extend(selected_thumbs_filename)
+    
+    progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
 
-    add_clicks = n_clicks
-    if 'delete-label-button' in changed_id and any(n_clicks2):
-        rem = changed_id[changed_id.find('index')+7:]
-        indx = int(rem[:rem.find(',')])
-        try:
-            label_dict.pop(indx)    # remove label from tagged images
-        except Exception as e:
-            print(e)
-            
-    if add_clicks > 0:
-        add_label_name = add_label_name.replace(' ', '_')
-        if len(label_dict.keys())>0:
-            if add_label_name not in label_dict.values():
-                if len(label_dict.keys()) < max(label_dict.keys())+1:
-                    key_to_add = 0
-                    last_key = -1
-                    for key in sorted(label_dict.keys()):
-                        if key > last_key + 1:
-                            key_to_add = last_key +1
-                            break
-                        else:
-                            last_key += 1
-                    if key_to_add == max(label_dict.keys()):
-                        key_to_add = max(label_dict.keys())+1
-                    label_dict[key_to_add] = add_label_name
-                else:
-                    label_dict[max(label_dict.keys())+1] = add_label_name
-        else:
-            label_dict = {0: add_label_name}
-
-    options = []
-    for elem in label_dict:
-        options.append({'value': elem, 'label': label_dict[elem]})
-
-    return [create_label_component(label_dict, color_cycle), 0, label_dict, indx, mlcoach_models, data_clinic_models,
-            options]
+    return dash.no_update, dash.no_update, current_labels_name, progress_values, progress_labels, total_num_labeled
 
 
 @app.callback(
-    Output('save-results-buffer', 'data'),
+    Output('storage-modal', 'is_open'),
+    Output('storage-body-modal', 'children'),
+
     Input('button-save-disk', 'n_clicks'),
+    Input('button-save-splash', 'n_clicks'),
+    Input('close-storage-modal', 'n_clicks'),
+
     State('docker-file-paths','data'),
     State('docker-labels-name', 'data'),
-    State('label-dict', 'data'),
     State('import-dir', 'n_clicks'),
-    State('files-table', 'selected_rows')
+    State('files-table', 'selected_rows'),
+    prevent_initial_call=True
 )
-def save_labels_disk(button_save_disk_n_clicks, file_paths, labels_name_data, label_dict, import_n_clicks, rows):
+def save_labels_disk(button_save_disk_n_clicks, button_save_splash_n_clicks, close_modal_n_clicks, file_paths, labels_name_data, import_n_clicks, rows):
     '''
-    This callback saves the labels to disk
+    This callback saves the labels to disk or to splash-ml
     Args:
-        button_save_disk_n_clicks:  Button save to disk
-        file_paths:                 Absolute file paths selected from path table
-        labels_name_data:           Dictionary of labeled images (docker path), as follows: {0: [image filenames],...}
-        label_dict:                 Dictionary of label names (tag name), e.g., {0: 'label',...}
-        import_n_clicks:            Button for importing selected paths
-        rows:                       Rows of the selected file paths from path table
+        button_save_disk_n_clicks:      Button to save to disk
+        button_save_splash_n_clicks:    Button to save to splash-ml
+        close_modal_n_clicks:           Button to close the confirmation message
+        file_paths:                     Absolute file paths selected from path table
+        labels_name_data:               Dictionary of labeled images (docker path), as follows: {'label1': [image filenames],...}
+        import_n_clicks:                Button for importing selected paths
+        rows:                           Rows of the selected file paths from path table
     Returns:
-        The data is saved in the output directory
+        storage_modal_open:             Open/closes the confirmation message
+        storag_body_modal:              Confirmation message
     '''
-    label_dict = {int(key):value for key,value in label_dict.items()}
+    changed_id = dash.callback_context.triggered[-1]['prop_id']
+    if changed_id == 'close-storage-modal.n_clicks':
+        return False, ''
     if labels_name_data is not None and import_n_clicks and bool(rows):
         if len(labels_name_data)>0:
-            print('Saving labels')
-            # create root directory
-            root = pathlib.Path(DOCKER_DATA / 'labelmaker_outputs' /str(uuid.uuid4()))
-            params1 = {'key': 'datapath'}
-            payload = [{'file_path': str(root), 'file_type': 'dir'}]
-            resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params1, json=payload)
-            total_filename_list = []
-            for label_index in labels_name_data:
-                filename_list = labels_name_data[label_index]
-                if len(filename_list)>0:
-                    label_dir = root / pathlib.Path(label_dict[int(label_index)])
-                    label_dir.mkdir(parents=True, exist_ok=True)
-                    # save all files under the current label into the directory
-                    for filename in filename_list:
-                        im_bytes = filename
-                        im = PIL.Image.open(im_bytes)
-                        filename = im_bytes.split("/")[-1]
-                        f_name = filename.split('.')[-2]
-                        f_ext  = filename.split('.')[-1]
-                        i = 0
-                        while check_duplicate_filename(label_dir,filename): # check duplicate filenames and save as different names 
-                            if i:
-                                filename = f_name + '_%s'%i + '.' + f_ext
-                            i += 1 
-                        im_fname = os.path.join(label_dir, pathlib.Path(filename))
-                        im.save(im_fname)
-                        total_filename_list.append(str(im_fname))
-            params2 = {'key': 'filenames'}
-            resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params2, json=total_filename_list)
-    return []
+            if 'button-save-splash.n_clicks' in changed_id:
+                response = save_to_splash(labels_name_data)
+            else:
+                # create root directory
+                root = pathlib.Path(DOCKER_DATA / 'labelmaker_outputs' /str(uuid.uuid4()))
+                params1 = {'key': 'datapath'}
+                payload = [{'file_path': str(root), 'file_type': 'dir'}]
+                resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params1, json=payload)
+                total_filename_list = []
+                for label_key in labels_name_data:
+                    filename_list = labels_name_data[label_key]
+                    if len(filename_list)>0:
+                        label_dir = root / pathlib.Path(label_key)
+                        label_dir.mkdir(parents=True, exist_ok=True)
+                        # save all files under the current label into the directory
+                        for filename in filename_list:
+                            im_bytes = filename
+                            im = PIL.Image.open(im_bytes)
+                            filename = im_bytes.split("/")[-1]
+                            f_name = filename.split('.')[-2]
+                            f_ext  = filename.split('.')[-1]
+                            i = 0
+                            while check_duplicate_filename(label_dir,filename): # check duplicate filenames and save as different names 
+                                if i:
+                                    filename = f_name + '_%s'%i + '.' + f_ext
+                                i += 1 
+                            im_fname = os.path.join(label_dir, pathlib.Path(filename))
+                            im.save(im_fname)
+                            total_filename_list.append(str(im_fname))
+                params2 = {'key': 'filenames'}
+                resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params2, json=total_filename_list)
+                response = 'Files were stored to disk.'
+            return True, response
+    return False, ''
 
 
 if __name__ == '__main__':
     app.run_server(debug=True, host='0.0.0.0', port=8067)
-
