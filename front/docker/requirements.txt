@@ -2,6 +2,7 @@ config==0.5.1
 dash==2.0.0
 dash_bootstrap_components==1.0.2
 dash_daq==0.5.0
+dash-extensions==0.0.71
 dash-uploader==0.6.0
 flask==2.0.2
 flask-caching==1.10.1
@@ -13,3 +14,4 @@ scikit_image==0.18.3
 scipy==1.7.1
 werkzeug==2.0.0
 requests==2.25.1
+tiled[client]
