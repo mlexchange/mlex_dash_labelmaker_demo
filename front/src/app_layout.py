@@ -483,7 +483,7 @@ app.layout = html.Div(
                                 dbc.CardBody([label_method])
                             ]),
                             dbc.Card([
-                                dbc.CardHeader('Store Settings'),
+                                dbc.CardHeader('Labels I/O'),
                                 dbc.CardBody([store_options])
                             ]),
                             dbc.Card([

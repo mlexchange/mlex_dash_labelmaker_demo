@@ -70,8 +70,9 @@ def header():
                                 dbc.Collapse(
                                     dbc.Nav(
                                         [
-                                            dbc.NavItem(button_github),
                                             dbc.NavItem(button_help),
+                                            dbc.NavItem(button_github),
+                                            className="me-auto"
                                         ],
                                         navbar=True,
                                     ),
