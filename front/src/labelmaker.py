@@ -318,12 +318,16 @@ def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks,
                     shutil.rmtree(source['file_path'])
                 else:
                     move_a_file(source['file_path'], str(destination))
-                
+
             selected_files = []
             files = filename_list(DOCKER_DATA, browse_format)
     
     if changed_id == 'clear-data.n_clicks':
         selected_files = []
+
+    # do not update 'docker-file-paths' when only toggle docker path 
+    if selected_files == selected_paths:
+        selected_files = dash.no_update
 
     if docker_path:
         return files, selected_files
@@ -965,12 +969,10 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
 
     # Check if unlabel all is selected 
     if changed_id == 'confirm-un-label-all.n_clicks' or 'docker-file-paths.data' in changed_id:
-        if bool(docker_file_paths):
-            if local_to_docker_path(thumbnail_name_children[0], DOCKER_HOME, LOCAL_HOME, 'str') != local_to_docker_path(docker_file_paths[0], DOCKER_HOME, LOCAL_HOME, 'str'):
-                for label in current_labels_name.keys():
-                    current_labels_name[label] = []
-                progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
-                return dash.no_update, dash.no_update, current_labels_name, progress_values, progress_labels, total_num_labeled 
+        for label in current_labels_name.keys():
+            current_labels_name[label] = []
+        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
+        return dash.no_update, dash.no_update, current_labels_name, progress_values, progress_labels, total_num_labeled 
                  
     if 'mlcoach-model-list.value' in changed_id:
         num_labels = len(current_labels_name)
