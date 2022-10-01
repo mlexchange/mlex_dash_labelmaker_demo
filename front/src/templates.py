@@ -72,7 +72,6 @@ def header():
                                         [
                                             dbc.NavItem(button_help),
                                             dbc.NavItem(button_github),
-                                            className="me-auto"
                                         ],
                                         navbar=True,
                                     ),
