@@ -1068,7 +1068,7 @@ def save_labels_disk(button_save_disk_n_clicks, button_save_splash_n_clicks, clo
             if 'button-save-splash.n_clicks' in changed_id:
                 response, uri_list = save_to_splash(labels_name_data)
                 params1 = {'key': 'datapath'}
-                payload = [{'file_path': uri_list, 'file_type': 'dir', 'where': 'splash'}]
+                payload = [{'file_path': uri_list, 'file_type': 'uri', 'where': 'splash'}]
                 resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params1, json=payload)
             else:
                 # create root directory
