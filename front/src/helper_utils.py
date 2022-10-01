@@ -266,6 +266,7 @@ def get_labeling_progress(current_labels_name, num_files):
     '''
     This function calculates the labeling progress
     '''
+    # need to calculate non-duplicate labeled images in the future
     num_labeled_imgs = len(list(itertools.chain.from_iterable(list(current_labels_name.values()))))
     labeled_amount = [0] * len(current_labels_name)
     if num_labeled_imgs != 0:
@@ -352,13 +353,15 @@ def save_to_splash(labels_name_data):
     Args:
         labels_name_data:   Dictionary of labeled images (docker path), as follows: {'label1': [image filenames],...}
     Returns:
-        Request status
+        Request status, a list of dataset
     '''
+    uri_list = []
     status = []
     splash_dataset = requests.get(f'{SPLASH_CLIENT}/datasets?', params={'tags': 'labelmaker'}).json()
     splash_uri_list = list(map(lambda d: d['uri'], splash_dataset))
     for key in labels_name_data:
         for dataset in labels_name_data[key]:
+            uri_list.append(dataset)
             status_code = 200
             # check if the dataset already exists in splash-ml
             if dataset in splash_uri_list:
@@ -386,6 +389,6 @@ def save_to_splash(labels_name_data):
             if status_code != 200:
                 status = status.append(f'Filename: {dataset} with label {key} failed with status {status_code}. ')
     if len(status)==0:
-        return 'Labels stored in splash-ml'
+        return 'Labels stored in splash-ml', uri_list
     else:
-        return f'Error. {status}'
+        return f'Error. {status}', uri_list
