@@ -893,7 +893,7 @@ def update_trained_model_list(tab_value, mlcoach_refresh_n_clicks, data_clinic_r
     prevent_initial_call=True
 )
 def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all_button, mlcoach_label_button, mlcoach_model, 
-                              load_splash_n_clicks, tab_value, modify_list_n_clicks, del_label_n_clicks, docker_file_paths, color_cycle,
+                              load_splash_n_clicks, tab_value, modify_list_n_clicks, del_label_n_clicks, docker_file_paths, color_cycle, 
                               add_label_name, image_order, thumbnail_image_index, thumbnail_image_select_value, thumbnail_name_children,
                               current_labels_name, threshold, mlcoach_label, tiled_on, label_button_children):
     '''
@@ -996,16 +996,20 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
 
     # Labeling from splash-ml
     elif changed_id == 'button-load-splash.n_clicks':
-        num_labels = len(current_labels_name)
-        labelmaker_filenames = load_filenames(docker_file_paths, tiled_on)
-        splash_labels = load_from_splash(labelmaker_filenames)
-        additional_labels =  list(set(list(current_labels_name.keys())) - set(splash_labels.keys()))
-        current_labels_name = splash_labels
-        for additional_label in additional_labels:
-            current_labels_name[additional_label] = []
-        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
-        return create_label_component(current_labels_name.keys(), color_cycle, progress_values=progress_values, progress_labels=progress_labels), dash.no_update, \
-               current_labels_name, [dash.no_update]*num_labels, [dash.no_update]*num_labels, dash.no_update
+        if bool(thumbnail_image_index):
+            return create_label_component(current_labels_name.keys(), color_cycle, progress_values=progress_values, progress_labels=progress_labels), dash.no_update, \
+               current_labels_name, [dash.no_update]*num_labels, [], ''
+        else:
+            num_labels = len(current_labels_name)
+            labelmaker_filenames = load_filenames(docker_file_paths, tiled_on)
+            splash_labels = load_from_splash(labelmaker_filenames)
+            additional_labels =  list(set(list(current_labels_name.keys())) - set(splash_labels.keys()))
+            current_labels_name = splash_labels
+            for additional_label in additional_labels:
+                current_labels_name[additional_label] = []
+            progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
+            return create_label_component(current_labels_name.keys(), color_cycle, progress_values=progress_values, progress_labels=progress_labels), dash.no_update, \
+                   current_labels_name, [dash.no_update]*num_labels, [dash.no_update]*num_labels, total_num_labeled
     
     # Labeling manually
     else:
