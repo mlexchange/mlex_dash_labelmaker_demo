@@ -1068,8 +1068,11 @@ def save_labels_disk(button_save_disk_n_clicks, button_save_splash_n_clicks, clo
             if 'button-save-splash.n_clicks' in changed_id:
                 response, uri_list = save_to_splash(labels_name_data)
                 params1 = {'key': 'datapath'}
-                payload = [{'file_path': uri_list, 'file_type': 'uri', 'where': 'splash'}]
-                resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params1, json=payload)
+                params2 = {'key': 'filenames'}
+                payload = [{'file_path': [], 'file_type': 'uri', 'where': 'splash'}]
+                resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params1, json=payload)           
+                resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params2, json=uri_list)
+                response = 'Labels are stored to Splash.'
             else:
                 # create root directory
                 root = pathlib.Path(DOCKER_DATA / 'labelmaker_outputs' /str(uuid.uuid4()))
@@ -1099,7 +1102,7 @@ def save_labels_disk(button_save_disk_n_clicks, button_save_splash_n_clicks, clo
                             total_filename_list.append(str(im_fname))
                 params2 = {'key': 'filenames'}
                 resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params2, json=total_filename_list)
-                response = 'Files were stored to disk.'
+                response = 'Labled files are stored to disk.'
             return True, response
     return False, ''
 
