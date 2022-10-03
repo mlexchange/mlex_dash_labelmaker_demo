@@ -1004,13 +1004,8 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
         for additional_label in additional_labels:
             current_labels_name[additional_label] = []
         progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
-        label_progress_bar = [dash.no_update]*num_labels
-        if bool(thumbnail_image_index):
-            total_num_labeled = ''
-            label_progress_bar = []
-            
         return create_label_component(current_labels_name.keys(), color_cycle, progress_values=progress_values, progress_labels=progress_labels), dash.no_update, \
-           current_labels_name, [dash.no_update]*num_labels, label_progress_bar, total_num_labeled
+           current_labels_name, [dash.no_update]*num_labels, [dash.no_update]*num_labels, total_num_labeled
     
     # Labeling manually
     else:
