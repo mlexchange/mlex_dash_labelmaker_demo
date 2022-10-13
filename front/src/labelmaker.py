@@ -61,7 +61,7 @@ def query_data(file_paths, tiled_on):
     else:           # load through file reading
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_filename = add_paths_from_dir(file_path['file_path'], ['tiff', 'tif', 'jpg', 'jpeg', 'png'], list_filename, sort=True)
+                list_filename = add_paths_from_dir(file_path['file_path'], ['tiff', 'tif', 'jpg', 'jpeg', 'png'], list_filename, sort=False)
             else:
                 list_filename.append(file_path['file_path'])
     return json.dumps(list_filename)
@@ -289,7 +289,7 @@ def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks,
         selected_files:     List of selected filename FROM DOCKER PATH (no subdirectories)
     '''
     changed_id = dash.callback_context.triggered[0]['prop_id']
-    files = filename_list(DOCKER_DATA, browse_format, sort=True)
+    files = filename_list(DOCKER_DATA, browse_format)
         
     selected_files = []
     if bool(rows):
@@ -303,7 +303,7 @@ def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks,
             else:
                 os.remove(filepath['file_path'])
         selected_files = []
-        files = filename_list(DOCKER_DATA, browse_format, sort=True)
+        files = filename_list(DOCKER_DATA, browse_format)
     
     if changed_id == 'move-dir.n_clicks':
         if dest is None:
@@ -446,7 +446,7 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename, sort=True)
+                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
             else:
                 list_filename.append(file_path['file_path'])
 

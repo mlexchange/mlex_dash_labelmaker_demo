@@ -45,8 +45,8 @@ def add_paths_from_dir(dir_path, supported_formats, list_file_path, sort=False):
     '''
     root_path, list_dirs, filenames = next(os.walk(dir_path))
     if sort:
-        filenames = filenames.sort()
-        list_dirs = list_dirs.sort()
+        filenames.sort()
+        list_dirs.sort()
     
     for filename in filenames:
         exts = filename.split('.')
@@ -61,11 +61,13 @@ def add_paths_from_dir(dir_path, supported_formats, list_file_path, sort=False):
     
     return list_file_path
 
+
 def filepaths_from_directory(directory, pattern='**/*', sort=False):
     if sort:
         return sorted(pathlib.Path(directory).glob(pattern))
     else:
         return pathlib.Path(directory).glob(pattern)
+
 
 def filename_list(directory, form, sort=False):
     '''
