@@ -183,7 +183,7 @@ def file_manager(clear_data, browse_format, browse_n_clicks, import_n_clicks, de
     changed_id = dash.callback_context.triggered[0]['prop_id']
     files = []
     if browse_n_clicks or import_n_clicks:
-        files = filename_list(DOCKER_DATA, browse_format)
+        files = filename_list(DOCKER_DATA, browse_format, sort=True)
         
     selected_files = []
     if bool(rows):
@@ -197,7 +197,7 @@ def file_manager(clear_data, browse_format, browse_n_clicks, import_n_clicks, de
             else:
                 os.remove(filepath['file_path'])
         selected_files = []
-        files = filename_list(DOCKER_DATA, browse_format)
+        files = filename_list(DOCKER_DATA, browse_format, sort=True)
     
     if browse_n_clicks and changed_id == 'move-dir.n_clicks':
         if dest is None:
@@ -278,7 +278,7 @@ def display_index(file_paths, import_n_clicks, import_format, rows, button_hide_
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
+                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename, sort=True)
             else:
                 list_filename.append(file_path['file_path'])
         
@@ -488,7 +488,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
+                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename, sort=True)
             else:
                 list_filename.append(file_path['file_path'])
     

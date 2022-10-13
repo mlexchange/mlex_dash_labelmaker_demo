@@ -32,17 +32,22 @@ def move_dir(source, destination):
         move_dir(dir_source, destination)
 
 
-def add_paths_from_dir(dir_path, supported_formats, list_file_path):
+def add_paths_from_dir(dir_path, supported_formats, list_file_path, sort=False):
     '''
     Args:
         dir_path, str:            full path of a directory
         supported_formats, list:  supported formats, e.g., ['tiff', 'tif', 'jpg', 'jpeg', 'png']
-        list_file_path, [str]:     list of absolute file paths
+        list_file_path, [str]:    list of absolute file paths
+        sort, boolean:            whether ordered or not, default False 
     
     Returns:
         Adding unique file paths to list_file_path, [str]
     '''
     root_path, list_dirs, filenames = next(os.walk(dir_path))
+    if sort:
+        filenames = filenames.sort()
+        list_dirs = list_dirs.sort()
+    
     for filename in filenames:
         exts = filename.split('.')
         if exts[-1] in supported_formats and exts[0] != '':
@@ -52,16 +57,22 @@ def add_paths_from_dir(dir_path, supported_formats, list_file_path):
             
     for dirname in list_dirs:
         new_dir_path = dir_path + '/' + dirname
-        list_file_path = add_paths_from_dir(new_dir_path, supported_formats, list_file_path)
+        list_file_path = add_paths_from_dir(new_dir_path, supported_formats, list_file_path, sort=sort)
     
     return list_file_path
 
+def filepaths_from_directory(directory, pattern='**/*', sort=False):
+    if sort:
+        return sorted(pathlib.Path(directory).glob(pattern))
+    else:
+        return pathlib.Path(directory).glob(pattern)
 
-def filename_list(directory, form):
+def filename_list(directory, form, sort=False):
     '''
     Args:
         directory, str:     full path of a directory
         format, list(str):  list of supported formats
+        sort, boolean:            whether ordered or not, default False 
     Return:
         a full list of absolute file path (filtered by file formats) inside a directory. 
     '''
@@ -69,14 +80,14 @@ def filename_list(directory, form):
     files = []
     if form == 'dir':
         if os.path.exists(directory):
-            for filepath in pathlib.Path(directory).glob('**/*'):
+            for filepath in filepaths_from_directory(directory, sort=sort):
                 if os.path.isdir(filepath):
                     files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
     else:
         form = form.split(',')
         for f_ext in form:
             if os.path.exists(directory):
-                for filepath in pathlib.Path(directory).glob('**/{}'.format(f_ext)):
+                for filepath in filepaths_from_directory(directory, pattern='**/{}'.format(f_ext), sort=sort):
                     if os.path.isdir(filepath):
                         files.append({'file_path': str(filepath.absolute()), 'file_type': 'dir'})
                     else:
