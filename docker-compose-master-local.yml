@@ -11,6 +11,7 @@ services:
       dockerfile: 'docker/Dockerfile'
     environment:
       DATA_DIR: "${PWD}/data/"
+      TILED_KEY: "${TILED_KEY}"
     volumes:
       - ./data:/app/work/data
       - ./front/src:/app/work/src
@@ -40,8 +41,10 @@ services:
       dockerfile: "docker/Dockerfile"
     environment:
       DATA_DIR: "${PWD}/data/"
+      HOST_NICKNAME: "vaughan"
     volumes:
       - ${PWD}/data:/app/work/data
+      - ../mlex_mlcoach/src:/app/work/src
     ports:
       - "8062:8062"
     networks:
@@ -57,8 +60,10 @@ services:
       dockerfile: "docker/Dockerfile"
     environment:
       DATA_DIR: "${PWD}/data/"
+      HOST_NICKNAME: "vaughan"
     volumes:
       - ${PWD}/data:/app/work/data
+      - ../mlex_data_clinic/src:/app/work/src
     ports:
       - "8072:8072"
     networks:

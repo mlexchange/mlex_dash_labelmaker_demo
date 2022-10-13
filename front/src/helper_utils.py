@@ -179,7 +179,10 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
     visible = []
     probs = None
     if show_prob:
-        filenames = list(file['filename'])
+        try:
+            filenames = list(file['filename'])
+        except Exception as e:
+            filenames = list(file.index)
     for j in range(n_rows):
         row_child = []
         for i in range(n_cols):
@@ -192,11 +195,14 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
             docker_filename = local_to_docker_path(filename, DOCKER_HOME, LOCAL_HOME, type='str')
             if show_prob:
                 if docker_filename in filenames:
-                    probs = str(file.loc[file['filename']==docker_filename].T.iloc[1:].to_string(header=None))
+                    try:
+                        probs = str(file.loc[file['filename']==docker_filename].T.iloc[1:].to_string(header=None))
+                    except Exception as e:
+                        probs = str(file.loc[docker_filename].T.iloc[0:].to_string(header=None))
                 else:
                     probs = ''
             row_child.append(dbc.Col(parse_contents(content,
-                                                    filename,
+                                                    filename.replace('.tiff', '.tif'),
                                                     j * n_cols + i,
                                                     probs,
                                                     data_clinic),
@@ -218,17 +224,30 @@ def get_trained_models_list(user, tab):
         trained_models:     List of options
     '''
     if tab == 'mlcoach':
-        filename = '/results.csv'
+        filename = '/results.parquet'
+        alt_filename = '/results.csv'
     else:
         tab = 'data_clinic'
-        filename = '/dist_matrix.csv'
+        filename = '/dist_matrix.parquet'
+        alt_filename = '/dist_matrix.csv'
     model_list = requests.get(f'http://job-service:8080/api/v0/jobs?&user={user}&mlex_app={tab}').json()
     trained_models = [{'label': 'Default', 'value': 'data'+filename}]
     for model in model_list:
         if model['job_kwargs']['kwargs']['job_type'].split(' ')[0]=='prediction_model':
             if os.path.exists(model['job_kwargs']['cmd'].split(' ')[4]+filename):  # check if the file exists
-                trained_models.append({'label': model['description'],
+                if model['description']:
+                    trained_models.append({'label': model['description'],
                                            'value': model['job_kwargs']['cmd'].split(' ')[4]+filename})
+                else:
+                    trained_models.append({'label': model['job_kwargs']['kwargs']['job_type'],
+                                           'value': model['job_kwargs']['cmd'].split(' ')[4]+filename})
+            elif os.path.exists(model['job_kwargs']['cmd'].split(' ')[4]+alt_filename):  # check if the file exists
+                if model['description']:
+                    trained_models.append({'label': model['description'],
+                                           'value': model['job_kwargs']['cmd'].split(' ')[4]+alt_filename})
+                else:
+                    trained_models.append({'label': model['job_kwargs']['kwargs']['job_type'],
+                                           'value': model['job_kwargs']['cmd'].split(' ')[4]+alt_filename})
     trained_models.reverse()
     return trained_models
 
@@ -237,7 +256,7 @@ def adapt_tiled_filename(filename, dir):
     '''
     This function takes the filename retrieved from tiled and add the full directory path and file extension
     '''
-    return dir + '/' + filename + '.tiff'
+    return dir + '/' + filename + '.tif'
 
 
 def parse_full_screen_content(contents, filename):
@@ -282,7 +301,10 @@ def get_labeling_progress(current_labels_name, num_files):
 
 def mlcoach_labeling(current_labels_name, mlcoach_model, mlcoach_label, labelmaker_filenames, threshold):
     # Load mlcoach probabilities
-    df_prob = pd.read_csv(mlcoach_model)
+    if mlcoach_model.split('.')[-1]=='csv':
+        df_prob = pd.read_csv(mlcoach_model)
+    else:
+        df_prob = pd.read_parquet(mlcoach_model)
     # list the files that are already labeled to avoid overwriting labels
     labeled_filenames = list(itertools.chain.from_iterable(list(current_labels_name.values())))
     selected_thumbs_filename = []
@@ -292,6 +314,10 @@ def mlcoach_labeling(current_labels_name, mlcoach_model, mlcoach_label, labelmak
             if filename not in labeled_filenames and filename in labelmaker_filenames and filename not in selected_thumbs_filename:
                 selected_thumbs_filename.append(filename)
     except Exception as e:
+        filenames = df_prob.index[df_prob[mlcoach_label]>threshold/100].tolist()
+        for indx, filename in enumerate(filenames):
+            if filename not in labeled_filenames and filename in labelmaker_filenames and filename not in selected_thumbs_filename:
+                selected_thumbs_filename.append(filename)
         print(f'Exception {e}')
     current_labels_name[mlcoach_label].extend(selected_thumbs_filename)
     return current_labels_name
@@ -326,7 +352,7 @@ def load_from_splash(uri_list):
     '''
     url = f'{SPLASH_CLIENT}/datasets?'
     try:
-        params = {'uris': uri_list}
+        params = {'uris': uri_list, 'page[limit]': 100}
         datasets = requests.get(url, params=params).json()
     except Exception as e:
         print(f'Loading from splash exception: {e}')
@@ -392,3 +418,5 @@ def save_to_splash(labels_name_data):
         return 'Labels stored in splash-ml', uri_list
     else:
         return f'Error. {status}', uri_list
+
+

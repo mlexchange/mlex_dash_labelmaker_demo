@@ -379,13 +379,14 @@ def display_indicator(n_clicks):
 
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks_timestamp'),
+    State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
     State('data-clinic-model-list', 'value'),
     State('docker-labels-name', 'data'),
     State('image-order','data'),
     prevent_initial_call=True)
 def display_index(exit_similar_images, find_similar_images, docker_path, file_paths, import_n_clicks, import_format,
                   rows, button_hide_n_clicks, button_sort_n_clicks, delete_n_clicks, move_dir_n_clicks, tab_selection,
-                  tiled_on, thumbnail_name_children, timestamp, data_clinic_model, labels_name_data, image_order):
+                  tiled_on, thumbnail_name_children, timestamp, thumb_n_clicks, data_clinic_model, labels_name_data, image_order):
     '''
     This callback arranges the image order according to the following actions:
         - New content is uploaded
@@ -436,9 +437,11 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
     button_hide = dash.no_update
 
     if 'find-similar-unsupervised.n_clicks' in changed_id:
-        clicked_ind = [i for i, e in enumerate(timestamp) if e != None]
-        if len(clicked_ind) > 0:                # if more than one image is selected
-            clicked_ind = clicked_ind[-1]       # we take the last one
+        for indx, n_click in enumerate(thumb_n_clicks):
+            if n_click%2 == 0 or timestamp[indx] is None:
+                timestamp[indx] = 0
+        clicked_ind = timestamp.index(max(timestamp))
+        
         filenames = []
         list_filename = []
         for file_path in file_paths:
@@ -450,25 +453,32 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
         labeled_filenames = list(itertools.chain.from_iterable(list(labels_name_data.values())))
         match_ind = [i for i, item in enumerate(list_filename) if item in set(labeled_filenames)]
 
-        if bool(clicked_ind) and data_clinic_model:
+        if clicked_ind is not None and data_clinic_model:
             ind = int(clicked_ind)
             if docker_path:
                 filenames.append(thumbnail_name_children[ind])
             else:
                 filenames.append(local_to_docker_path(thumbnail_name_children[ind], DOCKER_HOME, LOCAL_HOME, type='str'))
-            filename = filenames[0]
+            filename = filenames[0].replace('.tiff', '.tif')
+            
             if data_clinic_model:
-                df_clinic = pd.read_csv(data_clinic_model)
-                row_dataframe = df_clinic.iloc[df_clinic.set_index('filename').index.get_loc(filename)]
-                print(f'Row dataframe {row_dataframe.values[1:].tolist()}')
-                image_order = [int(order) for order in row_dataframe.values[1:].tolist()]
+                if data_clinic_model.split('.')[-1] == 'csv':
+                    df_clinic = pd.read_csv(data_clinic_model)
+                    row_dataframe = df_clinic.iloc[df_clinic.set_index('filename').index.get_loc(filename)]
+                    image_order = [int(order) for order in row_dataframe.values[1:].tolist()]
+                else:
+                    df_clinic = pd.read_parquet(data_clinic_model)
+                    row_dataframe = df_clinic.loc[[filename]]
+                    image_order = [int(order) for order in row_dataframe.values.tolist()[0]]
                 image_order = [x for x in image_order if x not in set(match_ind)]       # filter labeled images
         else:
             # if no image is selected, no update is triggered
-            return dash.no_update, 0, dash.no_update
+            return dash.no_update, 0, dash.no_update, dash.no_update
 
     elif import_n_clicks and bool(rows):
         list_filename = load_filenames(file_paths, tiled_on)
+        if tiled_on:
+            list_filename = [filename.replace('.tiff', '.tif') for filename in list_filename]
         if changed_id == "import-dir.n_clicks":
             params = {'key': 'datapath'}
             resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=file_paths)
@@ -634,7 +644,10 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
                         new_filenames.append(docker_to_local_path(list_filename[image_order[i]], DOCKER_HOME,
                                                                 LOCAL_HOME, 'str'))
         if mlcoach_model and tab_selection=='mlcoach':
-            df_prob = pd.read_csv(mlcoach_model)
+            if mlcoach_model.split('.')[-1] == 'csv':
+                df_prob = pd.read_csv(mlcoach_model)
+            else:
+                df_prob = pd.read_parquet(mlcoach_model)
             children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value,
                                     ml_coach_is_open, df_prob)
         elif find_similar_images:
@@ -978,8 +991,12 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
         num_labels = len(current_labels_name)
         mlcoach_options = {}
         if mlcoach_model:
-            df_prob = pd.read_csv(mlcoach_model)
-            mlcoach_labels = list(df_prob.columns[1:])
+            if mlcoach_model.split('.')[-1] == 'csv':
+                df_prob = pd.read_csv(mlcoach_model)
+                mlcoach_labels = list(df_prob.columns[1:])
+            else:
+                df_prob = pd.read_parquet(mlcoach_model)
+                mlcoach_labels = list(df_prob.columns[0:])
             additional_labels = list(set(mlcoach_labels) - set(list(current_labels_name.keys())))
             for additional_label in additional_labels:
                 current_labels_name[additional_label] = []
@@ -1069,7 +1086,9 @@ def save_labels_disk(button_save_disk_n_clicks, button_save_splash_n_clicks, clo
                 response, uri_list = save_to_splash(labels_name_data)
                 params1 = {'key': 'datapath'}
                 params2 = {'key': 'filenames'}
-                payload = [{'file_path': [], 'file_type': 'uri', 'where': 'splash'}]
+                file_path = file_paths[0]['file_path']
+                print(file_path)
+                payload = [{'file_path': [file_path], 'file_type': 'uri', 'where': 'splash'}]
                 resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params1, json=payload)           
                 resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params2, json=uri_list)
                 response = 'Labels are stored to Splash.'
@@ -1102,10 +1121,10 @@ def save_labels_disk(button_save_disk_n_clicks, button_save_splash_n_clicks, clo
                             total_filename_list.append(str(im_fname))
                 params2 = {'key': 'filenames'}
                 resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params2, json=total_filename_list)
-                response = 'Labled files are stored to disk.'
+                response = 'Labeled files are stored to disk.'
             return True, response
     return False, ''
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=8067)
+    app.run_server(debug=True, host='0.0.0.0', port=8057)
