@@ -303,7 +303,7 @@ def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks,
             else:
                 os.remove(filepath['file_path'])
         selected_files = []
-        files = filename_list(DOCKER_DATA, browse_format)
+        files = filename_list(DOCKER_DATA, browse_format, sort=False)
     
     if changed_id == 'move-dir.n_clicks':
         if dest is None:
@@ -320,7 +320,7 @@ def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks,
                     move_a_file(source['file_path'], str(destination))
 
             selected_files = []
-            files = filename_list(DOCKER_DATA, browse_format)
+            files = filename_list(DOCKER_DATA, browse_format, sort=False)
     
     if changed_id == 'clear-data.n_clicks':
         selected_files = []
@@ -446,7 +446,7 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
+                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename, sort=False)
             else:
                 list_filename.append(file_path['file_path'])
 
