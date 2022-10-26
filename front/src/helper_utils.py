@@ -28,7 +28,7 @@ def get_color_from_label(label_indx, color_cycle):
     return color_cycle[label_indx]
 
 
-def create_label_component(label_list, color_cycle=px.colors.qualitative.Light24, mlcoach=False, progress_values=None, progress_labels=None):
+def create_label_component(label_list, color_cycle=px.colors.qualitative.Light24, mlcoach=False, progress_values=None, progress_labels=None, total_num_labeled=None):
     '''
     This function updates the reactive component that contains the label buttons when
         - A new label is added
@@ -46,6 +46,7 @@ def create_label_component(label_list, color_cycle=px.colors.qualitative.Light24
     if not progress_values:
         progress_values = [0]*len(label_list)
         progress_labels = ['0']*len(label_list)
+        total_num_labeled = 'Labeled 0 out of 0 images.'
     if not mlcoach:
         for i in range(len(label_list)):
             comp_row = dbc.Row(
@@ -107,7 +108,7 @@ def create_label_component(label_list, color_cycle=px.colors.qualitative.Light24
                             style={'width': '100%', 'margin-bottom': '10px', 'margin-top': '10px'}),
                  dbc.Label('Labeled images:'),
                  dbc.Progress(progress),
-                 dbc.Label(id='total_labeled', style={'margin-top': '5px'})
+                 dbc.Label(total_num_labeled, id='total_labeled', style={'margin-top': '5px'})
                  ]
     
     return comp_list

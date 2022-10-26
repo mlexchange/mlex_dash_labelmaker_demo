@@ -71,6 +71,11 @@ def load_filenames(file_paths, tiled_on):
     return json.loads(query_data(file_paths, tiled_on))
 
 
+def clear_cache():
+
+#    with app.app_context():
+    cache.clear()
+
 #================================== callback functions ===================================
 @app.callback(
     Output("modal-help", "is_open"),
@@ -970,8 +975,10 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
     if 'modify-list.n_clicks' in changed_id:
         num_labels = len(current_labels_name)
         current_labels_name[add_label_name] = []
-        return create_label_component(current_labels_name.keys(), color_cycle), dash.no_update, current_labels_name, [dash.no_update]*num_labels, \
-               [dash.no_update]*num_labels, dash.no_update 
+        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
+        return create_label_component(current_labels_name.keys(), color_cycle, progress_values=progress_values, progress_labels=progress_labels, \
+               total_num_labeled=total_num_labeled), dash.no_update, current_labels_name, [dash.no_update]*num_labels, [dash.no_update]*num_labels, \
+               dash.no_update 
     
     # Check if there is a new color cycle
     if 'color-cycle.data' in changed_id:
@@ -984,7 +991,8 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
     if changed_id == 'confirm-un-label-all.n_clicks' or 'docker-file-paths.data' in changed_id:
         for label in current_labels_name.keys():
             current_labels_name[label] = []
-        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
+        num_imgs = len(load_filenames(docker_file_paths, tiled_on))
+        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, num_imgs)
         return dash.no_update, dash.no_update, current_labels_name, progress_values, progress_labels, total_num_labeled 
                  
     if 'mlcoach-model-list.value' in changed_id:
@@ -1127,4 +1135,5 @@ def save_labels_disk(button_save_disk_n_clicks, button_save_splash_n_clicks, clo
 
 
 if __name__ == '__main__':
+    clear_cache()
     app.run_server(debug=True, host='0.0.0.0', port=8057)
