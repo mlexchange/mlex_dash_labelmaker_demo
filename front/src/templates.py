@@ -12,6 +12,26 @@ button_github = dbc.Button(
 )
 
 
+button_help = dbc.Button(
+    "Help",
+    outline=True,
+    color="primary",
+    id="button-help",
+    style={"text-transform": "none"},
+)
+
+
+help_popup = dbc.Modal(
+                [
+                    dbc.ModalHeader(dbc.ModalTitle("Help")),
+                    dbc.ModalBody(id='help-body')
+                ], 
+                id="modal-help",
+                is_open=False,
+                size="xl"
+             )
+
+
 def header():
     header= dbc.Navbar(
         dbc.Container(
@@ -50,6 +70,7 @@ def header():
                                 dbc.Collapse(
                                     dbc.Nav(
                                         [
+                                            dbc.NavItem(button_help),
                                             dbc.NavItem(button_github),
                                         ],
                                         navbar=True,
@@ -63,6 +84,7 @@ def header():
                     ],
                     align="center",
                 ),
+                help_popup  
             ],
             fluid=True,
         ),
