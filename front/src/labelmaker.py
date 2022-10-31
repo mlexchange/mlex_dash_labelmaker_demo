@@ -21,8 +21,8 @@ from helper_utils import get_color_from_label, create_label_component, draw_rows
                          parse_full_screen_content, load_from_splash, save_to_splash, get_labeling_progress, mlcoach_labeling, \
                          manual_labeling
 from app_layout import app, DOCKER_DATA, UPLOAD_FOLDER_ROOT
-from file_manager import filename_list, move_a_file, move_dir, add_paths_from_dir, check_duplicate_filename, docker_to_local_path, \
-                         local_to_docker_path
+from file_manager import paths_from_dir, filenames_from_dir, move_a_file, move_dir, docker_to_local_path, local_to_docker_path, \
+                         check_duplicate_filename #delete later
 
 
 # Font and background colors associated with each theme
@@ -61,7 +61,7 @@ def query_data(file_paths, tiled_on):
     else:           # load through file reading
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_filename = add_paths_from_dir(file_path['file_path'], ['tiff', 'tif', 'jpg', 'jpeg', 'png'], list_filename, sort=False)
+                list_filename = filenames_from_dir(file_path['file_path'], ['tiff', 'tif', 'jpg', 'jpeg', 'png'], sort=False)
             else:
                 list_filename.append(file_path['file_path'])
     return json.dumps(list_filename)
@@ -294,7 +294,7 @@ def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks,
         selected_files:     List of selected filename FROM DOCKER PATH (no subdirectories)
     '''
     changed_id = dash.callback_context.triggered[0]['prop_id']
-    files = filename_list(DOCKER_DATA, browse_format)
+    files = paths_from_dir(DOCKER_DATA, browse_format, sort=False)
         
     selected_files = []
     if bool(rows):
@@ -308,7 +308,7 @@ def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks,
             else:
                 os.remove(filepath['file_path'])
         selected_files = []
-        files = filename_list(DOCKER_DATA, browse_format, sort=False)
+        files = paths_from_dir(DOCKER_DATA, browse_format, sort=False)
     
     if changed_id == 'move-dir.n_clicks':
         if dest is None:
@@ -325,7 +325,7 @@ def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks,
                     move_a_file(source['file_path'], str(destination))
 
             selected_files = []
-            files = filename_list(DOCKER_DATA, browse_format, sort=False)
+            files = paths_from_dir(DOCKER_DATA, browse_format, sort=False)
     
     if changed_id == 'clear-data.n_clicks':
         selected_files = []
@@ -337,7 +337,7 @@ def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks,
     if docker_path:
         return files, selected_files
     else:
-        return docker_to_local_path(files, DOCKER_HOME, LOCAL_HOME), selected_files
+        return docker_to_local_path(files, DOCKER_HOME, LOCAL_HOME, 'list-dict'), selected_files
 
 
 @app.callback(
@@ -451,7 +451,7 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
         list_filename = []
         for file_path in file_paths:
             if file_path['file_type'] == 'dir':
-                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename, sort=False)
+                list_filename = filenames_from_dir(file_path['file_path'], supported_formats,sort=False)
             else:
                 list_filename.append(file_path['file_path'])
 
@@ -463,7 +463,7 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
             if docker_path:
                 filenames.append(thumbnail_name_children[ind])
             else:
-                filenames.append(local_to_docker_path(thumbnail_name_children[ind], DOCKER_HOME, LOCAL_HOME, type='str'))
+                filenames.append(local_to_docker_path(thumbnail_name_children[ind], DOCKER_HOME, LOCAL_HOME, 'str'))
             filename = filenames[0].replace('.tiff', '.tif')
             
             if data_clinic_model:

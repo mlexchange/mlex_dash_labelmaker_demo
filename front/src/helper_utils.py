@@ -193,7 +193,7 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
                 break
             content = list_of_contents[index]
             filename = list_of_names[index]
-            docker_filename = local_to_docker_path(filename, DOCKER_HOME, LOCAL_HOME, type='str')
+            docker_filename = local_to_docker_path(filename, DOCKER_HOME, LOCAL_HOME, 'str')
             if show_prob:
                 if docker_filename in filenames:
                     try:
