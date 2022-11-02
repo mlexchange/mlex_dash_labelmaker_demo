@@ -196,14 +196,17 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
             docker_filename = local_to_docker_path(filename, DOCKER_HOME, LOCAL_HOME, 'str')
             if show_prob:
                 if docker_filename in filenames:
+                # if docker_filename.replace('.tiff', '.tif') in filenames:
                     try:
+                        # probs = str(file.loc[file['filename']==docker_filename.replace('.tiff', '.tif')].T.iloc[1:].to_string(header=None))
                         probs = str(file.loc[file['filename']==docker_filename].T.iloc[1:].to_string(header=None))
                     except Exception as e:
+                        # probs = str(file.loc[docker_filename.replace('.tiff', '.tif')].T.iloc[0:].to_string(header=None))
                         probs = str(file.loc[docker_filename].T.iloc[0:].to_string(header=None))
                 else:
                     probs = ''
             row_child.append(dbc.Col(parse_contents(content,
-                                                    filename.replace('.tiff', '.tif'),
+                                                    filename, #.replace('.tiff', '.tif'),
                                                     j * n_cols + i,
                                                     probs,
                                                     data_clinic),
@@ -257,7 +260,11 @@ def adapt_tiled_filename(filename, dir):
     '''
     This function takes the filename retrieved from tiled and add the full directory path and file extension
     '''
-    return dir + '/' + filename + '.tif'
+    new_filename = f'{dir}/{filename}.tif'
+    if Path(new_filename).is_file():
+        return new_filename
+    else:
+        return f'{dir}/{filename}.tiff'
 
 
 def parse_full_screen_content(contents, filename):
@@ -301,6 +308,7 @@ def get_labeling_progress(current_labels_name, num_files):
 
 
 def mlcoach_labeling(current_labels_name, mlcoach_model, mlcoach_label, labelmaker_filenames, threshold):
+    # labelmaker_filenames = [w.replace('.tiff', '.tif') for w in labelmaker_filenames]
     # Load mlcoach probabilities
     if mlcoach_model.split('.')[-1]=='csv':
         df_prob = pd.read_csv(mlcoach_model)
@@ -351,17 +359,12 @@ def load_from_splash(uri_list):
     Returns:
         labels_name_data:   Dictionary of labeled images (docker path), as follows: {'label1': [image filenames],...}
     '''
-    url = f'{SPLASH_CLIENT}/datasets?'
-    try:
-        params = {'uris': uri_list, 'page[limit]': 100}
-        datasets = requests.get(url, params=params).json()
-    except Exception as e:
-        print(f'Loading from splash exception: {e}')
-        datasets = []
-        for i in range(math.ceil(len(uri_list)/100)):
-            params = {'uris': uri_list[i*100:min(100*(i+1),len(uri_list))]}
-            datasets = datasets + requests.get(url, params=params).json()
-            time.sleep(0.01)
+    url = f'{SPLASH_CLIENT}/datasets/search'
+    params = {"page[offset]": 0, "page[limit]": len(uri_list)}
+    # data = {'uris': [w.replace('.tiff', '.tif') for w in uri_list]} 
+    data = {'uris': uri_list}
+    datasets = requests.post(url, params=params, json=data).json()
+
     labels_name_data = {}
     for dataset in datasets:
         for tag in dataset['tags']:
