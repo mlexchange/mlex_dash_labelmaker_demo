@@ -12,6 +12,8 @@ services:
     environment:
       DATA_DIR: "${PWD}/data/"
       TILED_KEY: "${TILED_KEY}"
+      MLCOACH_URL: "${MLCOACH_URL}"
+      DATA_CLINIC_URL: "${DATA_CLINIC_URL}"
     volumes:
       - ./data:/app/work/data
       - ./front/src:/app/work/src
@@ -19,6 +21,10 @@ services:
       - '8057:8057'
     networks:
       - computing_api_default
+    depends_on:
+      - tiled-server
+      - api
+      - splash
 
   api:
     restart: "unless-stopped"
@@ -41,7 +47,7 @@ services:
       dockerfile: "docker/Dockerfile"
     environment:
       DATA_DIR: "${PWD}/data/"
-      HOST_NICKNAME: "vaughan"
+      HOST_NICKNAME: "${HOST_NICKNAME}"
     volumes:
       - ${PWD}/data:/app/work/data
       - ../mlex_mlcoach/src:/app/work/src
@@ -49,6 +55,8 @@ services:
       - "8062:8062"
     networks:
       - computing_api_default
+    depends_on:
+      - labelmaker
 
 ########################  DATA CLINIC ##########################
 
@@ -60,7 +68,7 @@ services:
       dockerfile: "docker/Dockerfile"
     environment:
       DATA_DIR: "${PWD}/data/"
-      HOST_NICKNAME: "vaughan"
+      HOST_NICKNAME: "${HOST_NICKNAME}"
     volumes:
       - ${PWD}/data:/app/work/data
       - ../mlex_data_clinic/src:/app/work/src
@@ -68,7 +76,51 @@ services:
       - "8072:8072"
     networks:
       - computing_api_default
+    depends_on:
+      - labelmaker
 
+
+########################### TILED ##############################
+
+  tiled-server:
+    image: ghcr.io/bluesky/tiled:v0.1.0a74
+    volumes:
+      - ${PWD}/data:/deploy/data
+      - ../mlex_tiled/config:/deploy/config
+      - ../mlex_tiled/gunicorn_config.py:/app/docker/gunicorn_config.py
+    environment:
+      - TILED_CONFIG=/deploy/config/config.yml
+    networks:
+      - computing_api_default
+
+########################### SPLASH ##############################
+
+  mongo_mlex: 
+    image: mongo
+    restart: always
+    container_name: "mongodb_mlex"
+    working_dir: "/mongodbdata/"
+    volumes:
+      - "/mongodbdata/:/data/db"
+    networks:
+      - computing_api_default
+
+  splash:
+    container_name: "splash"
+    build:
+      context: '../splash-ml/'
+      dockerfile: 'Dockerfile'
+    depends_on:
+      - "mongo_mlex"
+    ports:
+      - '8087:80'
+    environment:
+       APP_MODULE: "tagging.api:app"
+       LOGLEVEL: DEBUG
+       MONGO_DB_URI: mongodb://mongodb_mlex:27017/tagging
+       MAX_WORKERS: 1
+    networks:
+      - computing_api_default
 
 networks:
   computing_api_default:

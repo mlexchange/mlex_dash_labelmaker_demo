@@ -72,9 +72,8 @@ def load_filenames(file_paths, tiled_on):
 
 
 def clear_cache():
-
-#    with app.app_context():
     cache.clear()
+
 
 #================================== callback functions ===================================
 @app.callback(
@@ -180,18 +179,20 @@ def toggle_tabs_collapse(tab_value, previous_tab):
 
 app.clientside_callback(
     """
-    function(n_clicks, tab_value) {
+    function(n_clicks, tab_value, mlcoach_url, data_clinic_url) {
         if (tab_value == 'mlcoach') {
-            window.open('https://mlcoach.mlexchange.als.lbl.gov');
+            window.open(mlcoach_url);
         } else if (tab_value == 'clinic') {
-            window.open('https://dataclinic.mlexchange.als.lbl.gov');
+            window.open(data_clinic_url);
         } 
         return '';
     }
     """,
     Output('dummy1', 'data'),
     Input('goto-webpage', 'n_clicks'),
-    State('tab-group', 'value')
+    State('tab-group', 'value'),
+    State('mlcoach-url', 'data'),
+    State('data-clinic-url', 'data')
 )
 
 
@@ -464,7 +465,7 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
                 filenames.append(thumbnail_name_children[ind])
             else:
                 filenames.append(local_to_docker_path(thumbnail_name_children[ind], DOCKER_HOME, LOCAL_HOME, 'str'))
-            filename = filenames[0].replace('.tiff', '.tif')
+            filename = filenames[0] #.replace('.tiff', '.tif')
             
             if data_clinic_model:
                 if data_clinic_model.split('.')[-1] == 'csv':
@@ -482,8 +483,8 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
 
     elif import_n_clicks and bool(rows):
         list_filename = load_filenames(file_paths, tiled_on)
-        if tiled_on:
-            list_filename = [filename.replace('.tiff', '.tif') for filename in list_filename]
+        # if tiled_on:
+        #     list_filename = [filename.replace('.tiff', '.tif') for filename in list_filename]
         if changed_id == "import-dir.n_clicks":
             params = {'key': 'datapath'}
             resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=file_paths)
@@ -868,7 +869,6 @@ def update_trained_model_list(tab_value, mlcoach_refresh_n_clicks, data_clinic_r
     '''
     if tab_value == 'mlcoach':
         mlcoach_models = get_trained_models_list(USER, tab_value)
-        print(mlcoach_models)
         data_clinic_models = dash.no_update
     elif tab_value == 'clinic':
         mlcoach_models = dash.no_update
@@ -1095,7 +1095,6 @@ def save_labels_disk(button_save_disk_n_clicks, button_save_splash_n_clicks, clo
                 params1 = {'key': 'datapath'}
                 params2 = {'key': 'filenames'}
                 file_path = file_paths[0]['file_path']
-                print(file_path)
                 payload = [{'file_path': [file_path], 'file_type': 'uri', 'where': 'splash'}]
                 resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params1, json=payload)           
                 resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params2, json=uri_list)
@@ -1115,7 +1114,10 @@ def save_labels_disk(button_save_disk_n_clicks, button_save_splash_n_clicks, clo
                         # save all files under the current label into the directory
                         for filename in filename_list:
                             im_bytes = filename
+                            # try:
                             im = PIL.Image.open(im_bytes)
+                            # except:
+                            #     im = PIL.Image.open(im_bytes.replace('tif', 'tiff'))
                             filename = im_bytes.split("/")[-1]
                             f_name = filename.split('.')[-2]
                             f_ext  = filename.split('.')[-1]

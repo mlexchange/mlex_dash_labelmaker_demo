@@ -1,3 +1,4 @@
+import os
 import dash
 from dash import dcc, html, dash_table
 import dash_bootstrap_components as dbc
@@ -21,7 +22,8 @@ app = dash.Dash(__name__, external_stylesheets = external_stylesheets, suppress_
 header = templates.header()
 
 LABEL_LIST = {'Label_1': [], 'Label_2': []}
-
+MLCOACH_URL = str(os.environ['MLCOACH_URL'])
+DATA_CLINIC_URL = str(os.environ['DATA_CLINIC_URL'])
 DOCKER_DATA = pathlib.Path.home() / 'data'
 
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
@@ -440,12 +442,15 @@ store_options = html.Div(
             dbc.Row(html.P('')),
             dbc.Row(dbc.Col(dbc.Button('Save Labels to Disk', id='button-save-disk',
                                        outline='True', color='primary', size="sm", style={'width': '100%'}))),
-            dbc.Modal([dbc.ModalBody(id='storage-body-modal'),
-                       dbc.ModalFooter(dbc.Button('OK',
-                                                  id='close-storage-modal'))],
-                      id="storage-modal",
-                      is_open=False,
-                    )
+            dcc.Loading(id="loading-storage",
+                                  type="default",
+                                  children=
+                dbc.Modal([dbc.ModalBody(id='storage-body-modal'),
+                                                dbc.ModalFooter(dbc.Button('OK', id='close-storage-modal'))],
+                        id="storage-modal",
+                        is_open=False,
+                        )
+            )
         ]
 )
 
@@ -461,7 +466,9 @@ browser_cache =html.Div(
             dcc.Store(id='dummy-data', data=0),
             dcc.Store(id='dummy1', data=0),
             dcc.Store(id='previous-tab', data=['init']),
-            dcc.Store(id='color-cycle', data=px.colors.qualitative.Light24)
+            dcc.Store(id='color-cycle', data=px.colors.qualitative.Light24),
+            dcc.Store(id='mlcoach-url', data=MLCOACH_URL),
+            dcc.Store(id='data-clinic-url', data=DATA_CLINIC_URL)
         ],
     )
 
@@ -477,7 +484,6 @@ app.layout = html.Div(
             [
                 dbc.Row(
                     [
-                        dbc.Col(display, width=8),
                         dbc.Col([
                             dbc.Card([
                                 dbc.CardHeader('Labeling Method'),
@@ -492,6 +498,7 @@ app.layout = html.Div(
                                 dbc.CardBody([additional_options_html])
                             ]),
                         ], width=4),
+                        dbc.Col(display, width=8),
                     ],
                     justify='center'
                 ),
