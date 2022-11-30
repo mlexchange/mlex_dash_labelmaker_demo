@@ -12,4 +12,7 @@ old_streamlit/__pycache__
 *.log
 *.cache
 *.pyc
+data/*
 data/*/*
+mongodbdata/*
+mongodbdata/*/*
