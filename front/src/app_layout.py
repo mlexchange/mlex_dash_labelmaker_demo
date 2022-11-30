@@ -29,6 +29,16 @@ DOCKER_DATA = pathlib.Path.home() / 'data'
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 
+# Connecting to tiled server
+TILED_KEY = str(os.environ['TILED_KEY'])
+try:
+    TILED_CLIENT = from_uri(f'http://tiled-server:8000/api?api_key={TILED_KEY}', cache=TiledCache.on_disk('data/cache'))
+    disable_tiled = False
+except Exception as e:
+    TILED_CLIENT = ''
+    print('Could not connect to tiled server due to: {e}')
+    disable_tiled = True
+
 
 # REACTIVE COMPONENTS FOR LABELING METHOD
 label_method = html.Div([
@@ -353,6 +363,7 @@ data_access = html.Div([
                                         id='tiled-switch',
                                         on=False,
                                         color="#9B51E0",
+                                        disabled=disable_tiled,
                                     )],
                             style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'margin': '10px', 'margin-left': '0px'},
                         ),
@@ -449,6 +460,7 @@ store_options = html.Div(
                                                 dbc.ModalFooter(dbc.Button('OK', id='close-storage-modal'))],
                         id="storage-modal",
                         is_open=False,
+                        scrollable=True
                         )
             )
         ]

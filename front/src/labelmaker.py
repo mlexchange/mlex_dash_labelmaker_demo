@@ -20,7 +20,7 @@ from tiled.client.cache import Cache as TiledCache
 from helper_utils import get_color_from_label, create_label_component, draw_rows, get_trained_models_list, adapt_tiled_filename, \
                          parse_full_screen_content, load_from_splash, save_to_splash, get_labeling_progress, mlcoach_labeling, \
                          manual_labeling
-from app_layout import app, DOCKER_DATA, UPLOAD_FOLDER_ROOT
+from app_layout import app, DOCKER_DATA, UPLOAD_FOLDER_ROOT, TILED_CLIENT
 from file_manager import paths_from_dir, filenames_from_dir, move_a_file, move_dir, docker_to_local_path, local_to_docker_path, \
                          check_duplicate_filename #delete later
 
@@ -34,8 +34,6 @@ USER = 'admin'
 LOCAL_DATA = str(os.environ['DATA_DIR'])
 DOCKER_HOME = str(DOCKER_DATA) + '/'
 LOCAL_HOME = str(LOCAL_DATA)
-TILED_KEY = str(os.environ['TILED_KEY'])
-TILED_CLIENT = from_uri(f'http://tiled-server:8000/api?api_key={TILED_KEY}', cache=TiledCache.on_disk('data/cache'))
 
 #====================================== memoization ======================================
 cache = Cache(app.server, config={
@@ -296,7 +294,7 @@ def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks,
     '''
     changed_id = dash.callback_context.triggered[0]['prop_id']
     files = paths_from_dir(DOCKER_DATA, browse_format, sort=False)
-        
+
     selected_files = []
     if bool(rows):
         for row in rows:
@@ -684,7 +682,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
     Input('my-toggle-switch', 'value'),
 
     State({'type': 'thumbnail-name', 'index': MATCH}, 'children'),
-    State('color-cycle', 'data')
+    State('color-cycle', 'data'),
 )
 def select_thumbnail(value, labels_name_data, docker_path, thumbnail_name_children, color_cycle):
     '''
@@ -964,10 +962,11 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
 
     # Check if a label has been deleted
     if 'delete-label-button' in changed_id or changed_id == 'image-order.data':
+        num_imgs = len(load_filenames(docker_file_paths, tiled_on))
         num_labels = len(current_labels_name)
         indx = np.argmax(del_label_n_clicks)
         current_labels_name.pop(label_button_children[indx])
-        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, len(image_order))
+        progress_values, progress_labels, total_num_labeled = get_labeling_progress(current_labels_name, num_imgs)
         return create_label_component(current_labels_name.keys(), color_cycle, progress_values=progress_values, progress_labels=progress_labels), dash.no_update, \
                current_labels_name, [dash.no_update]*num_labels, [dash.no_update]*num_labels, total_num_labeled
     
@@ -1131,7 +1130,8 @@ def save_labels_disk(button_save_disk_n_clicks, button_save_splash_n_clicks, clo
                             total_filename_list.append(str(im_fname))
                 params2 = {'key': 'filenames'}
                 resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params2, json=total_filename_list)
-                response = 'Labeled files are stored to disk.'
+                local_root = docker_to_local_path(str(root), DOCKER_HOME, LOCAL_HOME, 'str')
+                response = f'Labeled files are stored to disk at: {local_root}'
             return True, response
     return False, ''
 
