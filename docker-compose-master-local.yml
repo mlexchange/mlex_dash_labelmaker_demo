@@ -101,7 +101,7 @@ services:
     container_name: "mongodb_mlex"
     working_dir: "/mongodbdata/"
     volumes:
-      - "/mongodbdata/:/data/db"
+      - "./mongodbdata/:/data/db"
     networks:
       - computing_api_default
 
