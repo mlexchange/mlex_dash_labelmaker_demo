@@ -210,16 +210,42 @@ def toggle_modal(n1, n2, is_open):
 
 @app.callback(
     Output("modal-un-label", "is_open"),
+    Output("clear-data", "n_clicks"),
+    Output("clear-data-flag", "data"),
+    Output("un-label-warning", "children"),
 
     Input("un-label-all", "n_clicks"),
     Input("confirm-un-label-all", "n_clicks"),
+    Input("clear-data", "n_clicks"),
 
-    State("modal-un-label", "is_open")
+    State("modal-un-label", "is_open"),
+    State("docker-labels-name", "data")
+
 )
-def toggle_modal_unlabel(n1, n2, is_open):
-    if n1 or n2:
-        return not is_open
-    return is_open
+def toggle_modal_unlabel(n1, n2, n_clear, is_open, docker_labels_dict):
+    changed_id = dash.callback_context.triggered[0]['prop_id']
+
+    modal_is_open = True
+    clear_data_n_clicks = dash.no_update
+    clear_data_flag = dash.no_update
+    warning_msg = dash.no_update
+
+    if changed_id == 'un-label-all.n_clicks':
+        warning_msg = "Labels cannot be recovered after deletion. Do you still want to proceed?"
+    elif changed_id == 'clear-data.n_clicks':
+        if any(docker_labels_dict.values()):    # if any image has been labeled
+            warning_msg = "Unsaved labels cannot be recovered after clearing data. Do you still want to proceed?"
+        else:
+            modal_is_open = False
+            clear_data_flag = 1
+            clear_data_n_clicks = 0
+    elif changed_id == 'confirm-un-label-all.n_clicks' and n_clear>0:
+        modal_is_open = False
+        clear_data_n_clicks = 0
+        clear_data_flag = 1
+    else:
+        modal_is_open = False
+    return modal_is_open, clear_data_n_clicks, clear_data_flag, warning_msg
 
 
 @app.callback(
@@ -262,7 +288,6 @@ def upload_zip(iscompleted, upload_filename):
     Output('files-table', 'data'),
     Output('docker-file-paths', 'data'),
 
-    Input('clear-data', 'n_clicks'),
     Input('browse-format', 'value'),
     Input('import-dir', 'n_clicks'),
     Input('confirm-delete','n_clicks'),
@@ -270,12 +295,13 @@ def upload_zip(iscompleted, upload_filename):
     Input('docker-file-paths', 'data'),
     Input('my-toggle-switch', 'value'),
     Input('dummy-data', 'data'),
+    Input('clear-data-flag', 'data'),
 
     State('dest-dir-name', 'value'),
     State('files-table', 'selected_rows'),
 )
-def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks, 
-                move_dir_n_clicks, selected_paths, docker_path, uploaded_data, dest, rows):
+def load_dataset(browse_format, import_n_clicks, delete_n_clicks, 
+                move_dir_n_clicks, selected_paths, docker_path, uploaded_data, clear_flag, dest, rows):
     '''
     This callback displays manages the actions of file manager
     Args:
@@ -326,7 +352,7 @@ def load_dataset(clear_data, browse_format, import_n_clicks, delete_n_clicks,
             selected_files = []
             files = paths_from_dir(DOCKER_DATA, browse_format, sort=False)
     
-    if changed_id == 'clear-data.n_clicks':
+    if changed_id == 'clear-data-flag.data':
         selected_files = []
 
     # do not update 'docker-file-paths' when only toggle docker path 
@@ -893,7 +919,6 @@ def update_trained_model_list(tab_value, mlcoach_refresh_n_clicks, data_clinic_r
     Input("tab-group", "value"),
     Input('modify-list', 'n_clicks'),
     Input({'type': 'delete-label-button', 'index': ALL}, 'n_clicks_timestamp'),
-    Input('docker-file-paths', 'data'),
     Input('color-cycle', 'data'),
 
     State('add-label-name', 'value'),
@@ -906,12 +931,13 @@ def update_trained_model_list(tab_value, mlcoach_refresh_n_clicks, data_clinic_r
     State('mlcoach-label-name', 'value'),
     State('tiled-switch', 'on'),
     State({'type': 'label-button', 'index': ALL}, 'children'),
+    State('docker-file-paths', 'data'),
     prevent_initial_call=True
 )
 def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all_button, mlcoach_label_button, mlcoach_model, 
-                              load_splash_n_clicks, tab_value, modify_list_n_clicks, del_label_n_clicks, docker_file_paths, color_cycle, 
+                              load_splash_n_clicks, tab_value, modify_list_n_clicks, del_label_n_clicks, color_cycle, 
                               add_label_name, image_order, thumbnail_image_index, thumbnail_image_select_value, thumbnail_name_children,
-                              current_labels_name, threshold, mlcoach_label, tiled_on, label_button_children):
+                              current_labels_name, threshold, mlcoach_label, tiled_on, label_button_children, docker_file_paths):
     '''
     This callback updates the dictionary of labeled images when:
         - A new image is labeled
@@ -934,8 +960,7 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
         modify_list_n_clicks:           Button to add a new label (tag name)
         mlcoach_refresh_n_clicks:       Button to refresh the list of mlcoach trained models
         data_clinic_refresh_n_clicks:   Button to refresh the list of data clinic trained models
-        del_label_n_clicks:             List of n_clicks to delete a label button
-        docker_file_paths:              Absolute (docker) file paths selected from path table   
+        del_label_n_clicks:             List of n_clicks to delete a label button  
         color_cycle:                    Color cycle per label
         add_label_name:                 Label to add (tag name)
         image_order:                    
@@ -948,6 +973,7 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
         tiled_on:                       Tiled has been selected to load the dataset
         label_button_children:          List of label text in label buttons
         docker_path:                    [Bool] show docker path T/F
+        docker_file_paths:              Absolute (docker) file paths selected from path table 
     Returns:
         label_buttons:                  Reactive component with the updated list of labels
         mlcoach_model_list:             List of trained models in mlcoach
@@ -987,7 +1013,7 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
                dash.no_update, [dash.no_update]*num_labels, [dash.no_update]*num_labels, dash.no_update 
 
     # Check if unlabel all is selected 
-    if changed_id == 'confirm-un-label-all.n_clicks' or 'docker-file-paths.data' in changed_id:
+    if changed_id == 'confirm-un-label-all.n_clicks':
         for label in current_labels_name.keys():
             current_labels_name[label] = []
         num_imgs = len(load_filenames(docker_file_paths, tiled_on))

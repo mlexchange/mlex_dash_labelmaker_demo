@@ -180,10 +180,10 @@ additional_options_html = html.Div(
                             color='primary', size="sm", style={'width': '100%'}))),
             dbc.Modal([
                 dbc.ModalHeader(dbc.ModalTitle("Warning")),
-                dbc.ModalBody("Labels cannot be recovered after deletion. Do you still want to proceed?"),
+                dbc.ModalBody(id="un-label-warning"),
                 dbc.ModalFooter([
                     dbc.Button(
-                        "Unlabel", id="confirm-un-label-all", color='danger', outline=False,
+                        "YES", id="confirm-un-label-all", color='danger', outline=False,
                         className="ms-auto", n_clicks=0),
                 ]),
             ], id="modal-un-label",
@@ -480,7 +480,8 @@ browser_cache =html.Div(
             dcc.Store(id='previous-tab', data=['init']),
             dcc.Store(id='color-cycle', data=px.colors.qualitative.Light24),
             dcc.Store(id='mlcoach-url', data=MLCOACH_URL),
-            dcc.Store(id='data-clinic-url', data=DATA_CLINIC_URL)
+            dcc.Store(id='data-clinic-url', data=DATA_CLINIC_URL),
+            dcc.Store(id='clear-data-flag', data=0)
         ],
     )
 

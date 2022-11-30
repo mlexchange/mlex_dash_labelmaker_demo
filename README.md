@@ -11,7 +11,7 @@ To run this demo, please start the following services in the order:
 To start this multi-app labeling service, go to the source code folder and execute the following:
 ```
 docker-compose -f docker-compose-models.yml --pull
-docker-compose -f docker-compose-master.yml up
+docker-compose -f docker-compose-master-local.yml up
 ```
 Go to `http://localhost:8057` in web browser and follow the instructions on each tab.
 
