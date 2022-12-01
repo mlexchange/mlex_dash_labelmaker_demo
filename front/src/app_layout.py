@@ -36,7 +36,7 @@ try:
     disable_tiled = False
 except Exception as e:
     TILED_CLIENT = ''
-    print('Could not connect to tiled server due to: {e}')
+    print(f'Could not connect to tiled server due to: {e}')
     disable_tiled = True
 
 
@@ -481,7 +481,8 @@ browser_cache =html.Div(
             dcc.Store(id='color-cycle', data=px.colors.qualitative.Light24),
             dcc.Store(id='mlcoach-url', data=MLCOACH_URL),
             dcc.Store(id='data-clinic-url', data=DATA_CLINIC_URL),
-            dcc.Store(id='clear-data-flag', data=0)
+            dcc.Store(id='clear-data-flag', data=0),
+            dcc.Store(id='clear-then-import', data=0)
         ],
     )
 
