@@ -526,10 +526,10 @@ def display_index(exit_similar_images, find_similar_images, docker_path, file_pa
         list_filename = load_filenames(file_paths, tiled_on)
 
         if changed_id == "import-dir.n_clicks" or (changed_id == 'clear-then-import.data' and clear_then_import==1):
-            params = {'key': 'datapath'}
-            resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=file_paths)
-            params = {'key': 'filenames'}
-            resp = requests.post("http://labelmaker-api:8005/api/v0/import/datapath", params=params, json=list_filename)
+            payload = {'file_path': [file_paths[0]['file_path']], 'file_type': file_paths[0]['file_type'], 'where': 'local'}
+            params = {'datapath': payload, 'filenames': list_filename, 'operation_type': 'import_dataset'}
+            print(f'payload {params}')
+            resp = requests.post("http://labelmaker-api:8005/api/v0/datapath", json=params)
         
         num_imgs = len(list_filename)
         if  changed_id == 'import-dir.n_clicks' or \
@@ -1141,19 +1141,15 @@ def save_labels_disk(button_save_disk_n_clicks, button_save_splash_n_clicks, clo
         if len(labels_name_data)>0:
             if 'button-save-splash.n_clicks' in changed_id:
                 response, uri_list = save_to_splash(labels_name_data)
-                params1 = {'key': 'datapath'}
-                params2 = {'key': 'filenames'}
                 file_path = file_paths[0]['file_path']
-                payload = [{'file_path': [file_path], 'file_type': 'uri', 'where': 'splash'}]
-                resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params1, json=payload)           
-                resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params2, json=uri_list)
+                payload = {'file_path': [file_path], 'file_type': 'uri', 'where': 'splash'}
+                params = {'datapath': payload, 'filenames': uri_list, 'operation_type': 'export_dataset'}
+                resp = requests.post("http://labelmaker-api:8005/api/v0/datapath", json=params)
                 response = 'Labels are stored to Splash.'
             else:
                 # create root directory
                 root = pathlib.Path(DOCKER_DATA / 'labelmaker_outputs' /str(uuid.uuid4()))
-                params1 = {'key': 'datapath'}
-                payload = [{'file_path': [str(root)], 'file_type': 'dir', 'where': 'local'}]
-                resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params1, json=payload)
+                payload = {'file_path': [str(root)], 'file_type': 'dir', 'where': 'local'}
                 total_filename_list = []
                 for label_key in labels_name_data:
                     filename_list = labels_name_data[label_key]
@@ -1178,8 +1174,8 @@ def save_labels_disk(button_save_disk_n_clicks, button_save_splash_n_clicks, clo
                             im_fname = os.path.join(label_dir, pathlib.Path(filename))
                             im.save(im_fname)
                             total_filename_list.append(str(im_fname))
-                params2 = {'key': 'filenames'}
-                resp = requests.post("http://labelmaker-api:8005/api/v0/export/datapath", params=params2, json=total_filename_list)
+                params = {'datapath': payload, 'filenames': total_filename_list, 'operation_type': 'export_dataset'}
+                resp = requests.post("http://labelmaker-api:8005/api/v0/datapath", json=params)
                 local_root = docker_to_local_path(str(root), DOCKER_HOME, LOCAL_HOME, 'str')
                 response = f'Labeled files are stored to disk at: {local_root}'
             return True, response
