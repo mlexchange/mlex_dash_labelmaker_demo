@@ -2,6 +2,7 @@
 .DS_Store
 .bash_history
 tags
+*.env
 *.h*5
 *.png
 *.jpg
