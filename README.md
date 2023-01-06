@@ -8,6 +8,13 @@ To run this demo, please start the following services in the order:
 * [mlex_content_registry](https://github.com/mlexchange/mlex_content_registry)
 
 ### Running as labeling pipeline (Labelmaker + Data Clinic + MLCoach)
+In command line, execute `cd mlex_dash_labelmaker_demo`, and  create an environmental file (.env), as follows:
+```
+MONGO_DB_USERNAME=your_username
+MONGO_DB_PASSWORD=your_password
+TILED_KEY=your_tiled_key
+```
+
 To start this multi-app labeling service, go to the source code folder and execute the following:
 ```
 docker-compose -f docker-compose-models.yml --pull

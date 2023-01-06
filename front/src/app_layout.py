@@ -358,15 +358,22 @@ data_access = html.Div([
                             id="file-mover-collapse",
                             is_open=False,
                         ),
-                        html.Div([ html.Div([dbc.Label('4. (Optional) Load data through Tiled')], style = {'margin-right': '10px'}),
-                                    daq.BooleanSwitch(
-                                        id='tiled-switch',
-                                        on=False,
-                                        color="#9B51E0",
-                                        disabled=disable_tiled,
-                                    )],
+                        html.Div([
+                                dbc.Label('4. (Optional) Load data through Tiled', style = {'margin-right': '10px'}),
+                                daq.BooleanSwitch(
+                                    id='tiled-switch',
+                                    on=False,
+                                    color="#9B51E0",
+                                    disabled=disable_tiled)
+                            ],
                             style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'margin': '10px', 'margin-left': '0px'},
                         ),
+                        # html.Div(
+                        #     dbc.InputGroup([
+                        #         dbc.InputGroupText("URL"), 
+                        #         dbc.Input(placeholder="tiled url", id='tiled-url')
+                        #     ])
+                        # ),
                         html.Div([ html.Div([dbc.Label('5. (Optional) Show Local/Docker Path')], style = {'margin-right': '10px'}),
                                     daq.ToggleSwitch(
                                         id='my-toggle-switch',
