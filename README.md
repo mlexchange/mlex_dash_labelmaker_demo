@@ -8,6 +8,24 @@ To run this demo, please start the following services in the order:
 * [mlex_content_registry](https://github.com/mlexchange/mlex_content_registry)
 
 ### Running as labeling pipeline (Labelmaker + Data Clinic + MLCoach)
+Clone the following repositories:
+
+* [mlex_data_clinic](https://github.com/mlexchange/mlex_data_clinic)
+* [mlex_mlcoach](https://github.com/mlexchange/mlex_mlcoach)
+* [splash_ml](https://github.com/als-computing/splash-ml)
+
+These repositories should be in the same directory, as shown below:
+
+```
+project_directory
+│
+│   mlex_data_clinic
+│   mlex_mlcoach
+|   mlex_dash_labelmaker_demo
+│   splash_ml
+
+```
+
 In command line, execute `cd mlex_dash_labelmaker_demo`, and  create an environmental file (.env), as follows:
 ```
 MONGO_DB_USERNAME=your_username

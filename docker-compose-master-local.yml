@@ -22,7 +22,7 @@ services:
     networks:
       - computing_api_default
     depends_on:
-      - tiled-server
+      # - tiled-server
       - api
       - splash
 
@@ -85,16 +85,16 @@ services:
 
 ########################### TILED ##############################
 
-  tiled-server:
-    image: ghcr.io/bluesky/tiled:v0.1.0a74
-    volumes:
-      - ${PWD}/data:/deploy/data
-      - ../mlex_tiled/config:/deploy/config
-      - ../mlex_tiled/gunicorn_config.py:/app/docker/gunicorn_config.py
-    environment:
-      - TILED_CONFIG=/deploy/config/config.yml
-    networks:
-      - computing_api_default
+  # tiled-server:
+  #   image: ghcr.io/bluesky/tiled:v0.1.0a74
+  #   volumes:
+  #     - ${PWD}/data:/deploy/data
+  #     - ../mlex_tiled/config:/deploy/config
+  #     - ../mlex_tiled/gunicorn_config.py:/app/docker/gunicorn_config.py
+  #   environment:
+  #     - TILED_CONFIG=/deploy/config/config.yml
+  #   networks:
+  #     - computing_api_default
 
 ########################### SPLASH ##############################
 
