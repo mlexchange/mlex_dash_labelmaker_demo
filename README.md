@@ -29,7 +29,7 @@ Simple labeling application with a Dash UI.
 	```
 	MONGO_DB_USERNAME=your_username
 	MONGO_DB_PASSWORD=your_password
-	# uncomment the line below to use Tiled data streaming service (optional) 
+	# uncomment the line below to use Tiled data streaming service (deprecated atm) 
 	# TILED_KEY=your_tiled_key
 	```
 
