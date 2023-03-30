@@ -2,13 +2,11 @@
 Simple labeling application with a Dash UI.
 
 ## Install
-To run this demo, please start the following services in the order:
-
-* [mlex_computing_api](https://github.com/mlexchange/mlex_computing_api)
-* [mlex_content_registry](https://github.com/mlexchange/mlex_content_registry)
 
 ### Install the labeling pipeline (Labelmaker + Data Clinic + MLCoach)
-1. Clone the following repositories:
+1. First install the MLExchange platform: [install mlex](https://github.com/mlexchange/mlex/tree/dev1)
+	
+2. Clone the following repositories:
 
 	* [mlex_data_clinic](https://github.com/mlexchange/mlex_data_clinic)
 	* [mlex_mlcoach](https://github.com/mlexchange/mlex_mlcoach)
@@ -26,7 +24,7 @@ To run this demo, please start the following services in the order:
 	
 	```
 
-2. In terminal, cd into the mlex\_dash\_labelmaker\_demo folder, and create an environmental file (.env) as follows:
+3. In terminal, cd into the mlex\_dash\_labelmaker\_demo folder, and create an environmental file (.env) as follows:
 
 	```
 	MONGO_DB_USERNAME=your_username
@@ -35,8 +33,8 @@ To run this demo, please start the following services in the order:
 	# TILED_KEY=your_tiled_key
 	```
 
-3. To start this multi-app labeling service, run `./install`. Then go to `http://localhost:8057` in web browser and follow the instructions on each tab.
-4. To uninstall, run `./uninstall`
+4. To start this multi-app labeling service, run `./install`. Then go to `http://localhost:8057` in web browser and follow the instructions on each tab.
+5. To uninstall, run `./uninstall`
 
 
 
