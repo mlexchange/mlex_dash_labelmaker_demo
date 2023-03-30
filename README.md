@@ -88,7 +88,7 @@ The selected file paths can be deleted by clicking **Delete the Selected** butto
 
 
 ## View paths in different environments
-File manager allows users to view file paths either in local paths (mounted to docker) or docker paths. Users can choose which path by toggling the swith below the **Browse** button.
+The File Manager allows users to view file paths either in local paths (mounted to docker) or docker paths. Users can choose which path by toggling the swith below the **Browse** button.
 
 
 ## Labeling instructions:
