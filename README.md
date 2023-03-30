@@ -1,45 +1,46 @@
 # Dash LabelMaker
 Simple labeling application with a Dash UI.
 
-## Running
+## Install
 To run this demo, please start the following services in the order:
 
 * [mlex_computing_api](https://github.com/mlexchange/mlex_computing_api)
 * [mlex_content_registry](https://github.com/mlexchange/mlex_content_registry)
 
-### Running as labeling pipeline (Labelmaker + Data Clinic + MLCoach)
-Clone the following repositories:
+### Install the labeling pipeline (Labelmaker + Data Clinic + MLCoach)
+1. Clone the following repositories:
 
-* [mlex_data_clinic](https://github.com/mlexchange/mlex_data_clinic)
-* [mlex_mlcoach](https://github.com/mlexchange/mlex_mlcoach)
-* [splash_ml](https://github.com/als-computing/splash-ml)
+	* [mlex_data_clinic](https://github.com/mlexchange/mlex_data_clinic)
+	* [mlex_mlcoach](https://github.com/mlexchange/mlex_mlcoach)
+	* [splash_ml](https://github.com/als-computing/splash-ml)
 
-These repositories should be in the same directory, as shown below:
+	These repositories should be in the same directory, as shown below:
+	
+	```
+	project_directory
+	│
+	│   mlex_data_clinic
+	│   mlex_mlcoach
+	|   mlex_dash_labelmaker_demo
+	│   splash_ml
+	
+	```
 
-```
-project_directory
-│
-│   mlex_data_clinic
-│   mlex_mlcoach
-|   mlex_dash_labelmaker_demo
-│   splash_ml
+2. In terminal, cd into the mlex\_dash\_labelmaker\_demo folder, and create an environmental file (.env) as follows:
 
-```
+	```
+	MONGO_DB_USERNAME=your_username
+	MONGO_DB_PASSWORD=your_password
+	# uncomment the line below to use Tiled data streaming service (optional) 
+	# TILED_KEY=your_tiled_key
+	```
 
-In command line, execute `cd mlex_dash_labelmaker_demo`, and  create an environmental file (.env), as follows:
-```
-MONGO_DB_USERNAME=your_username
-MONGO_DB_PASSWORD=your_password
-TILED_KEY=your_tiled_key
-```
+3. To start this multi-app labeling service, run `./install`. Then go to `http://localhost:8057` in web browser and follow the instructions on each tab.
+4. To uninstall, run `./uninstall`
 
-To start this multi-app labeling service, go to the source code folder and execute the following:
-```
-docker-compose -f docker-compose-models.yml --pull
-docker-compose -f docker-compose-master-local.yml up
-```
-Go to `http://localhost:8057` in web browser and follow the instructions on each tab.
 
+
+---
 ### Running as a standalone application (Labelmaker only)
 To start this labeling service, go to the source code folder and execute the following:
 ```
