@@ -2,12 +2,8 @@ version: '3'
 
 services:
   model1:
-    image: mlexchange1/unsupervised-classifier:latest
+    image: mlexchange1/unsupervised-classifier:1.0
 
   model2:
-    image: mlexchange1/tensorflow-neural-networks:latest
+    image: mlexchange1/tensorflow-neural-networks:1.0
 
-
-networks:
-  computing_api_default:
-    external: true
