@@ -1,4 +1,4 @@
-import os
+import os, uuid
 import dash
 from dash import dcc, html, dash_table
 import dash_bootstrap_components as dbc
@@ -30,7 +30,11 @@ UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 
 # Connecting to tiled server
-TILED_KEY = str(os.environ['TILED_KEY'])
+try:
+    TILED_KEY = str(os.environ['TILED_KEY'])
+except:
+    TILED_KEY = uuid.uuid4()
+
 try:
     TILED_CLIENT = from_uri(f'http://tiled-server:8000/api?api_key={TILED_KEY}', cache=TiledCache.on_disk('data/cache'))
     disable_tiled = False

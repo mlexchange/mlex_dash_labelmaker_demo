@@ -11,7 +11,7 @@ services:
       dockerfile: 'docker/Dockerfile'
     environment:
       DATA_DIR: "${PWD}/data/"
-      TILED_KEY: "${TILED_KEY}"
+      #TILED_KEY: "${TILED_KEY}"
       MLCOACH_URL: "http://localhost:8062"
       DATA_CLINIC_URL: "http://localhost:8072"
     volumes:
