@@ -22,6 +22,8 @@ app = dash.Dash(__name__, external_stylesheets = external_stylesheets, suppress_
 header = templates.header()
 
 LABEL_LIST = {'Label_1': [], 'Label_2': []}
+Label_list = ['Label_1', 'Label_2']
+DATA_LABELS = {} #{'dummy_img': ['Label_1', 'Label_2',...]} 
 MLCOACH_URL = str(os.environ['MLCOACH_URL'])
 DATA_CLINIC_URL = str(os.environ['DATA_CLINIC_URL'])
 DOCKER_DATA = pathlib.Path.home() / 'data'
@@ -482,6 +484,7 @@ browser_cache =html.Div(
         id="no-display",
         children=[
             dcc.Store(id='docker-labels-name', data=LABEL_LIST),
+            dcc.Store(id='curr-label-list', data=Label_list),
             dcc.Store(id='docker-file-paths', data=[]),
             dcc.Store(id='current-page', data=0),
             dcc.Store(id='image-order', data=[]),
