@@ -9,8 +9,11 @@ services:
             dockerfile: 'docker/Dockerfile'
         environment:
             DATA_DIR: "${PWD}/data/"
-        volumes:
-            - "./data:/app/work/data"
+            MLCOACH_URL: "http://localhost:8062"
+            DATA_CLINIC_URL: "http://localhost:8072"
+        volumes:         
+            - ./data:/app/work/data
+            - ./front/src:/app/work/src
         ports:
             - '8057:8057'
         networks:
@@ -22,6 +25,9 @@ services:
         build:
           context: "api/"
           dockerfile: "docker/Dockerfile"
+        environment:
+          MONGO_INITDB_ROOT_USERNAME: '${MONGO_DB_USERNAME}'
+          MONGO_INITDB_ROOT_PASSWORD: '${MONGO_DB_PASSWORD}'
         ports:
           - "8005:8005"
         networks:
