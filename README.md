@@ -127,10 +127,6 @@ Please follow the instructions in the app sidebar. Likewise, users can also manu
 
 For further details on the operation of Data Clinic, please refer to its [documentation](https://github.com/mlexchange/mlex_data_clinic).
 
-## Authors
-Name: [Tanny Chavez](https://github.com/taxe10), [Zhuowen Zhao](https://github.com/zhuowenzhao)  
-Correspondence: [tanchavez@lbl.gov](mailto:tanchavez@lbl.gov), [zzhao2@lbl.gov](mailto:zzhao2@lbl.gov)  
-Date: 10/15/2021 
 
 ## Copyright
 MLExchange Copyright (c) 2021, The Regents of the University of California,
