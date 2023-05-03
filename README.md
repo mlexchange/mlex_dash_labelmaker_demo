@@ -132,7 +132,7 @@ Name: [Tanny Chavez](https://github.com/taxe10), [Zhuowen Zhao](https://github.c
 Correspondence: [tanchavez@lbl.gov](mailto:tanchavez@lbl.gov), [zzhao2@lbl.gov](mailto:zzhao2@lbl.gov)  
 Date: 10/15/2021 
 
-## COPYRIGHT
+## Copyright
 MLExchange Copyright (c) 2021, The Regents of the University of California,
 through Lawrence Berkeley National Laboratory (subject to receipt of
 any required approvals from the U.S. Dept. of Energy). All rights reserved.
