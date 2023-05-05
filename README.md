@@ -4,7 +4,7 @@ Simple labeling application with a Dash UI. This is our first release.
 ## Install
 
 ### Install the labeling pipeline (Labelmaker + Data Clinic + MLCoach)
-1. First [install the MLExchange platform](https://github.com/mlexchange/mlex/tree/dev1).
+1. First [install the MLExchange platform](https://github.com/mlexchange/mlex).
 	
 2. Clone the following repositories:
 
