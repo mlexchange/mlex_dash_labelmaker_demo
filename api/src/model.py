@@ -14,10 +14,7 @@ class FileType(str, Enum):
 class Location(str, Enum):
     splash = "splash"
     local = "local"
-    
-class OperationType(str, Enum):
-    import_dataset = 'import_dataset'
-    export_dataset = 'export_dataset'
+    tiled = "tiled"
 
 
 class DataPath(BaseModel):
@@ -27,8 +24,7 @@ class DataPath(BaseModel):
 
 
 class Dataset(BaseModel):
-  uid: str = DEFAULT_UID
-  user_id: Optional[str]
-  operation_type: OperationType
-  datapath: DataPath
-  filenames: List[str]
+    uid: str = DEFAULT_UID
+    user_id: Optional[str]
+    datapath: DataPath
+    labelpath: Optional[DataPath]
