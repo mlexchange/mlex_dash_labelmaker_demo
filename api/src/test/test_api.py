@@ -26,7 +26,7 @@ dataset1={
     "datapath": {
         "file_path": ["path/to/data"],
         "file_type": "dir",
-        "where": "local"
+        "file_location": "local"
     }
 }
 
@@ -36,11 +36,11 @@ dataset2={
     "datapath": {
         "file_path": ["path/to/data"],
         "file_type": "dir",
-        "where": "local"
+        "file_location": "local"
     },
     "labelpath": {
         "file_path": ["path/to/label"],
         "file_type": "dir",
-        "where": "local"
+        "file_location": "local"
     }
 }
