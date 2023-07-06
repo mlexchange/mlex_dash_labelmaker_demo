@@ -5,7 +5,13 @@ from dash_extensions import EventListener
 import pathlib
 import plotly.express as px
 import requests
-from file_manager.helper_utils import local_to_docker_path
+from file_manager.file_path import FilePath, ListFilePaths
+# from file_manager.helper_utils import local_to_docker_path
+
+filepath = ListFilePaths([FilePath("", "")])
+filenames_from_dir = filepath.filenames_from_dir
+docker_to_local_path = filepath.docker_to_local_path
+local_to_docker_path = filepath.local_to_docker_path
 
 LOCAL_DATA = str(os.environ['DATA_DIR'])
 DOCKER_DATA = pathlib.Path.home() / 'data'
@@ -198,7 +204,7 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
                 break
             content = list_of_contents[index]
             filename = list_of_names[index]
-            docker_filename = local_to_docker_path(filename, DOCKER_HOME, LOCAL_HOME, 'str')
+            docker_filename = local_to_docker_path(filename, DOCKER_HOME, LOCAL_HOME)
             if show_prob:
                 if docker_filename in filenames:
                 # if docker_filename.replace('.tiff', '.tif') in filenames:

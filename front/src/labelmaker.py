@@ -19,7 +19,13 @@ from helper_utils import get_color_from_label, create_label_component, draw_rows
 from labels import Labels
 from query import Query
 from app_layout import app, DOCKER_DATA, UPLOAD_FOLDER_ROOT, TILED_CLIENT
-from file_manager.helper_utils import filenames_from_dir, docker_to_local_path, local_to_docker_path
+from file_manager.file_path import FilePath, ListFilePaths
+
+filepath = ListFilePaths([FilePath("", "")])
+filenames_from_dir = filepath.filenames_from_dir
+docker_to_local_path = filepath.docker_to_local_path
+local_to_docker_path = filepath.local_to_docker_path
+# from file_manager.helper_utils import filenames_from_dir, docker_to_local_path, local_to_docker_path
 
 
 # Font and background colors associated with each theme
@@ -56,8 +62,9 @@ def query_data(file_paths, tiled_on):
                                      [file_paths[0]['file_path']]*len(list_filename)))
     else:           # load through file reading
         for file_path in file_paths:
-            data_path = 'data/'+file_path['file_path'].split(str(DOCKER_HOME))[-1]
+            data_path = file_path['file_path'].split(str(LOCAL_HOME))[-1]
             if file_path['file_type'] == 'dir':
+                print(data_path)
                 list_filename = filenames_from_dir(data_path, \
                                                    ['tiff', 'tif', 'jpg', 'jpeg', 'png'], \
                                                     sort=False)
@@ -424,7 +431,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
     new_contents = []
     new_filenames = []
     if num_imgs>0:
-        if tiled_on:    # load through tiled
+        if False: #tiled_on:    # load through tiled
             file_path = file_paths[0]['file_path'].replace(DOCKER_HOME, '')
             subdir = file_path.split('/')
             tiled_client = TILED_CLIENT
