@@ -42,7 +42,7 @@ Simple labeling application with a Dash UI. This is our first release.
 ### Running as a standalone application (Labelmaker only)
 To start this labeling service, go to the source code folder and execute the following:
 ```
-docker-compose up --build
+docker compose up --build
 ```
 Go to `http://localhost:8057` in web browser.
 
