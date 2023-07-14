@@ -5,13 +5,7 @@ from dash_extensions import EventListener
 import pathlib
 import plotly.express as px
 import requests
-from file_manager.file_path import FilePath, ListFilePaths
-# from file_manager.helper_utils import local_to_docker_path
 
-filepath = ListFilePaths([FilePath("", "")])
-filenames_from_dir = filepath.filenames_from_dir
-docker_to_local_path = filepath.docker_to_local_path
-local_to_docker_path = filepath.local_to_docker_path
 
 LOCAL_DATA = str(os.environ['DATA_DIR'])
 DOCKER_DATA = pathlib.Path.home() / 'data'
@@ -21,18 +15,6 @@ SPLASH_CLIENT = 'http://splash:80/api/v0'
 
 
 #============================= labelmaker related functions ==============================
-def get_color_from_label(label_indx, color_cycle):
-    '''
-    This function assigns a color label
-    Args:
-        label_indx:     Label index
-        color_cycle:    List of label colors
-    Returns:
-        color:          Color that corresponds to the input label
-    '''
-    return color_cycle[label_indx]
-
-
 def create_label_component(label_list, color_cycle=px.colors.qualitative.Light24, mlcoach=False, \
                            progress_values=None, progress_labels=None, total_num_labeled=None):
     '''
@@ -204,7 +186,8 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
                 break
             content = list_of_contents[index]
             filename = list_of_names[index]
-            docker_filename = local_to_docker_path(filename, DOCKER_HOME, LOCAL_HOME)
+            docker_filename = filename
+            # docker_filename = local_to_docker_path(filename, DOCKER_HOME, LOCAL_HOME)
             if show_prob:
                 if docker_filename in filenames:
                 # if docker_filename.replace('.tiff', '.tif') in filenames:
@@ -265,17 +248,6 @@ def get_trained_models_list(user, tab):
                                            'value': model['job_kwargs']['cmd'].split(' ')[4]+alt_filename})
     trained_models.reverse()
     return trained_models
-
-
-def adapt_tiled_filename(filename, dir):
-    '''
-    This function takes the filename retrieved from tiled and add the full directory path and file extension
-    '''
-    new_filename = f'{dir}/{filename}.tif'
-    if Path(new_filename).is_file():
-        return new_filename
-    else:
-        return f'{dir}/{filename}.tiff'
 
 
 def parse_full_screen_content(contents, filename):

@@ -284,7 +284,6 @@ browser_cache =html.Div(
             dcc.Store(id='dummy1', data=0),
             dcc.Store(id='previous-tab', data=['init']),
             dcc.Store(id='color-cycle', data=px.colors.qualitative.Light24),
-            dcc.Store(id='reset-labels', data=False),
             dcc.Store(id='mlcoach-url', data=MLCOACH_URL),
             dcc.Store(id='data-clinic-url', data=DATA_CLINIC_URL),
         ],

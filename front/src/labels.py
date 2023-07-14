@@ -89,7 +89,6 @@ class Labels:
                 self.num_imgs_per_label[current_labels[0]] -= 1
                 if label is None:
                     self.labels_dict[filename] = []
-                    pass
             if label is not None:
                 self.labels_dict[filename] = [label]
                 self.num_imgs_per_label[label] += 1

@@ -10,23 +10,14 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 import requests
-from tiled.client.array import ArrayClient
 import uuid
 
-from helper_utils import get_color_from_label, create_label_component, draw_rows, \
-                         get_trained_models_list, adapt_tiled_filename, \
+from helper_utils import create_label_component, draw_rows, get_trained_models_list, \
                          parse_full_screen_content
 from labels import Labels
 from query import Query
-from app_layout import app, DOCKER_DATA, UPLOAD_FOLDER_ROOT, TILED_CLIENT
-from file_manager.file_path import FilePath, ListFilePaths
-
-filepath = ListFilePaths([FilePath("", "")])
-filenames_from_dir = filepath.filenames_from_dir
-docker_to_local_path = filepath.docker_to_local_path
-local_to_docker_path = filepath.local_to_docker_path
-# from file_manager.helper_utils import filenames_from_dir, docker_to_local_path, local_to_docker_path
-
+from app_layout import app, DOCKER_DATA
+from file_manager.data_project import DataProject
 
 # Font and background colors associated with each theme
 text_color = {"dark": "#95969A", "light": "#595959"}
@@ -37,48 +28,6 @@ USER = 'admin'
 LOCAL_DATA = str(os.environ['DATA_DIR'])
 DOCKER_HOME = str(DOCKER_DATA) + '/'
 LOCAL_HOME = str(LOCAL_DATA)
-
-#====================================== memoization ======================================
-cache = Cache(app.server, config={
-    'CACHE_TYPE': 'filesystem',
-    'CACHE_DIR': 'cache-directory'
-})
-
-TIMEOUT = 60
-
-@cache.memoize(timeout=TIMEOUT)
-def query_data(file_paths, tiled_on):
-    list_filename = []
-    if tiled_on and len(file_paths)>0:    # load through tiled
-        file_path = file_paths[0]['file_path'].replace(DOCKER_HOME, '')
-        subdir = file_path.split('/')
-        tiled_client = TILED_CLIENT
-        for local_dir in subdir:
-            tiled_client = tiled_client[local_dir]
-        tmp_list = list(tiled_client)
-        if isinstance(tiled_client[tmp_list[0]], ArrayClient):
-            list_filename = tmp_list
-            list_filename = list(map(adapt_tiled_filename, list_filename, \
-                                     [file_paths[0]['file_path']]*len(list_filename)))
-    else:           # load through file reading
-        for file_path in file_paths:
-            data_path = file_path['file_path'].split(str(LOCAL_HOME))[-1]
-            if file_path['file_type'] == 'dir':
-                print(data_path)
-                list_filename = filenames_from_dir(data_path, \
-                                                   ['tiff', 'tif', 'jpg', 'jpeg', 'png'], \
-                                                    sort=False)
-            else:
-                list_filename.append(data_path)
-    return list_filename
-
-
-def load_filenames(file_paths, tiled_on):
-    return query_data(file_paths, tiled_on)
-
-
-def clear_cache():
-    cache.clear()
 
 
 #================================== callback functions ===================================
@@ -197,7 +146,6 @@ app.clientside_callback(
 
 @app.callback(
     Output("modal-un-label", "is_open"),
-    Output("reset-labels", "data"),
     Output("confirm-update-data", "data"),
 
     Input("un-label-all", "n_clicks"),
@@ -227,15 +175,14 @@ def toggle_modal_unlabel_warning(unlabel_all_clicks, confirm_unlabel_all_clicks,
     changed_id = dash.callback_context.triggered[0]['prop_id']
     modal_is_open = False
     update_data = True
-    reset_labels = dash.no_update
-
     labels = Labels(**labels_dict)
-    if changed_id == 'confirm-un-label-all.n_clicks':
-        reset_labels = True
-    elif np.sum(np.array(list(labels.num_imgs_per_label.values())))>0:      # if there are labels
-        update_data = False
+    if changed_id != 'confirm-un-label-all.n_clicks' and np.sum(np.array(list(labels.num_imgs_per_label.values())))>0:      # if there are labels
+        if changed_id == 'un-label-all.n_clicks':
+            update_data = dash.no_update
+        else:
+            update_data = False
         modal_is_open = True
-    return modal_is_open, reset_labels, update_data
+    return modal_is_open, update_data
 
 
 @app.callback(
@@ -320,9 +267,7 @@ def display_index(exit_similar_images, find_similar_images, labels_dict, button_
         data_access_open:           Closes the reactive component to select the data access 
                                     (upload vs. directory)
     '''
-    start = time.time()
     changed_id = dash.callback_context.triggered[0]['prop_id']
-    print(f'The image order is triggered by: {changed_id}')
     query = Query(**labels_dict)
     similar_img_clicks = dash.no_update
     button_hide = dash.no_update
@@ -352,7 +297,6 @@ def display_index(exit_similar_images, find_similar_images, labels_dict, button_
         button_hide = 0
         similar_img_clicks = 0
         image_order = query.sort_labels()
-    print(f'Image order is done after {time.time()-start}. Number of images is {len(image_order)}.')
     return image_order, similar_img_clicks, button_hide, {'visibility': 'visible'}
 
 
@@ -424,39 +368,21 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update
     children = []
     labels = Labels(**labels_dict)
-    list_filename = list(labels.labels_dict.keys())
-    num_imgs = len(list_filename)
+    data_project = DataProject()
+    data_project.init_from_dict(file_paths)
+    num_imgs = len(image_order)
     start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
     max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
     new_contents = []
     new_filenames = []
     if num_imgs>0:
-        if False: #tiled_on:    # load through tiled
-            file_path = file_paths[0]['file_path'].replace(DOCKER_HOME, '')
-            subdir = file_path.split('/')
-            tiled_client = TILED_CLIENT
-            for local_dir in subdir:
-                tiled_client = tiled_client[local_dir]
-            for i in range(start_indx, max_indx):
-                rawBytes = io.BytesIO()
-                img = tiled_client.values_indexer[image_order[i]].export(rawBytes, format='jpeg')
-                rawBytes.seek(0)        # return to the start of the file
-                img = base64.b64encode(rawBytes.read())
-                new_contents.append(f'data:image/jpeg;base64,{img.decode("utf-8")}')
-                new_filenames.append(list_filename[image_order[i]])
-        else:           # load through file reading
-            # plot images according to current page index and number of columns
-            for i in range(start_indx, max_indx):
-                filename = list_filename[image_order[i]]
-                img = Image.open(filename)
-                img = img.resize((300, 300))
-                rawBytes = io.BytesIO()
-                img.save(rawBytes, "JPEG")
-                rawBytes.seek(0)        # return to the start of the file
-                img = base64.b64encode(rawBytes.read())
-                file_ext = filename[filename.find('.')+1:]
-                new_contents.append('data:image/'+file_ext+';base64,'+img.decode("utf-8"))
-                new_filenames.append(list_filename[image_order[i]])
+        data_set = data_project.data
+        new_contents = []
+        new_filenames = []
+        for indx in range(start_indx, max_indx):
+            content, filename = data_set[image_order[indx]].read_data()
+            new_contents.append(content)
+            new_filenames.append(filename)
     if mlcoach_model and tab_selection=='mlcoach':
         if mlcoach_model.split('.')[-1] == 'csv':
             df_prob = pd.read_csv(mlcoach_model)
@@ -466,7 +392,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
                                 ml_coach_is_open, df_prob)
     elif find_similar_images:
         pre_highlight = True
-        filenames = local_to_docker_path(new_filenames, DOCKER_HOME, LOCAL_HOME, 'list')
+        filenames = new_filenames
         for name in filenames:                 # if there is one label in page, do not pre-highlight
             if labels.labels_dict[name] != []:
                 pre_highlight = False
@@ -521,7 +447,7 @@ def select_thumbnail(value, labels_dict, thumbnail_name_children, color_cycle):
             label = []
         if len(label)>0:
             label_indx = labels.labels_list.index(label[0])
-            color = get_color_from_label(label_indx, color_cycle)
+            color = color_cycle[label_indx]
         return color
 
 
@@ -560,10 +486,10 @@ def deselect(label_button_trigger, unlabel_n_clicks, unlabel_all, thumb_clicked)
     Input({'type': 'double-click-entry', 'index': ALL}, 'n_events'),
 
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
-    State('tiled-switch', 'on'),
+    State('docker-file-paths','data'),
     prevent_initial_call=True
 )
-def full_screen_thumbnail(double_click, thumbnail_name_children, tiled_on):
+def full_screen_thumbnail(double_click, thumbnail_name_children, file_paths):
     '''
     This callback opens the modal pop-up window with the full size image that was double-clicked
     Args:
@@ -578,24 +504,11 @@ def full_screen_thumbnail(double_click, thumbnail_name_children, tiled_on):
     if 1 not in double_click:
         raise PreventUpdate
     filename = thumbnail_name_children[double_click.index(1)]
-    if tiled_on:    # load through tiled
-        file_path = filename.replace(str(DOCKER_DATA), '')
-        file_path = file_path.split('/')
-        subdir = file_path[:-1]
-        tiled_client = TILED_CLIENT
-        for local_dir in subdir:
-            tiled_client = tiled_client[local_dir]
-        test = file_path[-1].split('.')[0]
-        np_img = tiled_client[file_path[-1].split('.')[0]][:]
-        img = Image.fromarray(np_img)
-    else:           # load from file reading
-        img = Image.open(filename)
-    rawBytes = io.BytesIO()
-    img.save(rawBytes, "JPEG")
-    rawBytes.seek(0)        # return to the start of the file
-    img = base64.b64encode(rawBytes.read())
-    file_ext = filename[filename.find('.')+1:]
-    img_contents = 'data:image/'+file_ext+';base64,'+img.decode("utf-8")
+    data_project = DataProject()
+    data_project.init_from_dict(file_paths)
+    data = data_project.data
+    data_set = next(item for item in data if item.uri == filename)
+    img_contents, _ = data_set.read_data()
     contents = parse_full_screen_content(img_contents, filename)
     return [contents], [True], [0]*len(double_click)
 
@@ -758,7 +671,9 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
     changed_id = dash.callback_context.triggered[-1]['prop_id']
     labels = Labels(**labels_dict)
     if changed_id == 'docker-file-paths.data':
-        filenames = query_data(docker_file_paths, False)
+        data_project = DataProject()
+        data_project.init_from_dict(docker_file_paths)
+        filenames = [data_set.uri for data_set in data_project.data]
         labels.init_labels(filenames, label_button_children)
     mlcoach_options = dash.no_update
     if changed_id in ['delete-label-button', 'modify-list', 'color-cycle']:
@@ -854,10 +769,11 @@ def save_labels(button_save_disk_n_clicks, button_save_splash_n_clicks, close_mo
             docker_save_dir = pathlib.Path(DOCKER_DATA / 'labelmaker_outputs' /str(uuid.uuid4()))
             response = labels.save_to_directory(docker_save_dir)
             payload = {'file_path': [str(docker_save_dir)], 'file_type': 'dir', 'where': 'local'}
-            local_save_dir = docker_to_local_path(str(docker_save_dir), \
-                                                  DOCKER_HOME, \
-                                                  LOCAL_HOME, \
-                                                  'str')
+            # local_save_dir = docker_to_local_path(str(docker_save_dir), \
+            #                                       DOCKER_HOME, \
+            #                                       LOCAL_HOME, \
+            #                                       'str')
+            local_save_dir = ''
             response = f'Labeled files are stored to disk at: {local_save_dir}'
         params = {'datapath': payload, 'operation_type': 'export_dataset'}
         status_code = requests.post("http://labelmaker-api:8005/api/v0/datapath", 
@@ -866,5 +782,4 @@ def save_labels(button_save_disk_n_clicks, button_save_splash_n_clicks, close_mo
 
 
 if __name__ == '__main__':
-    clear_cache()
     app.run_server(debug=True, host='0.0.0.0', port=8057)
