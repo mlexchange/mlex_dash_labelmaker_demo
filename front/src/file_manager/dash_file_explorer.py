@@ -5,13 +5,21 @@ import dash_uploader as du
 
 
 def create_file_explorer(max_file_size):
+    '''
+    Creates the dash components for the file explorer
+    Args:
+        max_file_size:      Maximum file size to be uploaded
+    Returns:
+        file_explorer:      HTML.DIV with all the corresponding components of the file explorer
+    '''
     file_explorer = html.Div([
         dbc.Card([
-            dbc.CardBody(id='data-body',
+            dbc.CardBody(id={'base_id': 'file-manager', 'name': 'data-body'},
                         children=[
+                            ######################## UPLOADING DATA ################################
                             dbc.Label('Upload a new file or a zipped folder:', className='mr-2'),
                             html.Div([
-                                du.Upload(id='dash-uploader',
+                                du.Upload(id={'base_id': 'file-manager', 'name': 'dash-uploader'},
                                           max_file_size=max_file_size,
                                           cancel_button=True,
                                           pause_button=True
@@ -23,6 +31,7 @@ def create_file_explorer(max_file_size):
                                        'margin-bottom': '10px',
                                        'margin-right': '20px'},
                             ),
+                            ################## BROWSE/IMPORT DATA FORMATS ##########################
                             dbc.Label('Choose files/directories:', className='mr-2'),
                             dbc.Row([
                                 dbc.Col(
@@ -33,7 +42,8 @@ def create_file_explorer(max_file_size):
                                                                            'width': '100%'}),
                                                 width=5),
                                         dbc.Col(dcc.Dropdown(
-                                                    id='browse-format',
+                                                    id={'base_id': 'file-manager', 
+                                                        'name': 'browse-format'},
                                                     options=[
                                                         {'label': 'dir', 'value': '**/'},
                                                         {'label': 'all (*)', 'value': '*'},
@@ -57,7 +67,8 @@ def create_file_explorer(max_file_size):
                                                                         'width': '100%'}),
                                                                width=5),
                                         dbc.Col(dcc.Dropdown(
-                                                id='import-format',
+                                                id={'base_id': 'file-manager', 
+                                                    'name': 'import-format'},
                                                 options=[
                                                         {'label': 'all (*)', 'value': '*'},
                                                         {'label': '.png', 'value': '**/*.png'},
@@ -74,7 +85,7 @@ def create_file_explorer(max_file_size):
                                 ),
                                 dbc.Col(
                                     dbc.Button('Import',
-                                               id='import-dir',
+                                               id={'base_id': 'file-manager', 'name': 'import-dir'},
                                                className='ms-auto',
                                                color='secondary',
                                                size='sm',
@@ -85,6 +96,7 @@ def create_file_explorer(max_file_size):
                                     width=2,
                                 ),
                             ]),   
+                            ###################### TILED FOR DATA ACCESS ###########################
                             dbc.Label('Load data through Tiled:', 
                                       style = {'margin-right': '10px',
                                                'margin-bottom': '10px'}),   
@@ -93,23 +105,35 @@ def create_file_explorer(max_file_size):
                                     dbc.InputGroup([
                                         dbc.InputGroupText('URI'), 
                                         dbc.Input(placeholder='tiled uri', 
-                                                  id='tiled-uri')
+                                                  id={'base_id': 'file-manager', 
+                                                      'name': 'tiled-uri'})
                                     ]),
                                     width=11
                                 ),
                                 dbc.Col(
                                     daq.BooleanSwitch(
-                                        id='tiled-switch',
+                                        id={'base_id': 'file-manager', 'name': 'tiled-switch'},
                                         on=False,
                                         color='green'
                                     ),
                                     width=1
+                                ),
+                                dbc.Modal(
+                                    children=[
+                                        dbc.ModalHeader(dbc.ModalTitle("Warning")),
+                                        dbc.ModalBody(children="Could not connect to Tiled"),
+                                        # dbc.ModalFooter([dbc.Button("OK")])
+                                        ], 
+                                    id={'base_id': 'file-manager', 'name': 'tiled-error'},
+                                    is_open=False,
+                                    style = {'color': 'red'}
                                 )
                             ]),
+                            ############################ FILE TABLE ################################
                             html.Div(
                                 children=[
                                     dash_table.DataTable(
-                                        id='files-table',
+                                        id={'base_id': 'file-manager', 'name': 'files-table'},
                                         columns=[
                                             {'name': 'Type', 'id': 'type'},
                                             {'name': 'URI', 'id': 'uri'}
@@ -127,15 +151,20 @@ def create_file_explorer(max_file_size):
                                         style_table={'height':'18rem', 'overflowY': 'auto',
                                                      'margin-top': '10px'}
                                         ),
-                                    dcc.Store(id='confirm-update-data', data=True),
-                                    dcc.Store(id='confirm-clear-data', data=False),
-                                    dcc.Store(id='docker-file-paths', data=[]),
-                                    dcc.Store(id='upload-data', data=False),
+                                    dcc.Store(id={'base_id': 'file-manager', 
+                                                  'name': 'confirm-update-data'}, 
+                                              data=True),
+                                    dcc.Store(id={'base_id': 'file-manager', 
+                                                  'name': 'confirm-clear-data'}, 
+                                              data=False),
+                                    dcc.Store(id={'base_id': 'file-manager', 
+                                                  'name': 'docker-file-paths'}, 
+                                              data=[]),
+                                    dcc.Store(id={'base_id': 'file-manager', 'name': 'upload-data'},
+                                              data=False),
                                     ]
                                 )
                             ]),
-        ],
-        id='file-manager',
-        )
+        ])
     ])
     return file_explorer

@@ -11,19 +11,24 @@ from file_manager.data_project import DataProject
 
 
 class FileManager():
-    def __init__(self, docker_home, local_home, data_folder_root, upload_folder_root,
-                 max_file_size=60000):
-        self.docker_home = docker_home
-        self.local_home = local_home
+    def __init__(self, data_folder_root, upload_folder_root, max_file_size=60000):
+        '''
+        FileManager creates a dash file explorer that supports: (1) local file reading, and (2)
+        data access through Tiled
+        Args:
+            data_folder_root:       Root folder to data directory for local loading
+            upload_folder_root:     Root folder to upload directory
+            max_file_size:          Maximum file size for uploaded data, defaults to 60000
+        '''
         self.data_folder_root = data_folder_root
         self.upload_folder_root = upload_folder_root
         self.max_file_size = max_file_size
-
+        # Definition of the dash components for file manager
         self.file_explorer = html.Div(
             [
                 dbc.Button(
                     'Toggle File Manager',
-                    id='collapse-button',
+                    id={'base_id': 'file-manager', 'name': 'collapse-button'},
                     size='lg',
                     className='m-2',
                     color='secondary',
@@ -32,7 +37,7 @@ class FileManager():
                 ),
                 dbc.Button(
                     'Clear Images',
-                    id='clear-data',
+                    id={'base_id': 'file-manager', 'name': 'clear-data'},
                     size='lg',
                     className='m-2',
                     color='secondary',
@@ -41,7 +46,7 @@ class FileManager():
                 ),
                 dbc.Collapse(
                     create_file_explorer(max_file_size),
-                    id='collapse',
+                    id={'base_id': 'file-manager', 'name': 'collapse-explorer'},
                     is_open=True,
                 ),
             ]
@@ -49,46 +54,55 @@ class FileManager():
         pass
     
     def init_callbacks(self, app):
+        '''
+        Definition of the callbacks to support the functionality of the file manager components
+        Args:
+            app:        Dash app that contains a file manager
+        '''
         app.callback(
-            Output('collapse', 'is_open'),
-            [Input('collapse-button', 'n_clicks'),
-             Input('import-dir', 'n_clicks'),
-             State('collapse', 'is_open')]
+            Output({'base_id': 'file-manager', 'name': 'collapse-explorer'}, 'is_open'),
+            [Input({'base_id': 'file-manager', 'name': 'collapse-button'}, 'n_clicks'),
+             Input({'base_id': 'file-manager', 'name': 'import-dir'}, 'n_clicks'),
+             State({'base_id': 'file-manager', 'name': 'collapse-explorer'}, 'is_open')]
         )(self._toggle_collapse)
 
         app.callback(
-            Output('upload-data', 'data'),
-            [Input('dash-uploader', 'isCompleted'),
-             State('dash-uploader', 'fileNames')]
+            Output({'base_id': 'file-manager', 'name': 'upload-data'}, 'data'),
+            [Input({'base_id': 'file-manager', 'name': 'dash-uploader'}, 'isCompleted'),
+             State({'base_id': 'file-manager', 'name': 'dash-uploader'}, 'fileNames')]
         )(self._upload_zip)
 
         app.callback(
-            [Output('files-table', 'data'),
-             Output('docker-file-paths', 'data'),
-             Output('files-table', 'selected_rows')],
-            [Input('browse-format', 'value'),
-             Input('import-dir', 'n_clicks'),
-             Input('upload-data', 'data'),
-             Input('confirm-update-data', 'data'),
-             Input('clear-data', 'n_clicks'),
-             Input('tiled-switch', 'on'),
-             State('files-table', 'selected_rows'),
-             State('docker-file-paths', 'data'),
-             State('tiled-uri', 'value'),
-             State('files-table', 'data'),
-             State('import-format', 'value')]
+            [Output({'base_id': 'file-manager', 'name': 'files-table'}, 'data'),
+             Output({'base_id': 'file-manager', 'name': 'files-table'}, 'selected_rows'),
+             Output({'base_id': 'file-manager', 'name': 'docker-file-paths'}, 'data'),
+             Output({'base_id': 'file-manager', 'name': 'tiled-error'}, 'is_open'),
+             Output({'base_id': 'file-manager', 'name': 'tiled-switch'}, 'on')],
+            [Input({'base_id': 'file-manager', 'name': 'browse-format'}, 'value'),
+             Input({'base_id': 'file-manager', 'name': 'import-dir'}, 'n_clicks'),
+             Input({'base_id': 'file-manager', 'name': 'upload-data'}, 'data'),
+             Input({'base_id': 'file-manager', 'name': 'confirm-update-data'}, 'data'),
+             Input({'base_id': 'file-manager', 'name': 'clear-data'}, 'n_clicks'),
+             Input({'base_id': 'file-manager', 'name': 'tiled-switch'}, 'on'),
+             State({'base_id': 'file-manager', 'name': 'files-table'}, 'selected_rows'),
+             State({'base_id': 'file-manager', 'name': 'tiled-uri'}, 'value'),
+             State({'base_id': 'file-manager', 'name': 'files-table'}, 'data'),
+             State({'base_id': 'file-manager', 'name': 'import-format'}, 'value')]
         )(self._load_dataset)
+        pass
 
     @staticmethod
-    def _toggle_collapse(n, import_n_clicks, is_open):
+    def _toggle_collapse(collapse_n_clicks, import_n_clicks, is_open):
         '''
         Collapse the file manager once a data set has been selected
         Args:
-            n:                  Number of clicks in collapse button
+            collapse_n_clicks:  Number of clicks in collapse button
             import_n_clicks:    Number of clicks in import button
             is_open:            Bool variable indicating if file manager is collapsed or not
+        Returns:
+            is_open:            Updated state of is_open
         '''
-        if n or import_n_clicks:
+        if collapse_n_clicks or import_n_clicks:
             return not is_open
         return is_open
 
@@ -98,6 +112,8 @@ class FileManager():
         Args:
             iscompleted:            Flag indicating if the upload + unzip are complete
             upload_filenames:       List of filenames that were uploaded
+        Returns:
+            flag:                   Bool indicating if the uploading process is completed
         '''
         if not iscompleted:
             return False
@@ -116,50 +132,59 @@ class FileManager():
         return True
     
     def _load_dataset(self, browse_format, import_n_clicks, uploaded_data, update_data, \
-                      clear_data_n, tiled_on, rows, selected_paths, tiled_uri, files_table, \
-                      import_format):
+                      clear_data_n_clicks, tiled_on, rows, tiled_uri, files_table, import_format):
         '''
         This callback displays manages the actions of file manager
         Args:
-            browse_format:      File extension to browse
-            import_n_clicks:    Number of clicks on import button
-            delete_n_clicks:    Number of clicks on delete button
-            move_dir_n_clicks:  Move button
-            uploaded_data:      Flag that indicates if new data has been uploaded
-            update_data:        Flag that indicates if the dataset can be updated
-            clear_data_n:       Number of clicks on clear data button
-            dest:               Destination path
-            rows:               Selected rows
-            selected_paths:     Selected paths in cache
+            browse_format:          File extension to browse
+            import_n_clicks:        Number of clicks on import button
+            uploaded_data:          Flag that indicates if new data has been uploaded
+            update_data:            Flag that indicates if the dataset can be updated
+            clear_data_n_clicks:    Number of clicks on clear data button
+            tiled_on:               Bool indicating if tiled has been selected for data access
+            rows:                   Selected rows in table of files/directories/nodes
+            tiled_uri:              Tiled URI for data access
+            files_table:            Current values within the table of files/directories/nodes
+            import_format:          File extension to import
         Returns
-            files:              Filenames to be displayed in File Manager according to browse_format 
-                                from docker/local path
-            selected_files:     List of selected filename FROM DOCKER PATH (no subdirectories)
+            table_data:             Updated table data according to browsing selection   
+            table_data_rows:        Updated selection of rows in table data
+            selected_files:         List of selected data sets for later analysis
+            tiled_warning_modal:    Open warning indicating that the connection to tiled failed
+            tiled_on:               If connection to tiled fails, tiled_on is defaulted to False
         '''
         changed_id = dash.callback_context.triggered[0]['prop_id']
-        if changed_id in 'import-dir.n_clicks' and not update_data:
-            return dash.no_update, dash.no_update, dash.no_update
-        elif changed_id == 'clear-data.n_clicks' and not update_data:
-            return dash.no_update, dash.no_update, []
-        elif changed_id == 'clear-data.n_clicks':
-            return dash.no_update, [], dash.no_update
+        # prevent update according to update_data flag
+        if 'import-dir' in changed_id and not update_data:
+            return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update   
+        elif 'clear-data' in changed_id and not update_data:
+            return dash.no_update, [], dash.no_update, dash.no_update, dash.no_update
+        elif 'clear-data' in changed_id:
+            return dash.no_update, dash.no_update, [], dash.no_update, dash.no_update
         data_project = DataProject(data=[])
-        if tiled_on:
+        if tiled_on:                    # Definition of the data type
             data_type = 'tiled'
         else:
             data_type = 'local'
-        browse_data = data_project.browse_data(data_type, browse_format, \
-                                               tiled_uri = tiled_uri,
-                                               dir_path=self.data_folder_root)
-        if bool(rows) and changed_id != 'tiled-switch.on':
+        try:
+            browse_data = data_project.browse_data(data_type, browse_format, \
+                                                    tiled_uri = tiled_uri,
+                                                    dir_path=self.data_folder_root)
+        except Exception as e:
+            # Open warning modal indicating that the connection to tiled failed
+            if 'Invalid type for url' in str(e) or 'Request URL is missing an' in str(e):
+                return dash.no_update, dash.no_update, dash.no_update, True, False
+        if bool(rows) and 'tiled-switch' not in changed_id:
             for row in rows:
                 selected_row = files_table[row]['uri']
                 data_project.data += data_project.browse_data(data_type, import_format, \
                                                               tiled_uri = selected_row,
                                                               dir_path = selected_row)
-        if changed_id == 'tiled-switch.on':
+        if 'tiled-switch' in changed_id:
+            # If the tiled selection triggered this callback, the data shown in the screen
+            # should not be updated until a node (row) has been selected and imported
             selected_data = dash.no_update
         else:
             selected_data = data_project.get_dict()
         browse_data = DataProject(data=browse_data).get_table_dict()
-        return browse_data, selected_data, dash.no_update
+        return browse_data, dash.no_update, selected_data, dash.no_update, dash.no_update

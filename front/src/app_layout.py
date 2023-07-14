@@ -36,7 +36,7 @@ DOCKER_HOME = f'{pathlib.Path.home()}/'
 DOCKER_DATA = pathlib.Path.home() / 'data'
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 
-dash_file_explorer = FileManager(DOCKER_HOME, LOCAL_DATA, DOCKER_DATA, UPLOAD_FOLDER_ROOT)
+dash_file_explorer = FileManager(DOCKER_DATA, UPLOAD_FOLDER_ROOT)
 dash_file_explorer.init_callbacks(app)
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 

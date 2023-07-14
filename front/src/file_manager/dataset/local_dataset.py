@@ -8,17 +8,26 @@ from PIL import Image
 
 from file_manager.dataset.dataset import Dataset
 
-
+# List of allowed and not allowed formats
 FORMATS = ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.tif', '**/*.tiff']
 NOT_ALLOWED_FORMATS = ['**/__pycache__/**', '**/.*']
 
 
 class LocalDataset(Dataset):
     def __init__(self, uri, type='local', tags=[]):
+        '''
+        Definition of a local data set
+        '''
         super().__init__(uri, type, tags)
         pass
 
     def read_data(self):
+        '''
+        Read data set
+        Returns:
+            Base64 image
+            Dataset URI
+        '''
         filename = self.uri
         img = Image.open(filename)
         img = img.resize((300, 300))
@@ -27,48 +36,28 @@ class LocalDataset(Dataset):
         rawBytes.seek(0)        # return to the start of the file
         img = base64.b64encode(rawBytes.read())
         file_ext = filename[filename.find('.')+1:]
-        return 'data:image/'+file_ext+';base64,'+img.decode("utf-8"), self.uri #.split('/')[-1]
-
-    @staticmethod
-    def move_dir(source, destination):
-        '''
-        Args:
-            source, str:          full path of source directory
-            destination, str:     full path of destination directory 
-        '''
-        dir_path, list_dirs, filenames = next(os.walk(source))
-        original_dir_name = dir_path.split('/')[-1]
-        destination = destination + '/' + original_dir_name
-        pathlib.Path(destination).mkdir(parents=True, exist_ok=True)
-        for filename in filenames:
-            file_source = dir_path + '/' + filename  
-            LocalDataset._move_a_file(file_source, destination)
-        for dirname in list_dirs:
-            dir_source = dir_path + '/' + dirname
-            LocalDataset.move_dir(dir_source, destination)
-        pass
-    
-    @staticmethod
-    def _move_a_file(source, destination):
-        '''
-        Args:
-            source, str:          full path of a file from source directory
-            destination, str:     full path of destination directory 
-        '''
-        pathlib.Path(destination).mkdir(parents=True, exist_ok=True)
-        filename = source.split('/')[-1]
-        new_destination = destination + '/' + filename
-        os.rename(source, new_destination)
-        pass
+        return 'data:image/'+file_ext+';base64,'+img.decode("utf-8"), self.uri
     
     @staticmethod
     def filepaths_from_directory(directory, formats=FORMATS, sort=True):
-        if type(formats) == str:
+        '''
+        Retrieve a list of filepaths from a given directory
+        Args:
+            directory:      Directory from which datapaths will be retrieved according to formats
+            formats:        List of file formats/extensions of interest, defaults to FORMATS
+            sort:           Sort output list of filepaths, defaults to True
+        Returns:
+            paths:          List of filepaths in directory
+        '''
+        if type(formats) == str:    # If a single format was selected, adapt to list
             formats = [formats]
+        # Find paths that match the format of interest
         paths = list(reduce(lambda list1, list2: list1 + list2, \
                             (glob.glob(str(directory)+'/'+t, recursive=True) for t in formats)))
+        # Find paths that match the not allowed file/directory formats
         not_allowed_paths = list(reduce(lambda list1, list2: list1 + list2, \
                             (glob.glob(str(directory)+'/'+t, recursive=True) for t in NOT_ALLOWED_FORMATS)))
+        # Remove not allowed filepaths from filepaths of interest
         paths = list(set(paths) - set(not_allowed_paths))
         if sort:
             paths.sort()

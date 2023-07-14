@@ -8,10 +8,19 @@ from file_manager.dataset.dataset import Dataset
 
 class TiledDataset(Dataset):
     def __init__(self, uri, type='tiled', tags=[]):
+        '''
+        Definition of a tiled data set
+        '''
         super().__init__(uri, type, tags)
         pass
 
     def read_data(self):
+        '''
+        Read data set
+        Returns:
+            Base64 image
+            Dataset URI
+        '''
         rawBytes = io.BytesIO()
         tiled_data = from_uri(self.uri)
         img = tiled_data.export(rawBytes, format='jpeg')
@@ -21,6 +30,18 @@ class TiledDataset(Dataset):
 
     @staticmethod
     def browse_data(tiled_uri, browse_format, tiled_uris=[], tiled_client=None):
+        '''
+        Retrieve a list of nodes from tiled URI
+        Args:
+            tiled_uri:          Tiled URI from which data should be retrieved
+            browse_format:      List of file formats/extensions of interest, defaults to FORMATS
+            tiled_uris:         List of current tiled URIs, which is used when the method is run
+                                recursively, defaults to []
+            tiled_client:       Current tiled client, which is used when the method is run
+                                recursively, defaults to None
+        Returns:
+            tiled_uris:         List of tiled URIs found in tiled client
+        '''
         if not tiled_client:
             tiled_client = from_uri(tiled_uri)
         if isinstance(tiled_client, Node):
@@ -28,6 +49,7 @@ class TiledDataset(Dataset):
             for node in nodes:
                 mod_tiled_uri = TiledDataset.update_tiled_uri(tiled_uri, node)
                 if browse_format != '**/' and isinstance(tiled_client[node], Node):
+                    # Recursively browse data if a node is encounteres
                     TiledDataset.browse_data(mod_tiled_uri, browse_format, tiled_uris,
                                             tiled_client=tiled_client[node])
                 else:
@@ -38,7 +60,12 @@ class TiledDataset(Dataset):
     
     @staticmethod
     def update_tiled_uri(tiled_uri, node):
+        '''
+        Update tiled URI to reflect nodes
+        '''
         if '/api/v1/node/metadata' in tiled_uri:
             return f'{tiled_uri}/{node}'
+        elif tiled_uri[-1] == '/':
+            return f'{tiled_uri}api/v1/node/metadata/{node}'
         else:
             return f'{tiled_uri}/api/v1/node/metadata/{node}'

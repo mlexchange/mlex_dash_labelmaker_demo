@@ -146,12 +146,12 @@ app.clientside_callback(
 
 @app.callback(
     Output("modal-un-label", "is_open"),
-    Output("confirm-update-data", "data"),
+    Output({'base_id': 'file-manager', 'name': "confirm-update-data"}, "data"),
 
     Input("un-label-all", "n_clicks"),
     Input("confirm-un-label-all", "n_clicks"),
-    Input("import-dir", "n_clicks"),
-    Input("clear-data", "n_clicks"),
+    Input({'base_id': 'file-manager', 'name': "import-dir"}, "n_clicks"),
+    Input({'base_id': 'file-manager', 'name': "clear-data"}, "n_clicks"),
 
     State("labels-dict", "data"),
 )
@@ -310,21 +310,21 @@ def display_index(exit_similar_images, find_similar_images, labels_dict, button_
     Input('thumbnail-slider', 'value'),
     Input('prev-page', 'n_clicks'),
     Input('next-page', 'n_clicks'),
-    Input('tiled-switch', 'on'),
+    # Input({'base_id': 'file-manager', 'name': 'tiled-switch'}, 'on'),
     Input('mlcoach-collapse', 'is_open'),
     Input('mlcoach-model-list', 'value'),
     Input('labels-dict', 'data'),
 
-    State('docker-file-paths','data'),
+    State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
     State('find-similar-unsupervised', 'n_clicks'),
     State('current-page', 'data'),
-    State('import-dir', 'n_clicks'),
+    # State('import-dir', 'n_clicks'),
     State('tab-group', 'value'),
     State('previous-tab', 'data')],
     prevent_initial_call=True)
 def update_output(image_order, thumbnail_slider_value, button_prev_page, button_next_page, 
-                  tiled_on, ml_coach_is_open, mlcoach_model, labels_dict, file_paths, \
-                  find_similar_images, current_page, import_n_clicks, \
+                  ml_coach_is_open, mlcoach_model, labels_dict, file_paths, \
+                  find_similar_images, current_page, #import_n_clicks, \
                   tab_selection, previous_tab):
     '''
     This callback displays images in the front-end
@@ -486,7 +486,7 @@ def deselect(label_button_trigger, unlabel_n_clicks, unlabel_all, thumb_clicked)
     Input({'type': 'double-click-entry', 'index': ALL}, 'n_events'),
 
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
-    State('docker-file-paths','data'),
+    State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
     prevent_initial_call=True
 )
 def full_screen_thumbnail(double_click, thumbnail_name_children, file_paths):
@@ -610,7 +610,7 @@ def update_trained_model_list(tab_value, mlcoach_refresh_n_clicks, data_clinic_r
     Input('modify-list', 'n_clicks'),
     Input({'type': 'delete-label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input('color-cycle', 'data'),
-    Input('docker-file-paths', 'data'),
+    Input({'base_id': 'file-manager', 'name': 'docker-file-paths'}, 'data'),
 
     State('add-label-name', 'value'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
@@ -670,7 +670,7 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
     '''
     changed_id = dash.callback_context.triggered[-1]['prop_id']
     labels = Labels(**labels_dict)
-    if changed_id == 'docker-file-paths.data':
+    if 'docker-file-paths' in changed_id:
         data_project = DataProject()
         data_project.init_from_dict(docker_file_paths)
         filenames = [data_set.uri for data_set in data_project.data]
@@ -731,7 +731,7 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
     Input('button-save-splash', 'n_clicks'),
     Input('close-storage-modal', 'n_clicks'),
 
-    State('docker-file-paths','data'),
+    State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
     State('labels-dict', 'data'),
     State('import-dir', 'n_clicks'),
     prevent_initial_call=True
