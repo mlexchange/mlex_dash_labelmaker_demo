@@ -21,15 +21,17 @@ class LocalDataset(Dataset):
         super().__init__(uri, type, tags)
         pass
 
-    def read_data(self):
+    def read_data(self, export='base64'):
         '''
         Read data set
         Returns:
-            Base64 image
+            Base64/PIL image
             Dataset URI
         '''
         filename = self.uri
         img = Image.open(filename)
+        if export == 'pillow':
+            return img, self.uri
         img = img.resize((300, 300))
         rawBytes = io.BytesIO()
         img.save(rawBytes, "JPEG")

@@ -11,18 +11,21 @@ from file_manager.data_project import DataProject
 
 
 class FileManager():
-    def __init__(self, data_folder_root, upload_folder_root, max_file_size=60000):
+    def __init__(self, data_folder_root, upload_folder_root, splash_uri='http://splash:80/api/v0', 
+                 max_file_size=60000):
         '''
         FileManager creates a dash file explorer that supports: (1) local file reading, and (2)
         data access through Tiled
         Args:
             data_folder_root:       Root folder to data directory for local loading
             upload_folder_root:     Root folder to upload directory
+            splash_uri:             URI to splash-ml service
             max_file_size:          Maximum file size for uploaded data, defaults to 60000
         '''
         self.data_folder_root = data_folder_root
         self.upload_folder_root = upload_folder_root
         self.max_file_size = max_file_size
+        self.splash_uri = splash_uri
         # Definition of the dash components for file manager
         self.file_explorer = html.Div(
             [
@@ -171,9 +174,7 @@ class FileManager():
                                                     tiled_uri = tiled_uri,
                                                     dir_path=self.data_folder_root)
         except Exception as e:
-            # Open warning modal indicating that the connection to tiled failed
-            if 'Invalid type for url' in str(e) or 'Request URL is missing an' in str(e):
-                return dash.no_update, dash.no_update, dash.no_update, True, False
+            return dash.no_update, dash.no_update, dash.no_update, True, False
         if bool(rows) and 'tiled-switch' not in changed_id:
             for row in rows:
                 selected_row = files_table[row]['uri']
@@ -185,6 +186,8 @@ class FileManager():
             # should not be updated until a node (row) has been selected and imported
             selected_data = dash.no_update
         else:
+            # if len(data_project.data)>0:
+            #     data_project.add_to_splash(self.splash_uri)
             selected_data = data_project.get_dict()
         browse_data = DataProject(data=browse_data).get_table_dict()
         return browse_data, dash.no_update, selected_data, dash.no_update, dash.no_update

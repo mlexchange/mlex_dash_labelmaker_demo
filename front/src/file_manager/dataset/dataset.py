@@ -12,3 +12,16 @@ class Dataset:
         self.type = type
         self.tags = tags
         pass
+    
+    def _add_event_id(self, event_uid):
+        '''
+        Add tagging event to the tags in data set
+        Args:
+            event_uid:      Tagging event uid assigned in splash-ml
+        '''
+        if len(self.tags)==0:
+            self.tags = [{'name': 'labelmaker', 'event_id': event_uid}]
+        else:
+            for cont in range(len(self.tags)):
+                self.tags[cont]['event_id'] = event_uid
+        pass

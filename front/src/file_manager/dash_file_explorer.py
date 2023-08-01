@@ -25,7 +25,7 @@ def create_file_explorer(max_file_size):
                                           pause_button=True
                                         )],
                                 style={'textAlign': 'center',
-                                       'width': '770px',
+                                       'width': '100%',
                                        'padding': '5px',
                                        'display': 'inline-block',
                                        'margin-bottom': '10px',

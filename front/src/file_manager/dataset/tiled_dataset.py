@@ -1,4 +1,5 @@
 import base64, io
+from PIL import Image
 
 from tiled.client import from_uri
 from tiled.client.node import Node
@@ -14,19 +15,21 @@ class TiledDataset(Dataset):
         super().__init__(uri, type, tags)
         pass
 
-    def read_data(self):
+    def read_data(self, export='base64'):
         '''
         Read data set
         Returns:
-            Base64 image
+            Base64/PIL image
             Dataset URI
         '''
         rawBytes = io.BytesIO()
         tiled_data = from_uri(self.uri)
         img = tiled_data.export(rawBytes, format='jpeg')
-        rawBytes.seek(0)                    # return to the start of the file
+        rawBytes.seek(0)        # return to the start of the file
+        if export=='pillow':
+            return Image.open(rawBytes), self.uri
         img = base64.b64encode(rawBytes.read())
-        return f'data:image/jpeg;base64,{img.decode("utf-8")}', self.uri #.split('/')[-1]
+        return f'data:image/jpeg;base64,{img.decode("utf-8")}', self.uri
 
     @staticmethod
     def browse_data(tiled_uri, browse_format, tiled_uris=[], tiled_client=None):
@@ -63,9 +66,9 @@ class TiledDataset(Dataset):
         '''
         Update tiled URI to reflect nodes
         '''
-        if '/api/v1/node/metadata' in tiled_uri:
+        if '/api/v1/metadata' in tiled_uri:
             return f'{tiled_uri}/{node}'
         elif tiled_uri[-1] == '/':
-            return f'{tiled_uri}api/v1/node/metadata/{node}'
+            return f'{tiled_uri}api/v1/metadata/{node}'
         else:
-            return f'{tiled_uri}/api/v1/node/metadata/{node}'
+            return f'{tiled_uri}/api/v1/metadata/{node}'
