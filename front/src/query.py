@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from labels import Labels
-# import pycbir
+from scipy.spatial.distance import cosine
 
 
 logging.basicConfig(encoding='utf-8', level=logging.INFO)
@@ -31,7 +31,12 @@ class Query(Labels):
         return indx
     
     def similarity_search(self, model_path, filename):
-        df_clinic = pd.read_parquet(model_path)
-        row_dataframe = df_clinic.loc[[filename]]
-        image_order = [int(order) for order in row_dataframe.values.tolist()[0]]
-        return image_order
+        unlabeled_indx = self.hide_labeled()            # Get list of indexes of unlabeled images
+        df_clinic = pd.read_parquet(model_path, engine='pyarrow') 
+        f_vec = np.array(df_clinic)[unlabeled_indx,:]   # Get feature vectors of unlabeled images
+        f_vec_int = np.array(df_clinic.loc[filename])   # Identify feature vector of interest
+        num_data_sets = f_vec.shape[0]
+        dist = np.zeros(num_data_sets)
+        for ii in range(num_data_sets):                 # Calculate distance vector
+            dist[ii] = cosine(f_vec_int, f_vec[ii])
+        return np.array(unlabeled_indx)[np.argsort(dist)]

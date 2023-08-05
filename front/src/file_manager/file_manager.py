@@ -4,7 +4,7 @@ import pathlib, zipfile
 import dash
 from dash import html, Input, Output, State
 import dash_bootstrap_components as dbc
-
+from threading import Thread
 
 from file_manager.dash_file_explorer import create_file_explorer
 from file_manager.data_project import DataProject
@@ -80,7 +80,8 @@ class FileManager():
              Output({'base_id': 'file-manager', 'name': 'files-table'}, 'selected_rows'),
              Output({'base_id': 'file-manager', 'name': 'docker-file-paths'}, 'data'),
              Output({'base_id': 'file-manager', 'name': 'tiled-error'}, 'is_open'),
-             Output({'base_id': 'file-manager', 'name': 'tiled-switch'}, 'on')],
+             Output({'base_id': 'file-manager', 'name': 'tiled-switch'}, 'on'),
+             Output({'base_id': 'file-manager', 'name': 'project-id'}, 'data')],
             [Input({'base_id': 'file-manager', 'name': 'browse-format'}, 'value'),
              Input({'base_id': 'file-manager', 'name': 'import-dir'}, 'n_clicks'),
              Input({'base_id': 'file-manager', 'name': 'upload-data'}, 'data'),
@@ -155,26 +156,29 @@ class FileManager():
             selected_files:         List of selected data sets for later analysis
             tiled_warning_modal:    Open warning indicating that the connection to tiled failed
             tiled_on:               If connection to tiled fails, tiled_on is defaulted to False
+            project_id:            Project UID to track the data set of interest
         '''
         changed_id = dash.callback_context.triggered[0]['prop_id']
+        project_id = dash.no_update
         # prevent update according to update_data flag
         if 'import-dir' in changed_id and not update_data:
-            return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update   
+            return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, \
+                project_id  
         elif 'clear-data' in changed_id and not update_data:
-            return dash.no_update, [], dash.no_update, dash.no_update, dash.no_update
+            return dash.no_update, [], dash.no_update, dash.no_update, dash.no_update, project_id
         elif 'clear-data' in changed_id:
-            return dash.no_update, dash.no_update, [], dash.no_update, dash.no_update
+            return dash.no_update, dash.no_update, [], dash.no_update, dash.no_update, project_id
         data_project = DataProject(data=[])
         if tiled_on:                    # Definition of the data type
             data_type = 'tiled'
         else:
-            data_type = 'local'
+            data_type = 'file'
         try:
             browse_data = data_project.browse_data(data_type, browse_format, \
                                                     tiled_uri = tiled_uri,
                                                     dir_path=self.data_folder_root)
         except Exception as e:
-            return dash.no_update, dash.no_update, dash.no_update, True, False
+            return dash.no_update, dash.no_update, dash.no_update, True, False, project_id
         if bool(rows) and 'tiled-switch' not in changed_id:
             for row in rows:
                 selected_row = files_table[row]['uri']
@@ -186,8 +190,12 @@ class FileManager():
             # should not be updated until a node (row) has been selected and imported
             selected_data = dash.no_update
         else:
-            # if len(data_project.data)>0:
-            #     data_project.add_to_splash(self.splash_uri)
+            if len(data_project.data)>0:
+                # Thread(target=data_project.add_to_splash, args=(self.splash_uri, )).start()
+                # data_project.add_to_splash(self.splash_uri)
+                data_project.project = str(123)
+                project_id = data_project.project
             selected_data = data_project.get_dict()
         browse_data = DataProject(data=browse_data).get_table_dict()
-        return browse_data, dash.no_update, selected_data, dash.no_update, dash.no_update
+        print(f'The project ID is {project_id}')
+        return browse_data, dash.no_update, selected_data, dash.no_update, dash.no_update, project_id

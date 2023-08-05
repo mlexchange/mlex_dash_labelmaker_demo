@@ -162,6 +162,8 @@ def create_file_explorer(max_file_size):
                                               data=[]),
                                     dcc.Store(id={'base_id': 'file-manager', 'name': 'upload-data'},
                                               data=False),
+                                    dcc.Store(id={'base_id': 'file-manager', 'name': 'project-id'},
+                                              data=''),
                                     ]
                                 )
                             ]),

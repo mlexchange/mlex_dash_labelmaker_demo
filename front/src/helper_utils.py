@@ -226,26 +226,27 @@ def get_trained_models_list(user, tab):
         alt_filename = '/results.csv'
     else:
         tab = 'data_clinic'
-        filename = '/dist_matrix.parquet'
+        filename = '/f_vectors.parquet'
         alt_filename = '/dist_matrix.csv'
     model_list = requests.get(f'http://job-service:8080/api/v0/jobs?&user={user}&mlex_app={tab}').json()
     trained_models = []
     for model in model_list:
         if model['job_kwargs']['kwargs']['job_type'].split(' ')[0]=='prediction_model':
-            if os.path.exists(model['job_kwargs']['cmd'].split(' ')[4]+filename):  # check if the file exists
+            print(model['job_kwargs']['cmd'].split(' ')[7]+filename)
+            if os.path.exists(model['job_kwargs']['cmd'].split(' ')[7]+filename):  # check if the file exists
                 if model['description']:
                     trained_models.append({'label': model['description'],
-                                           'value': model['job_kwargs']['cmd'].split(' ')[4]+filename})
+                                           'value': model['job_kwargs']['cmd'].split(' ')[7]+filename})
                 else:
                     trained_models.append({'label': model['job_kwargs']['kwargs']['job_type'],
-                                           'value': model['job_kwargs']['cmd'].split(' ')[4]+filename})
-            elif os.path.exists(model['job_kwargs']['cmd'].split(' ')[4]+alt_filename):  # check if the file exists
+                                           'value': model['job_kwargs']['cmd'].split(' ')[7]+filename})
+            elif os.path.exists(model['job_kwargs']['cmd'].split(' ')[8]+alt_filename):  # check if the file exists
                 if model['description']:
                     trained_models.append({'label': model['description'],
-                                           'value': model['job_kwargs']['cmd'].split(' ')[4]+alt_filename})
+                                           'value': model['job_kwargs']['cmd'].split(' ')[7]+alt_filename})
                 else:
                     trained_models.append({'label': model['job_kwargs']['kwargs']['job_type'],
-                                           'value': model['job_kwargs']['cmd'].split(' ')[4]+alt_filename})
+                                           'value': model['job_kwargs']['cmd'].split(' ')[7]+alt_filename})
     trained_models.reverse()
     return trained_models
 
@@ -259,14 +260,18 @@ def parse_full_screen_content(contents, filename):
     Returns:
         reactive_component
     '''
-    img_card = [html.A(id='full-screen-image',
-                       n_clicks=0,
-                       children=dbc.CardImg(id='full-screen-src',
-                                            src=contents,
-                                            bottom=False)),
-                dbc.CardBody([html.P(id='full-screen-name', 
-                                     children=filename, 
-                                     style={'font-size': '12px'})
-                                     ])
-                ]
+    img_card = dbc.Card(
+        id='full-screen-image',
+        children=[
+            dbc.CardImg(id='full-screen-src',
+                        src=contents,
+                        top=True,
+                        className = 'align-self-center',
+                        style={'width': '80vmin', 
+                                'aspect-ratio': '1/1'}),
+            dbc.CardBody([html.P(filename, 
+                                    className="card-text")
+                        ])
+        ]
+    )
     return img_card

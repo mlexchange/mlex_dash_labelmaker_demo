@@ -214,9 +214,10 @@ class Labels:
                 filename = im_bytes.split("/")[-1]
                 f_name = filename.split('.')[-2]
                 f_ext  = filename.split('.')[-1]
+                filename = Path(filename)
                 i = 0
                 while filename.exists():                                # check duplicate                                      
-                    filename = Path(f'{label_dir}{f_name}_{i}.{f_ext}') # filename and save under 
+                    filename = Path(f'{label_dir}/{f_name}_{i}.{f_ext}') # filename and save under 
                     i += 1                                              # different name if needed 
                 im.save(filename)
         pass
@@ -231,7 +232,7 @@ class Labels:
                                 many images are in the data set
         '''
         num_imgs_per_label = list(self.num_imgs_per_label.values())
-        progress_values = list(100*np.array(num_imgs_per_label) / np.sum(num_imgs_per_label))
+        progress_values = list(100*np.array(num_imgs_per_label) / max(np.sum(num_imgs_per_label), 1))
         progress_labels = list(map(str, num_imgs_per_label))
         total_num_labeled = f'Labeled {np.sum(num_imgs_per_label)} out of {len(self.labels_dict)}'
         return progress_values, progress_labels, total_num_labeled

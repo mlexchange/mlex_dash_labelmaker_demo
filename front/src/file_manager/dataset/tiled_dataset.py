@@ -8,11 +8,11 @@ from file_manager.dataset.dataset import Dataset
 
 
 class TiledDataset(Dataset):
-    def __init__(self, uri, type='tiled', tags=[]):
+    def __init__(self, uri, type='tiled', tags=[], project=None, **kwargs):
         '''
         Definition of a tiled data set
         '''
-        super().__init__(uri, type, tags)
+        super().__init__(uri, type, tags, project)
         pass
 
     def read_data(self, export='base64'):
