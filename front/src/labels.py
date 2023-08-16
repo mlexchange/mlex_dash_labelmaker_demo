@@ -1,3 +1,4 @@
+from datetime import datetime
 import itertools
 import logging
 from pathlib import Path
@@ -124,74 +125,82 @@ class Labels:
         self.assign_labels(label, filenames_to_label)
         pass
 
-    def _get_splash_dataset(self):
+    def _get_splash_dataset(self, project_id):
         '''
         Retrieve the current data set of interest from splash-ml with their labels
+        Args:
+            project_id:     Data project_id
         '''
         uri_list = list(self.labels_dict.keys())
         url = f'{SPLASH_CLIENT}/datasets/search'
         params = {"page[offset]": 0, "page[limit]": len(uri_list)}
-        data = {"uris": uri_list}
+        data = {"uris": uri_list, "project": project_id}
         status = requests.post(url, params=params, json=data)
         if status.status_code != 200:
             logging.error(f'Data set was not retrieved from splash-ml due to {status.status_code}: \
                           {status.json()}')
         return status.json()
 
-    def load_splash_labels(self):
+    def load_splash_labels(self, project_id, event_id):
         '''
         Query labels from splash-ml
+        Args:
+            event_id:      [str] Event id
         '''
-        datasets = self._get_splash_dataset()
-        self.labels_dict = {}       # resets dict and label before loading data
-        self.labels_list = []
+        datasets = self._get_splash_dataset(project_id)
+        self.init_labels()          # resets dict and label before loading data
         for dataset in datasets:
             for tag in dataset['tags']:
-                if tag['name'] == 'labelmaker':
-                    label = tag['locator']['path']
+                if tag["event_id"] == event_id:
+                    label = tag['name']
                     if label not in self.labels_list:
                         self.labels_list.append(label)
-                    self.assign_labels(label, dataset['uri'])
+                    self.assign_labels(label, [dataset['uri']])
         pass
 
-    def save_to_splash(self):
+    def save_to_splash(self, project_id, tagger_id):
         '''
         Save labels to splash-ml.
+        Args:
+            project_id:     [str] Data project id
+            tagger_id:      [str] Tagger id
         Returns:
             Request status
         '''
-        datasets = self._get_splash_dataset()
+        # Post new tagging event
+        event_status = requests.post(f'{SPLASH_CLIENT}/events', 
+                               json={"tagger_id": tagger_id, 
+                                     "run_time": str(datetime.utcnow())})
+        new_event_id = event_status.json()["uid"]
+        datasets = self._get_splash_dataset(project_id)
         uri_list = list(map(lambda d: d['uri'], datasets))
         status = ''
         for filename, label in zip(self.labels_dict.keys(), self.labels_dict.values()):
-            label = label[0]                    # 1 label per image
-            if filename in uri_list:            # check if the dataset already exists in splash-ml
+            if len(label)>0:
+                label = label[0]                      # 1 label per image
+                # if filename in uri_list:            # check if the dataset already exists in splash-ml
                 indx = uri_list.index(filename)
                 dataset_uid = datasets[indx]['uid']
-                tag2check = datasets[indx]['tags'][0]['locator']['path']
-                if tag2check != label:          # if the tag has changed, patch the dataset
-                    tag = {'name': 'labelmaker',
-                           'locator': {'spec': 'label', 
-                                       'path': str(label)}}
-                    data = {'add_tags': [tag], 
-                            'remove_tags': [datasets[indx]['tags'][0]['uid']]}
-                    status_code = requests.patch(f'{SPLASH_CLIENT}/datasets/{dataset_uid}/tags', \
-                                                 json=data).status_code
-                else:                           # if it doesn't exist in splash-ml, post it
-                    dataset = {'type': 'file',
-                                'uri': filename,
-                                'tags': [{'name': 'labelmaker',
-                                        'locator': {'spec': 'label',
-                                                    'path': label}
-                                        }]
-                                }
-                    response = requests.post(f'{SPLASH_CLIENT}/datasets/', json=dataset)
-                    status_code = response.status_code
-                if status_code != 200:
+                tag = {'name': str(label),
+                        'event_id': new_event_id}
+                data = {'add_tags': [tag]}
+                response = requests.patch(f'{SPLASH_CLIENT}/datasets/{dataset_uid}/tags', \
+                                            json=data)
+                # else:                           # if it doesn't exist in splash-ml, post it
+                #     dataset = {'type': 'file',
+                #                 'uri': filename,
+                #                 'tags': [{'name': 'labelmaker',
+                #                         'locator': {'spec': 'label',
+                #                                     'path': label}
+                #                         }]
+                #                 }
+                #     response = requests.post(f'{SPLASH_CLIENT}/datasets/', json=dataset)
+                #     status_code = response.status_code
+                if response.status_code != 200:
                     logging.error(f'Filename: {filename} with label {label} failed with \
-                                           status {status_code}: {response.json()}.')
+                                            status {response.status_code}: {response.json()}.')
                     status = status.append(f'Filename: {filename} with label {label} failed with \
-                                           status {status_code}. ')
+                                            status {response.status_code}. ')
         return status
     
     def save_to_directory(self, save_dir):
