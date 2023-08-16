@@ -36,38 +36,13 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
 
 
 @callback(
-    Output('color-cycle', 'data'),
-
-    Input('submit-color-button', 'n_clicks'),
-
-    State({'type': 'color-label-button', 'index': ALL}, 'n_clicks_timestamp'),
-    State('label-color-picker', 'value'),
-    State('color-cycle', 'data'),
-    prevent_initial_call=True
-)
-def change_label_color(submit_n_clicks, color_label_t_clicks, new_color, color_cycle):
-    '''
-    This callback updates color labels according to user's selection
-    Args:
-        submit_n_clicks:            Button "submit label color" was clicked
-        color_label_t_clicks:       Timestamps of clicks on all the label color buttons
-        new_color:                  User defined label color from palette
-        color_cycle:                Current color cycle definition
-    Returns:
-        New color cycle definition
-    '''
-    mod_indx = color_label_t_clicks.index(max(color_label_t_clicks))
-    color_cycle[mod_indx] = new_color['hex']
-    return color_cycle
-
-
-@callback(
     Output('label-buttons', 'children'),
     Output('mlcoach-label-name', 'options'),
     Output('labels-dict', 'data'),
     Output({'type': 'label-percentage', 'index': ALL}, 'value'),
     Output({'type': 'label-percentage', 'index': ALL}, 'label'),
     Output('total_labeled', 'children'),
+    Output('color-cycle', 'data'),
 
     Input({'type': 'label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input('un-label', 'n_clicks'),
@@ -77,8 +52,8 @@ def change_label_color(submit_n_clicks, color_label_t_clicks, new_color, color_c
     Input('confirm-load-splash', 'n_clicks'),
     Input('modify-list', 'n_clicks'),
     Input({'type': 'delete-label-button', 'index': ALL}, 'n_clicks_timestamp'),
-    Input('color-cycle', 'data'),
     Input({'base_id': 'file-manager', 'name': 'docker-file-paths'}, 'data'),
+    Input('submit-color-button', 'n_clicks'),
 
     State('add-label-name', 'value'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
@@ -89,15 +64,18 @@ def change_label_color(submit_n_clicks, color_label_t_clicks, new_color, color_c
     State({'type': 'label-button', 'index': ALL}, 'children'),
     State({'base_id': 'file-manager', 'name': 'project-id'}, 'data'),
     State('event-id', 'value'),
+    State({'type': 'color-label-button', 'index': ALL}, 'n_clicks_timestamp'),
+    State('label-color-picker', 'value'),
+    State('color-cycle', 'data'),
     prevent_initial_call=True
 )
 def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all_button, \
-                              mlcoach_label_button, mlcoach_model, 
-                              load_splash_n_clicks, \
-                              modify_list_n_clicks, del_label_n_clicks, color_cycle, docker_file_paths, \
-                              add_label_name, \
-                              thumbnail_image_select_value, thumbnail_name_children, labels_dict, \
-                              threshold, mlcoach_label, label_button_children, project_id, event_id):
+                              mlcoach_label_button, mlcoach_model, load_splash_n_clicks, \
+                              modify_list_n_clicks, del_label_n_clicks, docker_file_paths, \
+                              submit_color_n_clicks, add_label_name, thumbnail_image_select_value, \
+                              thumbnail_name_children, labels_dict, threshold, mlcoach_label, \
+                              label_button_children, project_id, event_id, color_label_t_clicks, \
+                              new_color, color_cycle):
     '''
     This callback updates the dictionary of labeled images when:
         - A new image is labeled
@@ -117,11 +95,10 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
         mlcoach_model:                  Selected MLCoach model
         load_splash_n_clicks:           Triggers loading labeled datasets with splash-ml
         modify_list_n_clicks:           Button to add a new label (tag name)
-        mlcoach_refresh_n_clicks:       Button to refresh the list of mlcoach trained models
-        data_clinic_refresh_n_clicks:   Button to refresh the list of data clinic trained models
         del_label_n_clicks:             List of n_clicks to delete a label button  
-        color_cycle:                    Color cycle per label
-        docker_file_paths:              Dictionary [{'file_path': 'path/to/dataset', 'file_type': dir/tiled}]
+        docker_file_paths:              Dictionary [{'file_path': 'path/to/dataset', 
+                                                     'file_type': dir/tiled}]
+        submit_color_n_clicks:          Button "submit label color" was clicked
         add_label_name:                 Label to add (tag name)
         thumbnail_image_select_value:   Selected thumbnail image (n_clicks)
         thumbnail_name_children:        Filename of the selected thumbnail image
@@ -131,6 +108,10 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
         mlcoach_label:                  Selected label from trained model in mlcoach
         label_button_children:          List of label text in label buttons
         project_id:                     Data project id
+        event_id:                       Tagging event id for version control of tags
+        color_label_t_clicks:           Timestamps of clicks on all the label color buttons
+        new_color:                      User defined label color from palette
+        color_cycle:                    Color cycle per label
     Returns:
         label_buttons:                  Reactive component with the updated list of labels
         mlcoach_label:                  Selected label from trained model in mlcoach
@@ -140,6 +121,7 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
                                         labeled per class/label
         label_perc_label:               Same as above, but string
         total_labeled:                  Message to indicate how many images have been labeled
+        color_cycle:                    Color cycle per label
     '''
     changed_id = dash.callback_context.triggered[-1]['prop_id']
     labels = Labels(**labels_dict)
@@ -149,13 +131,19 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
         filenames = [data_set.uri for data_set in data_project.data]
         labels.init_labels(filenames, label_button_children)
     mlcoach_options = dash.no_update
-    if changed_id in ['delete-label-button', 'modify-list', 'color-cycle']:
+    if changed_id in ['modify-list.n_clicks', 'color-cycle.data', 'submit-color-button.n_clicks'] \
+        or 'delete-label-button' in changed_id:
         label_perc_value = [dash.no_update]*len(labels.labels_list)
         label_perc_label = [dash.no_update]*len(labels.labels_list)
         total_labeled = dash.no_update
-        if changed_id == 'delete-label-button.n_clicks':        # A label has been deleted
-            label_to_delete = labels.labels_list[np.argmax(del_label_n_clicks)]
+        if changed_id == 'submit-color-button.n_clicks':
+            mod_indx = color_label_t_clicks.index(max(color_label_t_clicks))
+            color_cycle[mod_indx] = new_color['hex']
+        elif 'delete-label-button' in changed_id:        # A label has been deleted
+            indx_label_to_delete = np.argmax(del_label_n_clicks)
+            label_to_delete = labels.labels_list[indx_label_to_delete]
             labels.update_labels_list(remove_label=label_to_delete)
+            color_cycle.pop(indx_label_to_delete)
         elif changed_id == 'modify-list.n_clicks':              # New label has been added
             labels.update_labels_list(add_label=add_label_name)
         elif changed_id == 'mlcoach-model-list.value':          # Update labels according to mlcoach
@@ -193,7 +181,7 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
                                        thumbnail_name_children) 
         label_perc_value, label_perc_label, total_labeled = labels.get_labeling_progress()   
     return label_comp, mlcoach_options, vars(labels), label_perc_value, label_perc_label, \
-           total_labeled
+           total_labeled, color_cycle
 
 
 @callback(
@@ -212,11 +200,9 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
     State('tagger-id', 'value'),
     prevent_initial_call=True
 )
-def save_labels(button_save_disk_n_clicks, 
-                button_save_splash_n_clicks, 
-                button_confirm_splash_n_clicks, 
-                close_modal_n_clicks, \
-                file_paths, project_id, labels_dict, tagger_id):
+def save_labels(button_save_disk_n_clicks, button_save_splash_n_clicks, \
+                button_confirm_splash_n_clicks, close_modal_n_clicks, file_paths, project_id, \
+                labels_dict, tagger_id):
     '''
     This callback saves the labels to disk or to splash-ml
     Args:

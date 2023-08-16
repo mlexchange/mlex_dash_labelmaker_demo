@@ -63,7 +63,7 @@ class Labels:
             self.labels_list.append(add_label)
             self.num_imgs_per_label[add_label] = 0
         if remove_label is not None:
-            self.labels_list.pop(remove_label)
+            self.labels_list.remove(remove_label)
             self.labels_dict = {key: [val for val in values if val!=remove_label] \
                                 for key, values in self.labels_dict.items()}
             self.num_imgs_per_label.pop(remove_label)
