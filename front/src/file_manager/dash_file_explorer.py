@@ -150,23 +150,28 @@ def create_file_explorer(max_file_size):
                                             ],
                                         style_table={'height':'18rem', 'overflowY': 'auto',
                                                      'margin-top': '10px'}
-                                        ),
-                                    dcc.Store(id={'base_id': 'file-manager', 
-                                                  'name': 'confirm-update-data'}, 
-                                              data=True),
-                                    dcc.Store(id={'base_id': 'file-manager', 
-                                                  'name': 'confirm-clear-data'}, 
-                                              data=False),
-                                    dcc.Store(id={'base_id': 'file-manager', 
-                                                  'name': 'docker-file-paths'}, 
-                                              data=[]),
-                                    dcc.Store(id={'base_id': 'file-manager', 'name': 'upload-data'},
-                                              data=False),
-                                    dcc.Store(id={'base_id': 'file-manager', 'name': 'project-id'},
-                                              data=''),
-                                    ]
-                                )
-                            ]),
+                                        )
+                                ]
+                            ),
+                            ############################ CACHE VARS ################################
+                            html.Div([
+                                dcc.Store(id={'base_id': 'file-manager', 
+                                                'name': 'confirm-update-data'}, 
+                                            data=True),
+                                dcc.Store(id={'base_id': 'file-manager', 
+                                                'name': 'confirm-clear-data'}, 
+                                            data=False),
+                                dcc.Store(id={'base_id': 'file-manager', 
+                                                'name': 'docker-file-paths'}, 
+                                            data=[]),
+                                dcc.Store(id={'base_id': 'file-manager', 'name': 'upload-data'},
+                                            data=False),
+                                dcc.Store(id={'base_id': 'file-manager', 'name': 'project-id'},
+                                            data=''),
+                                
+                                ]
+                            )
+                        ]),
         ])
     ])
     return file_explorer

@@ -1,5 +1,5 @@
 import os
-import pathlib, zipfile
+import pathlib, pickle, zipfile
 
 import dash
 from dash import html, Input, Output, State
@@ -29,24 +29,38 @@ class FileManager():
         # Definition of the dash components for file manager
         self.file_explorer = html.Div(
             [
-                dbc.Button(
-                    'Toggle File Manager',
-                    id={'base_id': 'file-manager', 'name': 'collapse-button'},
-                    size='lg',
-                    className='m-2',
-                    color='secondary',
-                    outline=True,
-                    n_clicks=0,
-                ),
-                dbc.Button(
-                    'Clear Images',
-                    id={'base_id': 'file-manager', 'name': 'clear-data'},
-                    size='lg',
-                    className='m-2',
-                    color='secondary',
-                    outline=True,
-                    n_clicks=0,
-                ),
+                dbc.Row([
+                    dbc.Button(
+                            'Toggle File Manager',
+                            id={'base_id': 'file-manager', 'name': 'collapse-button'},
+                            size='lg',
+                            className='m-2',
+                            color='primary',
+                            n_clicks=0,
+                            style={'width': '30%'}
+                        ),
+                        dbc.Button(
+                            'Refresh Project',
+                            id={'base_id': 'file-manager', 'name': 'refresh-data'},
+                            size='lg',
+                            className='m-2',
+                            color='primary',
+                            n_clicks=0,
+                            style={'width': '30%'}
+                        ),
+                        dbc.Button(
+                            'Clear Images',
+                            id={'base_id': 'file-manager', 'name': 'clear-data'},
+                            size='lg',
+                            className='m-2',
+                            color='danger',
+                            n_clicks=0,
+                            style={'width': '30%'}
+                        ),
+                ], justify="center"),
+                # dbc.Alert(id={'base_id': 'file-manager', 'name': 'alert'},
+                #           dismissable=True,
+                #           is_open=False),
                 dbc.Collapse(
                     create_file_explorer(max_file_size),
                     id={'base_id': 'file-manager', 'name': 'collapse-explorer'},
@@ -84,6 +98,7 @@ class FileManager():
              Output({'base_id': 'file-manager', 'name': 'project-id'}, 'data')],
             [Input({'base_id': 'file-manager', 'name': 'browse-format'}, 'value'),
              Input({'base_id': 'file-manager', 'name': 'import-dir'}, 'n_clicks'),
+             Input({'base_id': 'file-manager', 'name': 'refresh-data'}, 'n_clicks'),
              Input({'base_id': 'file-manager', 'name': 'upload-data'}, 'data'),
              Input({'base_id': 'file-manager', 'name': 'confirm-update-data'}, 'data'),
              Input({'base_id': 'file-manager', 'name': 'clear-data'}, 'n_clicks'),
@@ -135,13 +150,14 @@ class FileManager():
                 os.remove(path_to_zip_file)
         return True
     
-    def _load_dataset(self, browse_format, import_n_clicks, uploaded_data, update_data, \
+    def _load_dataset(self, browse_format, import_n_clicks, refresh_data, uploaded_data, update_data, \
                       clear_data_n_clicks, tiled_on, rows, tiled_uri, files_table, import_format):
         '''
         This callback displays manages the actions of file manager
         Args:
             browse_format:          File extension to browse
             import_n_clicks:        Number of clicks on import button
+            refresh_data:           Number of clicks on refresh data button
             uploaded_data:          Flag that indicates if new data has been uploaded
             update_data:            Flag that indicates if the dataset can be updated
             clear_data_n_clicks:    Number of clicks on clear data button
@@ -156,19 +172,27 @@ class FileManager():
             selected_files:         List of selected data sets for later analysis
             tiled_warning_modal:    Open warning indicating that the connection to tiled failed
             tiled_on:               If connection to tiled fails, tiled_on is defaulted to False
-            project_id:            Project UID to track the data set of interest
+            project_id:             Project UID to track the data set of interest
         '''
         changed_id = dash.callback_context.triggered[0]['prop_id']
+        data_project = DataProject(data=[])
         project_id = dash.no_update
         # prevent update according to update_data flag
         if 'import-dir' in changed_id and not update_data:
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, \
-                project_id  
-        elif 'clear-data' in changed_id and not update_data:
+                project_id
+        elif changed_id in ['{"base_id":"file-manager","name":"clear-data"}.n_clicks', \
+                            '{"base_id":"file-manager","name":"refresh-data"}.n_clicks'] \
+                            and not update_data:
             return dash.no_update, [], dash.no_update, dash.no_update, dash.no_update, project_id
         elif 'clear-data' in changed_id:
             return dash.no_update, dash.no_update, [], dash.no_update, dash.no_update, project_id
-        data_project = DataProject(data=[])
+        elif 'refresh-data' in changed_id and os.path.exists(f'{self.data_folder_root}/.file_manager_vars.pkl'):
+            with open(f'{self.data_folder_root}/.file_manager_vars.pkl', 'rb') as file:
+                project_id = pickle.load(file)['project_id']
+            data_project.init_from_splash(f'{self.splash_uri}/datasets/search', project_id)
+            return dash.no_update, dash.no_update, data_project.get_dict(), dash.no_update, \
+                dash.no_update, project_id
         if tiled_on:                    # Definition of the data type
             data_type = 'tiled'
         else:
@@ -192,10 +216,12 @@ class FileManager():
         else:
             if len(data_project.data)>0:
                 # Thread(target=data_project.add_to_splash, args=(self.splash_uri, )).start()
-                # data_project.add_to_splash(self.splash_uri)
-                data_project.project = str(123)
+                data_project.add_to_splash(self.splash_uri)
                 project_id = data_project.project
+                with open(f'{self.data_folder_root}/.file_manager_vars.pkl', 'wb') as file:
+                    pickle.dump({'project_id': project_id}, file)
             selected_data = data_project.get_dict()
         browse_data = DataProject(data=browse_data).get_table_dict()
         print(f'The project ID is {project_id}')
-        return browse_data, dash.no_update, selected_data, dash.no_update, dash.no_update, project_id
+        return browse_data, dash.no_update, selected_data, dash.no_update, dash.no_update, \
+            project_id
