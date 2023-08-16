@@ -18,7 +18,10 @@ def label_method():
                     inputClassName="btn-check",
                     labelClassName="btn btn-outline-primary",
                     labelCheckedClassName="active",
-                    labelStyle={'font-size': '13px', 'width': '85px', 'margin':'1px', 'width': '100%'},
+                    labelStyle={'font-size': '13px', 
+                                'width': '85px', 
+                                'margin':'1px', 
+                                'width': '100%'},
                     options=[
                         {"label": "Manual", "value": "manual"},
                         {"label": "DataClinic", "value": "clinic"},
@@ -139,6 +142,30 @@ def label_method():
             ],
             id="data-clinic-collapse",
             is_open=False
+        ),
+        dbc.Button('Unlabel All', 
+                       id='un-label-all', 
+                       outline='True',
+                       color='danger', 
+                       size="sm", 
+                       style={'width': '100%', 'margin-bottom': '4px', 'margin-top': '4px'}),
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle("Warning")),
+            dbc.ModalBody(id="un-label-warning",
+                            children="Unsaved labels cannot be recovered after clearing data. Do \
+                                    you still want to proceed?"),
+            dbc.ModalFooter([
+                dbc.Button(
+                    "YES", id="confirm-un-label-all", 
+                    color='danger', 
+                    outline=False,
+                    className="ms-auto", 
+                    n_clicks=0),
+            ]),
+        ], id="modal-un-label",
+            is_open=False,
+            style = {'color': 'red'}
         )
     ])
+
     return label_method

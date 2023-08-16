@@ -21,29 +21,6 @@ def display_settings():
                        color='primary', 
                        size="sm", 
                        style={'width': '100%', 'margin-bottom': '4px'}),
-            dbc.Button('Unlabel All', 
-                       id='un-label-all', 
-                       outline='True',
-                       color='danger', 
-                       size="sm", 
-                       style={'width': '100%', 'margin-bottom': '4px'}),
-            dbc.Modal([
-                dbc.ModalHeader(dbc.ModalTitle("Warning")),
-                dbc.ModalBody(id="un-label-warning",
-                              children="Unsaved labels cannot be recovered after clearing data. Do \
-                                        you still want to proceed?"),
-                dbc.ModalFooter([
-                    dbc.Button(
-                        "YES", id="confirm-un-label-all", 
-                        color='danger', 
-                        outline=False,
-                        className="ms-auto", 
-                        n_clicks=0),
-                ]),
-            ], id="modal-un-label",
-               is_open=False,
-               style = {'color': 'red'}
-            )
         ]
     )
     return display_settings

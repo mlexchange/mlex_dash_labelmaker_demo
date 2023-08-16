@@ -8,10 +8,6 @@ from callbacks.manage_labels import *
 from callbacks.update_models import *
 from callbacks.warning import *
 
-# # Font and background colors associated with each theme
-# text_color = {"dark": "#95969A", "light": "#595959"}
-# card_color = {"dark": "#2D3038", "light": "#FFFFFF"}
-
 
 app.clientside_callback(
     """

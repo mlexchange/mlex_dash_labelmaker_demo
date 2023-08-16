@@ -12,18 +12,20 @@ from labels import Labels
     Input("confirm-un-label-all", "n_clicks"),
     Input({'base_id': 'file-manager', 'name': "import-dir"}, "n_clicks"),
     Input({'base_id': 'file-manager', 'name': "clear-data"}, "n_clicks"),
+    Input({'base_id': 'file-manager', 'name': "refresh-data"}, "n_clicks"),
 
     State("labels-dict", "data"),
 )
-def toggle_modal_unlabel_warning(unlabel_all_clicks, confirm_unlabel_all_clicks, n_clear, n_import, \
-                                 labels_dict):
+def toggle_modal_unlabel_warning(unlabel_all_clicks, confirm_unlabel_all_clicks, n_import, n_clear, \
+                                 n_refresh, labels_dict):
     '''
     This callback toggles a modal with unlabeling warnings
     Args:
         unlabel_all_clicks:         Number of clicks of unlabel all button
         confirm_unlabel_all_clicks: Number of clicks of confirm unlabel all button
-        n_clear:                    Number of clicks of clear data button
         n_import:                   Number of clicks of import button
+        n_clear:                    Number of clicks of clear data button
+        n_refresh:                  Number of clicks of refresh data button
         labels_dict:                Dictionary with labeling information, e.g. 
                                     {filename1: [label1,label2], ...}
     Returns:
