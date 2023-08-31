@@ -140,8 +140,14 @@ def parse_contents(contents, filename, index, probs=None, data_clinic=False):
                                         dbc.CardBody([
                                             html.P(id={'type':'thumbnail-name', 'index': index}, 
                                                    children=filename, 
-                                                   style={'font-size': '12px'}),
-                                            html.P(children=text, style={'whiteSpace': 'pre-wrap', 'font-size': '12px'})
+                                                   style={'display': 'none'}),
+                                            html.P(id={'type':'thumbnail-name-short', 'index': index}, 
+                                                   children=filename.split('/')[-1], 
+                                                   className="card-text"),
+                                            html.P(children=text, 
+                                                   style={'whiteSpace': 'pre-wrap', 
+                                                          'font-size': '12px',
+                                                          'display': 'none'})
                                         ])],
                                 outline=False,
                                 color='white')],

@@ -144,11 +144,11 @@ def label_method():
             is_open=False
         ),
         dbc.Button('Unlabel All', 
-                       id='un-label-all', 
-                       outline='True',
-                       color='danger', 
-                       size="sm", 
-                       style={'width': '100%', 'margin-bottom': '4px', 'margin-top': '4px'}),
+                    id='un-label-all', 
+                    outline='True',
+                    color='danger', 
+                    size="sm", 
+                    style={'width': '100%', 'margin-bottom': '4px', 'margin-top': '4px'}),
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle("Warning")),
             dbc.ModalBody(id="un-label-warning",

@@ -56,7 +56,7 @@ app.layout = html.Div(
                                 dbc.AccordionItem(
                                     display_settings(), 
                                     title='Display Settings'),
-                            ], style = {'position': 'sticky', 'top': '10%'}),
+                            ], style = {'position': 'sticky', 'top': '10%'})
                         ], width=4),
                         dbc.Col(
                             [
@@ -72,7 +72,8 @@ app.layout = html.Div(
                     justify='center'
                 ),
             ],
-            fluid=True
+            fluid=True,
+            style={'margin-top': '1%'}
         ),
         browser_cache(MLCOACH_URL, DATA_CLINIC_URL)
     ]

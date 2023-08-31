@@ -28,7 +28,8 @@ def display():
                            disabled=True
                            ),  
                 ],
-                justify='center'
+                justify='center',
+                style={'margin-top': '1%'}
             ),
             dbc.Modal(id={'type': 'full-screen-modal', 'index': 0},
                       size='xl',
