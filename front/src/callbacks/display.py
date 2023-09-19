@@ -86,7 +86,7 @@ def update_output(image_order, thumbnail_slider_value, button_prev_page, button_
         new_contents = []
         new_filenames = []
         for indx in range(start_indx, max_indx):
-            content, filename = data_set[image_order[indx]].read_data()
+            content, filename, _ = data_set[image_order[indx]].read_data()
             new_contents.append(content)
             new_filenames.append(filename)
     if mlcoach_model and tab_selection=='mlcoach':
@@ -146,7 +146,7 @@ def full_screen_thumbnail(double_click, thumbnail_name_children, file_paths):
     data_project.init_from_dict(file_paths)
     data = data_project.data
     data_set = next(item for item in data if item.uri == filename)
-    img_contents, _ = data_set.read_data()
+    img_contents, _, _ = data_set.read_data()
     contents = parse_full_screen_content(img_contents, filename)
     return [contents], [True], [0]*len(double_click)
 

@@ -12,7 +12,7 @@ from components.store import store_options
 from components.display_settings import display_settings
 from components.display import display
 from components.browser_cache import browser_cache
-from components.templates import header
+from components.header import header
 
 
 external_stylesheets = [dbc.themes.BOOTSTRAP, 
@@ -25,12 +25,13 @@ app = dash.Dash(__name__, external_stylesheets = external_stylesheets, \
 MLCOACH_URL = str(os.environ['MLCOACH_URL'])
 DATA_CLINIC_URL = str(os.environ['DATA_CLINIC_URL'])
 SPLASH_CLIENT = str(os.environ['SPLASH_URL'])
+TILED_KEY = str(os.environ['TILED_KEY'])
 DOCKER_DATA = pathlib.Path.home() / 'data'
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 USER = 'admin'
 NUMBER_OF_ROWS = 4
 
-dash_file_explorer = FileManager(DOCKER_DATA, UPLOAD_FOLDER_ROOT)
+dash_file_explorer = FileManager(DOCKER_DATA, UPLOAD_FOLDER_ROOT, api_key=TILED_KEY)
 dash_file_explorer.init_callbacks(app)
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 
@@ -40,7 +41,8 @@ app._favicon = 'mlex.ico'
 
 app.layout = html.Div(
     [
-        header(),
+        header("MLExchange | Label Maker", 
+               "https://github.com/mlexchange/mlex_dash_labelmaker_demo"),
         dbc.Container(
             [
                 dbc.Row(

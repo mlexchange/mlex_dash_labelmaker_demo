@@ -26,7 +26,7 @@ from query import Query
     State('button-hide', 'children'),
     prevent_initial_call=True)
 def display_index(exit_similar_images, find_similar_images, button_hide_n_clicks, button_sort_n_clicks, \
-                  tab_selection, labels_dict, thumbnail_name_children, timestamp, thumb_n_clicks, \
+                  tab_selection, labels_dict, thumbnail_children, timestamp, thumb_n_clicks, \
                   data_clinic_model, image_order, on_off_display, button_hide_text):
     '''
     This callback arranges the image order according to the following actions:
@@ -41,7 +41,7 @@ def display_index(exit_similar_images, find_similar_images, button_hide_n_clicks
         tab_selection:              Current tab [Manual, Data Clinic, MLCoach]
         labels_dict:                Dictionary with labeling information, e.g. 
                                     {filename1: [label1,label2], ...}
-        thumbnail_name_children:    Filenames of images in current page
+        thumbnail_children:     UIDs of images in current page
         timestamp:                  Timestamps of selected images in current page - to find similar 
                                     images. Currently, one 1 image is selected for this operation
         thumb_n_clicks:             Number of clicks per card/filename in current page
@@ -73,7 +73,7 @@ def display_index(exit_similar_images, find_similar_images, button_hide_n_clicks
         if clicked_ind is not None and data_clinic_model:
             if data_clinic_model:
                 image_order = query.similarity_search(data_clinic_model, 
-                                                      thumbnail_name_children[int(clicked_ind)])
+                                                      thumbnail_children[int(clicked_ind)])
         else:                                      # if no image is selected, no update is triggered
             return dash.no_update, 0, dash.no_update, dash.no_update
     elif changed_id == 'button-hide.n_clicks':

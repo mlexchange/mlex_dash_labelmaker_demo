@@ -15,6 +15,7 @@ from labels import Labels
     Input({'base_id': 'file-manager', 'name': "refresh-data"}, "n_clicks"),
 
     State("labels-dict", "data"),
+    prevent_initial_call=True
 )
 def toggle_modal_unlabel_warning(unlabel_all_clicks, confirm_unlabel_all_clicks, n_import, n_clear, \
                                  n_refresh, labels_dict):
