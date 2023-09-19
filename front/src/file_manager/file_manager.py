@@ -1,10 +1,8 @@
-import os
-import pathlib, pickle, zipfile
-
+import os, pathlib, pickle, zipfile
 import dash
-from dash import html, Input, Output, State
+from dash import dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
-from threading import Thread
+# from threading import Thread
 
 from file_manager.dash_file_explorer import create_file_explorer
 from file_manager.data_project import DataProject
@@ -12,7 +10,7 @@ from file_manager.data_project import DataProject
 
 class FileManager():
     def __init__(self, data_folder_root, upload_folder_root, splash_uri='http://splash:80/api/v0', 
-                 max_file_size=60000):
+                 max_file_size=60000, open_explorer=True, api_key=None):
         '''
         FileManager creates a dash file explorer that supports: (1) local file reading, and (2)
         data access through Tiled
@@ -21,50 +19,75 @@ class FileManager():
             upload_folder_root:     Root folder to upload directory
             splash_uri:             URI to splash-ml service
             max_file_size:          Maximum file size for uploaded data, defaults to 60000
+            api_key:                Tiled API key
         '''
         self.data_folder_root = data_folder_root
         self.upload_folder_root = upload_folder_root
         self.max_file_size = max_file_size
         self.splash_uri = splash_uri
+        self.api_key = api_key
         # Definition of the dash components for file manager
         self.file_explorer = html.Div(
             [
                 dbc.Row([
-                    dbc.Button(
-                            'Toggle File Manager',
-                            id={'base_id': 'file-manager', 'name': 'collapse-button'},
-                            size='lg',
-                            className='m-2',
-                            color='primary',
-                            n_clicks=0,
-                            style={'width': '30%'}
-                        ),
+                    dbc.Col(
+                        dbc.Button(
+                                'Toggle Explorer',
+                                id={'base_id': 'file-manager', 'name': 'collapse-button'},
+                                n_clicks=0,
+                                style={'width': '100%', 
+                                       'color': 'white', 
+                                       'background-color': '#007681',
+                                       'border-color': '#007681'}
+                            ),
+                    ),
+                    dbc.Col(
                         dbc.Button(
                             'Refresh Project',
                             id={'base_id': 'file-manager', 'name': 'refresh-data'},
-                            size='lg',
-                            className='m-2',
-                            color='primary',
+                            color='secondary',
                             n_clicks=0,
-                            style={'width': '30%'}
+                            style={'width': '100%', 
+                                   'color': 'white', 
+                                   'background-color': '#007681',
+                                   'border-color': '#007681'}
                         ),
+                    ),
+                    dbc.Col(
                         dbc.Button(
                             'Clear Images',
                             id={'base_id': 'file-manager', 'name': 'clear-data'},
-                            size='lg',
-                            className='m-2',
                             color='danger',
                             n_clicks=0,
-                            style={'width': '30%'}
+                            style={'width': '100%'}
                         ),
-                ], justify="center"),
+                    ),
+                    dcc.Loading(
+                        # id={'base_id': 'file-manager', 
+                        #     'name': 'loading-spinner'},
+                        type="cube",
+                        # delay_show=1000, #ms
+                        children=[
+                            dcc.Store(
+                                id={'base_id': 'file-manager', 
+                                    'name': 'docker-file-paths'}, 
+                                data=[])
+                            ],
+                        # loading_state={'component_name': 'docker-file-paths'}
+                        # show_initially=False,
+                        # hidden=True,
+                        # spinnerClassName='mlex-loading',
+                        style={'background-color': 'transparent'},
+                        fullscreen=True
+                        ),
+                ], className="g-0", justify="center"),
                 # dbc.Alert(id={'base_id': 'file-manager', 'name': 'alert'},
                 #           dismissable=True,
                 #           is_open=False),
                 dbc.Collapse(
                     create_file_explorer(max_file_size),
                     id={'base_id': 'file-manager', 'name': 'collapse-explorer'},
-                    is_open=True,
+                    is_open=open_explorer,
                 ),
             ]
         )
@@ -80,14 +103,23 @@ class FileManager():
             Output({'base_id': 'file-manager', 'name': 'collapse-explorer'}, 'is_open'),
             [Input({'base_id': 'file-manager', 'name': 'collapse-button'}, 'n_clicks'),
              Input({'base_id': 'file-manager', 'name': 'import-dir'}, 'n_clicks'),
+             Input({'base_id': 'file-manager', 'name': 'refresh-data'}, 'n_clicks'),
              State({'base_id': 'file-manager', 'name': 'collapse-explorer'}, 'is_open')]
         )(self._toggle_collapse)
 
         app.callback(
             Output({'base_id': 'file-manager', 'name': 'upload-data'}, 'data'),
             [Input({'base_id': 'file-manager', 'name': 'dash-uploader'}, 'isCompleted'),
-             State({'base_id': 'file-manager', 'name': 'dash-uploader'}, 'fileNames')]
+             State({'base_id': 'file-manager', 'name': 'dash-uploader'}, 'fileNames')],
+             prevent_initial_call=True
         )(self._upload_zip)
+
+        # app.callback(
+        #     Output({'base_id': 'file-manager', 'name': 'loading-modal'}, 'is_open'),
+        #     [Input({'base_id': 'file-manager', 'name': 'loading-spinner'}, 'loading_state'),
+        #     State({'base_id': 'file-manager', 'name': 'loading-modal'}, 'is_open')],
+        #     prevent_initial_call=True
+        # )(self._loading_project)
 
         app.callback(
             [Output({'base_id': 'file-manager', 'name': 'files-table'}, 'data'),
@@ -111,19 +143,28 @@ class FileManager():
         pass
 
     @staticmethod
-    def _toggle_collapse(collapse_n_clicks, import_n_clicks, is_open):
+    def _toggle_collapse(collapse_n_clicks, import_n_clicks, refresh_n_clicks, is_open):
         '''
         Collapse the file manager once a data set has been selected
         Args:
             collapse_n_clicks:  Number of clicks in collapse button
             import_n_clicks:    Number of clicks in import button
+            refresh_n_clicks:   Number of clicks on refresh data button
             is_open:            Bool variable indicating if file manager is collapsed or not
         Returns:
             is_open:            Updated state of is_open
         '''
-        if collapse_n_clicks or import_n_clicks:
+        changed_id = dash.callback_context.triggered[0]['prop_id']
+        if 'refresh-data' in changed_id:
+            return False
+        elif collapse_n_clicks or import_n_clicks:
             return not is_open
         return is_open
+    
+    # @staticmethod
+    # def _loading_project(is_loading, is_open):
+    #     print(f'I am here: {is_loading}')
+    #     return not is_open
 
     def _upload_zip(self, iscompleted, upload_filename):
         '''
@@ -190,7 +231,8 @@ class FileManager():
         elif 'refresh-data' in changed_id and os.path.exists(f'{self.data_folder_root}/.file_manager_vars.pkl'):
             with open(f'{self.data_folder_root}/.file_manager_vars.pkl', 'rb') as file:
                 project_id = pickle.load(file)['project_id']
-            data_project.init_from_splash(f'{self.splash_uri}/datasets/search', project_id)
+            data_project.init_from_splash(f'{self.splash_uri}/datasets/search', project_id, 
+                                          self.api_key)
             return dash.no_update, dash.no_update, data_project.get_dict(), dash.no_update, \
                 dash.no_update, project_id
         if tiled_on:                    # Definition of the data type
@@ -199,16 +241,19 @@ class FileManager():
             data_type = 'file'
         try:
             browse_data = data_project.browse_data(data_type, browse_format, \
-                                                    tiled_uri = tiled_uri,
-                                                    dir_path=self.data_folder_root)
+                                                   tiled_uri = tiled_uri,
+                                                   dir_path=self.data_folder_root,
+                                                   api_key=self.api_key)
         except Exception as e:
+            print(f'Cannot connect to tiled due to {e}')
             return dash.no_update, dash.no_update, dash.no_update, True, False, project_id
         if bool(rows) and 'tiled-switch' not in changed_id:
             for row in rows:
                 selected_row = files_table[row]['uri']
                 data_project.data += data_project.browse_data(data_type, import_format, \
                                                               tiled_uri = selected_row,
-                                                              dir_path = selected_row)
+                                                              dir_path = selected_row,
+                                                              api_key=self.api_key)
         if 'tiled-switch' in changed_id:
             # If the tiled selection triggered this callback, the data shown in the screen
             # should not be updated until a node (row) has been selected and imported
