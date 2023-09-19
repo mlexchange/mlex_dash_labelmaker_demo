@@ -1,10 +1,12 @@
+from datetime import datetime, timezone
 import pathlib
-import uuid
+
 import dash
 from dash import Input, Output, State, callback, ALL
 import numpy as np
 import pandas as pd
 import requests
+import uuid
 
 from labels import Labels
 from file_manager.data_project import DataProject
@@ -283,7 +285,10 @@ def load_from_splash_modal(load_n_click, confirm_load, docker_file_paths, projec
     options = []
     for event_id in event_ids:
         tagging_event = requests.get(f'{SPLASH_CLIENT}/events/{event_id}').json()
+        tagging_event_time = datetime.strptime(tagging_event['run_time'], "%Y-%m-%dT%H:%M:%S.%f")
+        tagging_event_time = tagging_event_time.replace(tzinfo=timezone.utc).astimezone(tz=None)\
+            .strftime("%d-%m-%Y %H:%M:%S")
         options.append({'label': f"Tagger ID: {tagging_event['tagger_id']}, \
-                                 modified: {tagging_event['run_time']}",
+                                 modified: {tagging_event_time}",
                         'value' : event_id})
     return options, True
