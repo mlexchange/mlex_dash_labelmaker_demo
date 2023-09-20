@@ -31,7 +31,8 @@ UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 USER = 'admin'
 NUMBER_OF_ROWS = 4
 
-dash_file_explorer = FileManager(DOCKER_DATA, UPLOAD_FOLDER_ROOT, api_key=TILED_KEY)
+dash_file_explorer = FileManager(DOCKER_DATA, UPLOAD_FOLDER_ROOT, api_key=TILED_KEY, 
+                                 splash_uri=SPLASH_CLIENT)
 dash_file_explorer.init_callbacks(app)
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 
