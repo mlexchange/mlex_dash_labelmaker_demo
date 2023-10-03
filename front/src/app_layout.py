@@ -1,12 +1,14 @@
 import os
 import dash
 from dash import dcc, html
+from dash.long_callback import DiskcacheLongCallbackManager
 import dash_bootstrap_components as dbc
 import dash_uploader as du
+import diskcache
 from flask import Flask
 import pathlib
 
-from file_manager.file_manager import FileManager
+from file_manager.main import FileManager
 from components.label_method import label_method
 from components.store import store_options
 from components.display_settings import display_settings
@@ -14,13 +16,15 @@ from components.display import display
 from components.browser_cache import browser_cache
 from components.header import header
 
+cache = diskcache.Cache("./cache")
+long_callback_manager = DiskcacheLongCallbackManager(cache)
 
 external_stylesheets = [dbc.themes.BOOTSTRAP, 
                         'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'
                         ]
 server = Flask(__name__)
 app = dash.Dash(__name__, external_stylesheets = external_stylesheets, \
-                suppress_callback_exceptions=True)
+                suppress_callback_exceptions=True, long_callback_manager=long_callback_manager)
 
 MLCOACH_URL = str(os.environ['MLCOACH_URL'])
 DATA_CLINIC_URL = str(os.environ['DATA_CLINIC_URL'])

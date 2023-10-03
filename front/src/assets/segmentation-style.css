@@ -30,6 +30,11 @@ label {
     width: 100%;
 }  
 
+div#dash-uploader {
+    min-height: auto !important;
+    line-height: normal !important;
+  }
+
 /* .mlex-loading {
     width: 300%;
     height: 170%;
