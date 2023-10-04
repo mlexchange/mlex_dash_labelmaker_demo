@@ -8,7 +8,6 @@ from query import Query
     Output('image-order','data'),
     Output('find-similar-unsupervised', 'n_clicks'),
     Output('button-hide', 'n_clicks'),
-    Output('loading-display', 'style'),
 
     Input('exit-similar-unsupervised', 'n_clicks'),
     Input('find-similar-unsupervised', 'n_clicks'),
@@ -61,9 +60,10 @@ def display_index(exit_similar_images, find_similar_images, button_hide_n_clicks
     similar_img_clicks = dash.no_update
     button_hide = dash.no_update
     num_imgs = len(query.labels_dict)
-    image_order = dash.no_update
     if 'labels-dict.data' in changed_id and on_off_display != 'green' and \
         button_hide_text != 'Unhide':                       # Checks if new data has been uploaded
+        if len(image_order) == num_imgs:
+            return dash.no_update, dash.no_update, dash.no_update
         image_order = list(range(num_imgs))
     elif 'find-similar-unsupervised.n_clicks' in changed_id:
         for indx, n_click in enumerate(thumb_n_clicks):
@@ -75,7 +75,7 @@ def display_index(exit_similar_images, find_similar_images, button_hide_n_clicks
                 image_order = query.similarity_search(data_clinic_model, 
                                                       thumbnail_children[int(clicked_ind)])
         else:                                      # if no image is selected, no update is triggered
-            return dash.no_update, 0, dash.no_update, dash.no_update
+            return dash.no_update, 0, dash.no_update
     elif changed_id == 'button-hide.n_clicks':
         similar_img_clicks = 0
         if button_hide_n_clicks % 2 == 1:
@@ -90,4 +90,6 @@ def display_index(exit_similar_images, find_similar_images, button_hide_n_clicks
         button_hide = 0
         similar_img_clicks = 0
         image_order = query.sort_labels()
-    return image_order, similar_img_clicks, button_hide, {'visibility': 'visible'}
+    else:
+        image_order = dash.no_update
+    return image_order, similar_img_clicks, button_hide

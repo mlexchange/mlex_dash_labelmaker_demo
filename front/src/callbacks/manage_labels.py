@@ -48,7 +48,6 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
 
     Input({'type': 'label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input('un-label', 'n_clicks'),
-    Input('confirm-un-label-all', 'n_clicks'),
     Input('mlcoach-label', 'n_clicks'),
     Input('mlcoach-model-list', 'value'),
     Input('confirm-load-splash', 'n_clicks'),
@@ -71,7 +70,7 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
     State('color-cycle', 'data'),
     prevent_initial_call=True
 )
-def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all_button, \
+def label_selected_thumbnails(label_button_n_clicks, unlabel_button,
                               mlcoach_label_button, mlcoach_model, load_splash_n_clicks, \
                               modify_list_n_clicks, del_label_n_clicks, docker_file_paths, \
                               submit_color_n_clicks, add_label_name, thumbnail_image_select_value, \
@@ -92,7 +91,6 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
     Args:
         label_button_n_clicks:          List of timestamps of the clicked label-buttons
         unlabel_button:                 Un-label button
-        unlabel_all_button:             Unlabel all button
         mlcoach_label_button:           Triggers labeling with mlcoach results
         mlcoach_model:                  Selected MLCoach model
         load_splash_n_clicks:           Triggers loading labeled datasets with splash-ml
@@ -165,9 +163,7 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
                                             total_num_labeled=total_num_labeled)
     else:
         label_comp = dash.no_update
-        if changed_id == 'confirm-un-label-all.n_clicks':       # Unlabel all is selected 
-            labels.init_labels()
-        elif changed_id == 'mlcoach-label.n_clicks':            # Labeling with mlcoach
+        if changed_id == 'mlcoach-label.n_clicks':            # Labeling with mlcoach
             if mlcoach_model:
                 labels.mlcoach_labeling(mlcoach_model, mlcoach_label, threshold)
         elif changed_id == 'confirm-load-splash.n_clicks':       # Labeling from splash-ml
@@ -190,6 +186,7 @@ def label_selected_thumbnails(label_button_n_clicks, unlabel_button, unlabel_all
     Output('storage-modal', 'is_open'),
     Output('storage-body-modal', 'children'),
     Output('modal-save-splash', 'is_open'),
+    Output('modal-splash-warning', 'is_open'),
 
     Input('button-save-disk', 'n_clicks'),
     Input('button-save-splash', 'n_clicks'),
@@ -220,36 +217,39 @@ def save_labels(button_save_disk_n_clicks, button_save_splash_n_clicks, \
     Returns:
         storage_modal_open:             Open/closes the confirmation message
         storag_body_modal:              Confirmation message
-        modal_save_splash:              Open/close save to splash modal to collect the tagger id 
+        modal_save_splash:              Open/close save to splash modal to collect the tagger id
+        modal_warning_splash:           Open/close a warning modal indicating if the data has been
+                                        updated in splash-ml
     '''
     changed_id = dash.callback_context.triggered[-1]['prop_id']
-    if changed_id == 'close-storage-modal.n_clicks':
-        return False, dash.no_update, False
+    if changed_id == 'close-storage-modal.n_clicks' or file_paths[0]['uid']=='1234':
+        return False, dash.no_update, False, True
     labels = Labels(**labels_dict)
     if sum(labels.num_imgs_per_label.values())>0:
-        if 'confirm-save-splash.n_clicks' in changed_id:    # If confirmed, labels are stored in splash
-            labels = Labels(**labels_dict)                  # by using the project_id and tagger_id
-            status = labels.save_to_splash(project_id, tagger_id)
+        if 'confirm-save-splash.n_clicks' in changed_id:
+            status = labels.save_to_splash(tagger_id, file_paths)
             if len(status)==0:
                 response = 'Labels stored in splash-ml'
             else:
                 response = f'Error. {status}'
-            return True, response, False
+            return True, response, False, False
         elif 'button-save-disk.n_clicks' in changed_id:
             docker_save_dir = pathlib.Path(DOCKER_DATA / 'labelmaker_outputs' /str(uuid.uuid4()))
             response = labels.save_to_directory(docker_save_dir)
             response = f'Labeled files are stored to disk at: {docker_save_dir}'
-            return True, response, False
+            return True, response, False, False
         else:
-            return False, dash.no_update, True
-    return True, 'No labels to save', False
+            return False, dash.no_update, True, False
+    return True, 'No labels to save', False, False
 
 
 @callback(
     Output('event-id', 'options'),
     Output('modal-load-splash', 'is_open'),
+
     Input('button-load-splash', 'n_clicks'),
     Input('confirm-load-splash', 'n_clicks'),
+
     State({'base_id': 'file-manager', 'name': 'docker-file-paths'}, 'data'),
     State({'base_id': 'file-manager', 'name': 'project-id'}, 'data'),
     prevent_initial_call=True

@@ -158,12 +158,12 @@ class Labels:
                     self.assign_labels(label, [dataset['uri']])
         pass
 
-    def save_to_splash(self, project_id, tagger_id):
+    def save_to_splash(self, tagger_id, datasets):
         '''
         Save labels to splash-ml.
         Args:
-            project_id:     [str] Data project id
             tagger_id:      [str] Tagger id
+            datasets:       [list of dict] Data Project
         Returns:
             Request status
         '''
@@ -172,30 +172,17 @@ class Labels:
                                json={"tagger_id": tagger_id, 
                                      "run_time": str(datetime.utcnow())})
         new_event_id = event_status.json()["uid"]
-        datasets = self._get_splash_dataset(project_id)
         uri_list = list(map(lambda d: d['uri'], datasets))
         status = ''
         for filename, label in zip(self.labels_dict.keys(), self.labels_dict.values()):
             if len(label)>0:
                 label = label[0]                      # 1 label per image
-                # if filename in uri_list:            # check if the dataset already exists in splash-ml
                 indx = uri_list.index(filename)
                 dataset_uid = datasets[indx]['uid']
-                tag = {'name': str(label),
-                        'event_id': new_event_id}
+                tag = {'name': str(label), 'event_id': new_event_id}
                 data = {'add_tags': [tag]}
-                response = requests.patch(f'{SPLASH_CLIENT}/datasets/{dataset_uid}/tags', \
-                                            json=data)
-                # else:                           # if it doesn't exist in splash-ml, post it
-                #     dataset = {'type': 'file',
-                #                 'uri': filename,
-                #                 'tags': [{'name': 'labelmaker',
-                #                         'locator': {'spec': 'label',
-                #                                     'path': label}
-                #                         }]
-                #                 }
-                #     response = requests.post(f'{SPLASH_CLIENT}/datasets/', json=dataset)
-                #     status_code = response.status_code
+                response = requests.patch(f'{SPLASH_CLIENT}/datasets/{dataset_uid}/tags',
+                                          json=data)
                 if response.status_code != 200:
                     logging.error(f'Filename: {filename} with label {label} failed with \
                                             status {response.status_code}: {response.json()}.')

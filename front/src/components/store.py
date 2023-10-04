@@ -48,6 +48,15 @@ def store_options():
                         ],
                         id="modal-save-splash",
                         is_open=False),
+                dbc.Modal([
+                        dbc.ModalHeader(dbc.ModalTitle("Warning")),
+                        dbc.ModalBody(id="splash-warning",
+                                      children="The data project is still being created. Please try \
+                                                again in a couple minutes.")
+                        ], 
+                        id="modal-splash-warning",
+                        is_open=False,
+                        style = {'color': 'red'}),
                 dbc.Button('Save Labels to Disk', 
                                 id='button-save-disk',
                                 outline='True', 

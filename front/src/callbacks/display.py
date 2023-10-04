@@ -21,8 +21,8 @@ from app_layout import NUMBER_OF_ROWS
     Input('next-page', 'n_clicks'),
     Input('mlcoach-collapse', 'is_open'),
     Input('mlcoach-model-list', 'value'),
-    Input('labels-dict', 'data'),
-
+    
+    State('labels-dict', 'data'),
     State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
     State('find-similar-unsupervised', 'n_clicks'),
     State('current-page', 'data'),
