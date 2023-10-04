@@ -162,7 +162,8 @@ def label_method():
                     className="ms-auto", 
                     n_clicks=0),
             ]),
-        ], id="modal-un-label",
+            ], 
+            id="modal-un-label",
             is_open=False,
             style = {'color': 'red'}
         )

@@ -14,7 +14,59 @@ LOCAL_HOME = str(LOCAL_DATA)
 SPLASH_CLIENT = 'http://splash:80/api/v0'
 
 
-#============================= labelmaker related functions ==============================
+def create_label_button(label_text, label_color, indx):
+    '''
+    Creates the label button with it's corresponding options
+    Args:
+        label_text:     Label name to be used as text in the button
+        label_color:    Color associated with the label
+        indx:           Index to identify the label buttons
+    Returns:
+        label_comp:     Dash component with label button
+    '''
+    label_comp = dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Button(label_text,
+                                   id={'type': 'label-button', 'index': indx},
+                                   n_clicks_timestamp=0,
+                                   size="sm",
+                                   style={'background-color': label_color,
+                                          'border-color': label_color,
+                                          'color':'black', 'width': '100%'}
+                                   ),
+                        width=10,
+                        style={'margin-right': '2%', 'width': '80%'}
+                    ),
+                    dbc.Col(
+                        dbc.Button(className="fa fa-edit",
+                                   id={'type': 'color-label-button', 'index': indx},
+                                   size="sm",
+                                   n_clicks_timestamp=0,
+                                   style={'background-color': label_color, 
+                                          'border-color': label_color,
+                                          'color':'black', 'width': '100%'}),
+                        width=1,
+                        style={ 'margin-right': '2%', 'width': '8%'}
+                    ),
+                    dbc.Col(
+                        dbc.Button(className="fa fa-trash",
+                                   id={'type': 'delete-label-button', 'index': indx},
+                                   n_clicks_timestamp=0,
+                                   size="sm",
+                                   style={'background-color': label_color, 
+                                          'border-color': label_color,
+                                          'color':'black', 'width': '100%'}),
+                        width=1,
+                        style={'width': '8%'}
+                    ),
+                ],
+                className="g-0",
+                style={'background-color': label_color}
+            )
+    return label_comp
+
+
 def create_label_component(label_list, color_cycle=px.colors.qualitative.Light24, mlcoach=False, \
                            progress_values=None, progress_labels=None, total_num_labeled=None):
     '''
@@ -37,45 +89,7 @@ def create_label_component(label_list, color_cycle=px.colors.qualitative.Light24
         total_num_labeled = 'Labeled 0 out of 0 images.'
     if not mlcoach:
         for i in range(len(label_list)):
-            comp_row = dbc.Row(
-                [
-                    dbc.Col(
-                        dbc.Button(label_list[i],
-                                   id={'type': 'label-button', 'index': i},
-                                   n_clicks_timestamp=0,
-                                   size="sm",
-                                   style={'background-color': color_cycle[i], 
-                                          'border-color': color_cycle[i],
-                                          'color':'black', 'width': '100%'}
-                                   ),
-                        width=10,
-                        style={'margin-right': '2%', 'width': '80%'}
-                    ),
-                    dbc.Col(
-                        dbc.Button(className="fa fa-paint-brush",
-                                   id={'type': 'color-label-button', 'index': i},
-                                   size="sm",
-                                   n_clicks_timestamp=0,
-                                   style={'background-color': color_cycle[i], 
-                                          'border-color': color_cycle[i],
-                                          'color':'black', 'width': '100%'}),
-                        width=1,
-                        style={ 'margin-right': '2%', 'width': '8%'}
-                    ),
-                    dbc.Col(
-                        dbc.Button(className="fa fa-times",
-                                   id={'type': 'delete-label-button', 'index': i},
-                                   n_clicks_timestamp=0,
-                                   size="sm",
-                                   style={'background-color': color_cycle[i], 
-                                          'border-color': color_cycle[i],
-                                          'color':'black', 'width': '100%'}),
-                        width=1,
-                        style={'width': '8%'}
-                    ),
-                ],
-                className="g-0",
-            )
+            comp_row = create_label_button(label_list[i], color_cycle[i], i)
             comp_list.append(comp_row)
             progress.append(dbc.Progress(id={'type': 'label-percentage', 'index': i},
                                          value=progress_values[i],
@@ -130,27 +144,27 @@ def parse_contents(contents, filename, index, probs=None, data_clinic=False):
     img_card = html.Div(
         EventListener(
             children=[dbc.Card(
-                                id={'type': 'thumbnail-card', 'index': index},
-                                children=[
-                                        html.A(id={'type': 'thumbnail-image', 'index': index},
-                                            n_clicks=init_clicks,   
-                                            children=dbc.CardImg(id={'type': 'thumbnail-src', 'index': index},
-                                                                 src=contents,
-                                                                 bottom=False)),
-                                        dbc.CardBody([
-                                            html.P(id={'type':'thumbnail-name', 'index': index}, 
-                                                   children=filename, 
-                                                   style={'display': 'none'}),
-                                            html.P(id={'type':'thumbnail-name-short', 'index': index}, 
-                                                   children=filename.split('/')[-1], 
-                                                   className="card-text"),
-                                            html.P(children=text, 
-                                                   style={'whiteSpace': 'pre-wrap', 
-                                                          'font-size': '12px',
-                                                          'display': 'none'})
-                                        ])],
-                                outline=False,
-                                color='white')],
+                        id={'type': 'thumbnail-card', 'index': index},
+                        children=[
+                                html.A(id={'type': 'thumbnail-image', 'index': index},
+                                    n_clicks=init_clicks,   
+                                    children=dbc.CardImg(id={'type': 'thumbnail-src', 'index': index},
+                                                            src=contents,
+                                                            bottom=False)),
+                                dbc.CardBody([
+                                    html.P(id={'type':'thumbnail-name', 'index': index}, 
+                                            children=filename, 
+                                            style={'display': 'none'}),
+                                    html.P(id={'type':'thumbnail-name-short', 'index': index}, 
+                                            children=filename.split('/')[-1], 
+                                            className="card-text"),
+                                    html.P(children=text, 
+                                            style={'whiteSpace': 'pre-wrap', 
+                                                    'font-size': '12px',
+                                                    'display': 'none'})
+                                ])],
+                        outline=False,
+                        color='white')],
             id={'type': 'double-click-entry', 'index': index}, 
             events=[{"event": "dblclick", "props": ["srcElement.className", "srcElement.innerText"]}], 
             logging=True),

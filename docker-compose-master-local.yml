@@ -26,7 +26,7 @@ services:
       - ./data:/app/work/data
       - ./front/src:/app/work/src
     ports:
-      - '8057:8057'
+      - 127.0.0.1:8057:8057
     networks:
       - computing_api_default
     depends_on:
@@ -42,13 +42,12 @@ services:
   #     context: "../mlex_mlcoach/"
   #     dockerfile: "docker/Dockerfile"
   #   environment:
-  #     DATA_DIR: "${PWD}/data/"
-  #     HOST_NICKNAME: "local"
+  #     *commonEnvironment
   #   volumes:
   #     - ${PWD}/data:/app/work/data
   #     - ../mlex_mlcoach/src:/app/work/src
   #   ports:
-  #     - "8062:8062"
+  #     - 127.0.0.1:8062:8062
   #   networks:
   #     - computing_api_default
   #   depends_on:
