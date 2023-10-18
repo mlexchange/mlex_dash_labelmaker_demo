@@ -1,21 +1,23 @@
-from datetime import datetime
-import itertools
-import logging
+import os, shutil, itertools, logging, tempfile
 from pathlib import Path
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from PIL import Image
 import requests
 
-from app_layout import SPLASH_CLIENT
+from app_layout import SPLASH_URL
 
 
 logging.basicConfig(encoding='utf-8', level=logging.INFO)
 
 
 class Labels:
-    def __init__(self, labels_dict, labels_list, num_imgs_per_label=None) -> None:
+    def __init__(self,
+                 labels_dict,
+                 labels_list,
+                 num_imgs_per_label=None
+                 ) -> None:
         self.labels_dict = labels_dict
         self.labels_list = labels_list
         if num_imgs_per_label is None:
@@ -132,7 +134,7 @@ class Labels:
             project_id:     Data project_id
         '''
         uri_list = list(self.labels_dict.keys())
-        url = f'{SPLASH_CLIENT}/datasets/search'
+        url = f'{SPLASH_URL}/datasets/search'
         params = {"page[offset]": 0, "page[limit]": len(uri_list)}
         data = {"uris": uri_list, "project": project_id}
         status = requests.post(url, params=params, json=data)
@@ -145,6 +147,7 @@ class Labels:
         '''
         Query labels from splash-ml
         Args:
+            project_id:     Data project_id
             event_id:      [str] Event id
         '''
         datasets = self._get_splash_dataset(project_id)
@@ -154,69 +157,78 @@ class Labels:
                 if tag["event_id"] == event_id:
                     label = tag['name']
                     if label not in self.labels_list:
-                        self.labels_list.append(label)
+                        self.update_labels_list(add_label=label)
                     self.assign_labels(label, [dataset['uri']])
         pass
 
-    def save_to_splash(self, tagger_id, datasets):
+    def save_to_splash(self, tagger_id, datasets, project_id):
         '''
         Save labels to splash-ml.
         Args:
             tagger_id:      [str] Tagger id
             datasets:       [list of dict] Data Project
+            project_id:     Data project_id
         Returns:
             Request status
         '''
         # Post new tagging event
-        event_status = requests.post(f'{SPLASH_CLIENT}/events', 
+        event_status = requests.post(f'{SPLASH_URL}/events', 
                                json={"tagger_id": tagger_id, 
                                      "run_time": str(datetime.utcnow())})
         new_event_id = event_status.json()["uid"]
         uri_list = list(map(lambda d: d['uri'], datasets))
+        splash_datasets = requests.post(f'{SPLASH_URL}/datasets/search',
+                                        json={'project': project_id, 'uris': uri_list}).json()
+        splash_uris = [d['uri'] for d in splash_datasets]
         status = ''
         for filename, label in zip(self.labels_dict.keys(), self.labels_dict.values()):
             if len(label)>0:
                 label = label[0]                      # 1 label per image
-                indx = uri_list.index(filename)
-                dataset_uid = datasets[indx]['uid']
-                tag = {'name': str(label), 'event_id': new_event_id}
-                data = {'add_tags': [tag]}
-                response = requests.patch(f'{SPLASH_CLIENT}/datasets/{dataset_uid}/tags',
-                                          json=data)
+                if filename in splash_uris:
+                    indx = splash_uris.index(filename)
+                    dataset_uid = splash_datasets[indx]['uid']
+                    tag = {'name': str(label), 'event_id': new_event_id}
+                    data = {'add_tags': [tag]}
+                    response = requests.patch(f'{SPLASH_URL}/datasets/{dataset_uid}/tags',
+                                              json=data)
+                else:
+                    indx = uri_list.index(filename)
+                    new_dataset = datasets[indx]
+                    new_dataset['project'] = project_id
+                    new_dataset['tags'] = [{'name': str(label), 'event_id': new_event_id}]
+                    response = requests.post(f'{SPLASH_URL}/datasets',
+                                             json=[new_dataset])
                 if response.status_code != 200:
                     logging.error(f'Filename: {filename} with label {label} failed with \
-                                            status {response.status_code}: {response.json()}.')
-                    status = status.append(f'Filename: {filename} with label {label} failed with \
-                                            status {response.status_code}. ')
+                                  status {response.status_code}: {response.json()}.')
+                    status =+ f'Filename: {filename} with label {label} failed with \
+                               status {response.status_code}. '
         return status
     
-    def save_to_directory(self, save_dir):
+    def save_to_directory(self, data_project):
         '''
-        Save labels to local directory
-        Args:
-            save_dir:       Directory where the labels will be stored
+        Zips images with labels to be downloaded
         '''
-        for label_key in self.labels_list:                              # create a folder per label
-            if self.num_imgs_per_label[label_key]>0:
-                label_dir = save_dir / Path(label_key)
-                label_dir.mkdir(parents=True, exist_ok=True)
-        filename_list = self.labels_dict.keys()
-        for filename in filename_list:
-            label = self.labels_dict[filename]
-            if len(label)>0:
-                label_dir = save_dir / Path(label[0])
-                im_bytes = filename
-                im = Image.open(im_bytes)
-                filename = im_bytes.split("/")[-1]
-                f_name = filename.split('.')[-2]
-                f_ext  = filename.split('.')[-1]
-                filename = Path(filename)
-                i = 0
-                while filename.exists():                                # check duplicate                                      
-                    filename = Path(f'{label_dir}/{f_name}_{i}.{f_ext}') # filename and save under 
-                    i += 1                                              # different name if needed 
-                im.save(filename)
-        pass
+        with tempfile.TemporaryDirectory() as temp_dir:
+            data_path = os.path.join(temp_dir, "downloaded_images")
+            # create a folder per label
+            for label_key in self.labels_list:
+                if self.num_imgs_per_label[label_key]>0:
+                    label_dir = data_path / Path(label_key)
+                    label_dir.mkdir(parents=True, exist_ok=True)
+            for indx, (filename, label) in enumerate(self.labels_dict.items()):
+                if len(label)>0:
+                    img, uri = data_project.data[indx].read_data(export='pillow')
+                    label_dir = f'{data_path}/{label[0]}'
+                    base_name = uri.split('/')[-1].split('.')[0]
+                    filename = Path(f'{base_name}.tif')
+                    i = 0   # check duplicate filename and save under different name if needed
+                    while filename.exists():
+                        filename = Path(f'{label_dir}/{base_name}_{i}.tif')
+                        i += 1
+                    img.save(f'{label_dir}/{filename}')
+            shutil.make_archive('/app/tmp/results', 'zip', data_path)
+        return '/app/tmp/results'
             
     def get_labeling_progress(self):
         '''
