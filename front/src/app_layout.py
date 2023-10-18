@@ -19,24 +19,31 @@ from components.header import header
 cache = diskcache.Cache("./cache")
 long_callback_manager = DiskcacheLongCallbackManager(cache)
 
-external_stylesheets = [dbc.themes.BOOTSTRAP, 
-                        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'
-                        ]
+external_stylesheets = [
+    dbc.themes.BOOTSTRAP, 
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css',
+    '../assets/labelmaker-style.css'
+    ]
 server = Flask(__name__)
-app = dash.Dash(__name__, external_stylesheets = external_stylesheets, \
-                suppress_callback_exceptions=True, long_callback_manager=long_callback_manager)
+app = dash.Dash(__name__, 
+                external_stylesheets = external_stylesheets,
+                suppress_callback_exceptions=True, 
+                long_callback_manager=long_callback_manager)
 
 MLCOACH_URL = str(os.environ['MLCOACH_URL'])
 DATA_CLINIC_URL = str(os.environ['DATA_CLINIC_URL'])
-SPLASH_CLIENT = str(os.environ['SPLASH_URL'])
+SPLASH_URL = str(os.environ['SPLASH_URL'])
+MLEX_COMPUTE_URL = str(os.environ['MLEX_COMPUTE_URL'])
 TILED_KEY = str(os.environ['TILED_KEY'])
 DOCKER_DATA = pathlib.Path.home() / 'data'
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 USER = 'admin'
 NUMBER_OF_ROWS = 4
 
-dash_file_explorer = FileManager(DOCKER_DATA, UPLOAD_FOLDER_ROOT, api_key=TILED_KEY, 
-                                 splash_uri=SPLASH_CLIENT)
+dash_file_explorer = FileManager(DOCKER_DATA, 
+                                 UPLOAD_FOLDER_ROOT, 
+                                 api_key=TILED_KEY, 
+                                 splash_uri=SPLASH_URL)
 dash_file_explorer.init_callbacks(app)
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 

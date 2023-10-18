@@ -15,12 +15,18 @@ def display_settings():
                        color='primary', 
                        size="sm", 
                        style={'width': '100%', 'margin-top': '20px', 'margin-bottom': '4px'}),
+            dbc.Tooltip(f'Sort images according to assigned label',
+                        target='button-sort',
+                        placement='top'),
             dbc.Button('Hide', 
                        id='button-hide', 
                        outline='True',
                        color='primary', 
                        size="sm", 
                        style={'width': '100%', 'margin-bottom': '4px'}),
+            dbc.Tooltip(f'Hide/unhide labeled images',
+                        target='button-hide',
+                        placement='top'),
         ]
     )
     return display_settings

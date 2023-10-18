@@ -1,8 +1,9 @@
 from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash_extensions import EventListener
 import dash_daq as daq
 
-from helper_utils import create_label_component
+from utils.plot_utils import create_label_component
 
 
 LABEL_LIST = {'Label_1': [], 'Label_2': []}
@@ -24,7 +25,7 @@ def label_method():
                                 'width': '100%'},
                     options=[
                         {"label": "Manual", "value": "manual"},
-                        {"label": "DataClinic", "value": "clinic"},
+                        {"label": "DataClinic", "value": "data_clinic"},
                         {"label": "MLCoach", "value": "mlcoach"}
                     ],
                     style={'width': '100%'},
@@ -38,27 +39,37 @@ def label_method():
             children = [
                         dbc.Row(
                             [
-                                dbc.Col(dbc.Button('Go to MLCoach', 
-                                                    id='goto-webpage', 
-                                                    outline="True",
-                                                    color='primary', 
-                                                    size="sm", 
-                                                    n_clicks=0,
-                                                    style={'width': '100%', 
-                                                        'margin-bottom': '1rem', 
-                                                        'margin-top': '0.5rem'}),
-                                        width=11,
-                                        style={ 'margin-right': '2%', 'width': '90%'}),
-                                dbc.Col(dbc.Button(className="fa fa-question",
-                                                id='tab-help-button',
-                                                outline="True",
-                                                color='primary', 
-                                                size="sm", 
-                                                style={'width': '100%', 
-                                                        'margin-bottom': '1rem', 
-                                                        'margin-top': '0.5rem'}),
-                                        width=1,
-                                        style={'width': '8%'})
+                                dbc.Col(
+                                    dbc.Button('Go to MLCoach', 
+                                               id='goto-webpage', 
+                                               outline="True",
+                                               color='primary', 
+                                               size="sm", 
+                                               n_clicks=0,
+                                               style={
+                                                   'width': '100%', 
+                                                   'margin-bottom': '1rem', 
+                                                   'margin-top': '0.5rem'
+                                                   }
+                                    ),
+                                    width=11,
+                                    style={ 'margin-right': '2%', 'width': '90%'}
+                                ),
+                                dbc.Col(
+                                    dbc.Button(className="fa fa-question",
+                                               id='tab-help-button',
+                                               outline="True",
+                                               color='primary', 
+                                               size="sm", 
+                                               style={
+                                                   'width': '100%', 
+                                                   'margin-bottom': '1rem', 
+                                                   'margin-top': '0.5rem'
+                                                   }
+                                    ),
+                                    width=1,
+                                    style={'width': '8%'}
+                                )
                             ],
                             className="g-0"
                         )
@@ -69,24 +80,31 @@ def label_method():
         dbc.Collapse(
             children = [
                         dbc.Row([
-                            dbc.Col(dcc.Input(
-                                id='add-label-name',
-                                placeholder="Input new label here",
-                                style={'width': '100%', 
-                                    'margin-bottom': '10px', 
-                                    'margin-top': '5px'}), width=8),
-                            dbc.Col(dbc.Button(
-                                'Add Label',
-                                id='modify-list',
-                                outline="True",
-                                size = 'sm',
-                                color='primary',
-                                n_clicks=0,
-                                style={'width': '100%', 
-                                    'margin-bottom': '10px', 
-                                    'margin-top': '5px'}), width=4) ],
+                            dbc.Col(
+                                dcc.Input(
+                                    id='add-label-name',
+                                    placeholder="Input new label here",
+                                    style={'width': '100%', 
+                                        'margin-bottom': '10px', 
+                                        'margin-top': '5px'}
+                                    ), 
+                                width=8),
+                            dbc.Col(
+                                dbc.Button(
+                                    'Add Label',
+                                    id='modify-list',
+                                    outline="True",
+                                    size = 'sm',
+                                    color='primary',
+                                    n_clicks=0,
+                                    style={'width': '100%', 
+                                        'margin-bottom': '10px', 
+                                        'margin-top': '5px'}
+                                    ),
+                                width=4) 
+                            ],
                             justify = 'center'
-                            )
+                        )
             ],
             id="manual-collapse",
             is_open=False
@@ -101,44 +119,100 @@ def label_method():
         ),
         # Labeling with MLCoach
         dbc.Collapse(
-            children = [dbc.Label('Trained models:'),
-                        dbc.Row([dbc.Col(dcc.Dropdown(id='mlcoach-model-list')),
-                                dbc.Col(dbc.Button('Refresh', id='mlcoach-refresh', outline="True",
-                                    color='primary', size="sm", style={'width': '100%', 
-                                                                        'margin-top': '1px'}))]),
-                        dbc.Label('Probability Threshold', style={'width': '100%', 'margin-top': '20px'}),
-                        dcc.Dropdown(id='mlcoach-label-name'),
-                        dcc.Slider(id='probability-threshold',
-                                min=0,
-                                max=100,
-                                value=51,
-                                tooltip={"placement": "top", "always_visible": True},
-                                marks={0: '0', 25: '25', 50: '50', 75: '75', 100: '100'}),
-                        dbc.Button('Label with Threshold', id='mlcoach-label', outline="True",
-                                color='primary', size="sm", style={'width': '100%', 
-                                                                    'margin-top': '20px'})
-                        ],
+            children = [
+                dbc.Label('Trained models:'),
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            dcc.Dropdown(id='mlcoach-model-list')
+                            ),
+                        dbc.Col(
+                            dbc.Button('Refresh', 
+                                       id='mlcoach-refresh',
+                                         outline="True",
+                                         color='primary',
+                                         size="sm",
+                                         style={'width': '100%', 'margin-top': '1px'}
+                                        )
+                            )
+                    ]
+                ),
+                dbc.Label(
+                    'Probability Threshold',
+                    style={'width': '100%', 'margin-top': '20px'}
+                    ),
+                dcc.Dropdown(id='mlcoach-label-name'),
+                dcc.Slider(id='probability-threshold',
+                           min=0,
+                           max=100,
+                           value=51,
+                           tooltip={"placement": "top", "always_visible": True},
+                           marks={0: '0', 25: '25', 50: '50', 75: '75', 100: '100'}
+                           ),
+                dbc.Button(
+                    'Label with Threshold',
+                    id='mlcoach-label',
+                    outline="True",
+                    color='primary',
+                    size="sm",
+                    style={'width': '100%', 'margin-top': '20px'})
+            ],
             id="mlcoach-collapse",
             is_open=False
         ),
         # Labeling with Data Clinic
         dbc.Collapse(
-            children = [dbc.CardBody([
-                            dbc.Label('Trained models:'),
-                            dbc.Row([dbc.Col(dcc.Dropdown(id='data-clinic-model-list')),
-                                dbc.Col(dbc.Button('Refresh', id='data-clinic-refresh', outline="True",
-                                    color='primary', size="sm", style={'width': '100%', 'margin-top': '1px'}))]),
-                            dbc.Row([dbc.Col(dbc.Button('Find Similar Images', 
-                                                        id='find-similar-unsupervised', outline="True",
-                                                        color='primary', size="sm", \
-                                                        style={'width': '100%', 'margin-top': '20px'})),
-                                    dbc.Col(dbc.Button('Stop Find Similar Images', \
-                                                        id='exit-similar-unsupervised', outline="True",
-                                                        color='primary', size="sm", \
-                                                        style={'width': '100%', 'margin-top': '20px'}))]),
-                            daq.Indicator(id='on-off-display', label='Find Similar Images: OFF', \
-                                        color='#596D4E', size=30, style={'margin-top': '20px'})
-                        ]),
+            children = [
+                dbc.CardBody(
+                    [
+                        dbc.Label('Trained models:'),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    dcc.Dropdown(id='data-clinic-model-list')
+                                    ),
+                                dbc.Col(
+                                    dbc.Button('Refresh',
+                                               id='data-clinic-refresh',
+                                               outline="True",
+                                               color='primary',
+                                               size="sm",
+                                               style={'width': '100%', 'margin-top': '1px'}
+                                               )
+                                    )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    dbc.Button('Find Similar Images', 
+                                               id='find-similar-unsupervised', 
+                                               outline="True",
+                                               color='primary',
+                                               size="sm",
+                                               style={'width': '100%', 'margin-top': '20px'}
+                                               )
+                                    ),
+                                dbc.Col(
+                                    dbc.Button('Stop Find Similar Images',
+                                               id='exit-similar-unsupervised', 
+                                               outline="True",
+                                               color='primary',
+                                               size="sm",
+                                               style={'width': '100%', 'margin-top': '20px'}
+                                               )
+                                    )
+                            ]
+                        ),
+                        daq.Indicator(
+                            id='on-off-display',
+                            label='Find Similar Images: OFF',
+                            color='#596D4E',
+                            size=30,
+                            style={'margin-top': '20px'}
+                            )
+                    ]
+                ),
             ],
             id="data-clinic-collapse",
             is_open=False
@@ -152,7 +226,7 @@ def label_method():
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle("Warning")),
             dbc.ModalBody(id="un-label-warning",
-                            children="Unsaved labels cannot be recovered after clearing data. Do \
+                          children="Unsaved labels cannot be recovered after clearing data. Do \
                                     you still want to proceed?"),
             dbc.ModalFooter([
                 dbc.Button(
@@ -166,7 +240,17 @@ def label_method():
             id="modal-un-label",
             is_open=False,
             style = {'color': 'red'}
-        )
+        ),
+        EventListener(
+                events=[
+                    {
+                        "event": "keydown",
+                        "props": ["key", "ctrlKey", "ctrlKey", "timeStamp"],
+                        "repeat": True
+                    }
+                ],
+                id="keybind-event-listener",
+                logging=True
+            ),
     ])
-
     return label_method

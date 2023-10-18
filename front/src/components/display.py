@@ -1,4 +1,4 @@
-from dash import dcc, html
+from dash import html
 import dash_bootstrap_components as dbc
 import dash_daq as daq
 
@@ -36,13 +36,14 @@ def display():
                       centered=True,
                       is_open=False),
             dbc.Modal(id='color-picker-modal',
-                    children=[daq.ColorPicker(id='label-color-picker',
-                                              label='Choose label color',
-                                              value=dict(hex='#119DFF')),
-                                dbc.Button('Submit', 
-                                           id='submit-color-button', 
-                                           style={'width': '100%'})
-                                ],
+                    children=[
+                        daq.ColorPicker(id='label-color-picker',
+                                        label='Choose label color',
+                                        value=dict(hex='#119DFF')),
+                        dbc.Button('Submit', 
+                                   id='submit-color-button', 
+                                   style={'width': '100%'})
+                    ],
                     is_open=False
                     )
         ]
