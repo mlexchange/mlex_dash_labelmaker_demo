@@ -1,7 +1,7 @@
 import dash
 from dash import Input, Output, callback
 
-from helper_utils import get_trained_models_list
+from utils.model_utils import get_trained_models_list
 from app_layout import USER
 
 
@@ -28,7 +28,7 @@ def update_trained_model_list(tab_value, mlcoach_refresh_n_clicks, data_clinic_r
     if tab_value == 'mlcoach':
         mlcoach_models = get_trained_models_list(USER, tab_value)
         data_clinic_models = dash.no_update
-    elif tab_value == 'clinic':
+    elif tab_value == 'data_clinic':
         mlcoach_models = dash.no_update
         data_clinic_models = get_trained_models_list(USER, tab_value)
     else:

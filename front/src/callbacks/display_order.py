@@ -24,8 +24,8 @@ from query import Query
     State('on-off-display', 'color'),
     State('button-hide', 'children'),
     prevent_initial_call=True)
-def display_index(exit_similar_images, find_similar_images, button_hide_n_clicks, button_sort_n_clicks, \
-                  tab_selection, labels_dict, thumbnail_children, timestamp, thumb_n_clicks, \
+def display_index(exit_similar_images, find_similar_images, button_hide_n_clicks, button_sort_n_clicks,
+                  tab_selection, labels_dict, thumbnail_children, timestamp, thumb_n_clicks,
                   data_clinic_model, image_order, on_off_display, button_hide_text):
     '''
     This callback arranges the image order according to the following actions:
@@ -40,7 +40,7 @@ def display_index(exit_similar_images, find_similar_images, button_hide_n_clicks
         tab_selection:              Current tab [Manual, Data Clinic, MLCoach]
         labels_dict:                Dictionary with labeling information, e.g. 
                                     {filename1: [label1,label2], ...}
-        thumbnail_children:     UIDs of images in current page
+        thumbnail_children:         URIs of images in current page
         timestamp:                  Timestamps of selected images in current page - to find similar 
                                     images. Currently, one 1 image is selected for this operation
         thumb_n_clicks:             Number of clicks per card/filename in current page
@@ -52,8 +52,8 @@ def display_index(exit_similar_images, find_similar_images, button_hide_n_clicks
     Returns:
         image_order:                Order of the images according to the selected action 
                                     (sort, hide, new data, etc)
-        data_access_open:           Closes the reactive component to select the data access 
-                                    (upload vs. directory)
+        similar_img_clicks:         Reset number of clicks in similarity trigger button
+        button_hide:                Reset number of clicks in hide button
     '''
     changed_id = dash.callback_context.triggered[0]['prop_id']
     query = Query(**labels_dict)

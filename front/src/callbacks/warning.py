@@ -31,9 +31,7 @@ def toggle_modal_unlabel_warning(unlabel_all_clicks, confirm_unlabel_all_clicks,
                                     {filename1: [label1,label2], ...}
     Returns:
         modal_is_open:              [Bool] modal unlabel warning is open
-        reset_labels:               Flag indicating that the labels should be reset
         update_data:                Flag indicating that new data can be imported from file manager
-        clear_data:                 Flag indicating that the data can be cleared
     '''
     changed_id = dash.callback_context.triggered[0]['prop_id']
     modal_is_open = False

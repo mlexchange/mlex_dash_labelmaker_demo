@@ -15,6 +15,17 @@ import dash_bootstrap_components as dbc
     prevent_initial_call=True
 )
 def toggle_help_modal(main_n_clicks, tab_n_clicks, is_open, tab_value):
+    '''
+    This callback toggles the modal with help instructions
+    Args:
+        main_n_clicks:          Number of clicks in main help button at the header
+        tab_n_clicks:           Number of clicks in tab help button
+        is_open:                Open/close status of help modal
+        tab_value:              Current tab
+    Returns:
+        open_modal:             Open/close status of help modal
+        modal_text:             Help modal text
+    '''
     changed_id = dash.callback_context.triggered[0]['prop_id']
     # Main instructions
     if 'button-help.n_clicks' in changed_id:
