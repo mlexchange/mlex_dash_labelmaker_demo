@@ -178,6 +178,7 @@ class Labels:
         new_event_id = event_status.json()["uid"]
         uri_list = list(map(lambda d: d['uri'], datasets))
         splash_datasets = requests.post(f'{SPLASH_URL}/datasets/search',
+                                        params = {"page[offset]": 0, "page[limit]": len(uri_list)},
                                         json={'project': project_id, 'uris': uri_list}).json()
         splash_uris = [d['uri'] for d in splash_datasets]
         status = ''
