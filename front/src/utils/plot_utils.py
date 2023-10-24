@@ -141,14 +141,21 @@ def parse_contents(contents, filename, index, probs=None, data_clinic=False):
         dash component
     '''
     text=''
-    prob_style = {'display': 'none'}
     if probs:
         text = probs
-        prob_style = {'display': 'block', 'whiteSpace': 'pre-wrap', 'font-size': '12px'}
+        prob_style = {'display': 'block',
+                      'whiteSpace': 'pre-wrap',
+                      'font-size': '12px',
+                      'margin-bottom': '0px',
+                      'margin-top': '1px'}
+    else:
+        prob_style = {'display': 'none'}
     if data_clinic:
         init_clicks = 1
+        color = 'primary'
     else:
         init_clicks = 0
+        color = 'white'
     img_card = html.Div(
         EventListener(
             children=[
@@ -170,15 +177,17 @@ def parse_contents(contents, filename, index, probs=None, data_clinic=False):
                                        children=filename, 
                                        style={'display': 'none'}),
                                 html.P(id={'type':'thumbnail-name-short', 'index': index}, 
-                                       children=filename.split('/')[-1], 
-                                       className="card-text"),
+                                       children=filename.split('/')[-1],
+                                       style={'margin-bottom': '0px', 'margin-top': '0px'}),
                                 html.P(children=text, 
                                        style=prob_style)
-                            ]
+                            ],
                         )
                     ],
                     outline=False,
-                    color='white')
+                    color=color,
+                    style={'margin-bottom': '0px', 'margin-top': '10px'}
+                    )
             ],
             id={'type': 'double-click-entry', 'index': index}, 
             events=[
@@ -187,7 +196,7 @@ def parse_contents(contents, filename, index, probs=None, data_clinic=False):
                     "props": ["srcElement.className", "srcElement.innerText"]
                 }
             ], 
-            logging=True
+            logging=True,
         ),
         id={'type': 'thumbnail-wrapper', 'index': index},
         style={'display': 'block'}
@@ -206,14 +215,13 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
         n_cols:             Number of columns
         show_prob:          Bool, show probabilities
         file:               table of filenames and probabilities
-        data_clinic:    Bool indicating if the images should be pre-selected for data clinic mode
+        data_clinic:        Bool indicating if the images should be pre-selected for data clinic mode
     Returns:
         dash component with all the images
     '''
     n_images = len(list_of_contents)
     n_cols = n_cols
     children = []
-    visible = []
     probs = None
     if show_prob:
         filenames = list(file.index)
@@ -221,16 +229,12 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
         row_child = []
         for i in range(n_cols):
             index = j * n_cols + i
-            if index >= n_images:
-                # no more images, on hanging row
+            if index >= n_images:   # no more images, on hanging row
                 break
             content = list_of_contents[index]
             filename = list_of_names[index]
             if show_prob:
-                if filename in filenames:
-                    probs = str(file.loc[filename].T.iloc[0:].to_string(header=None))
-                else:
-                    probs = ''
+                probs = file.loc[filename].to_string(header=None) if filename in filenames else ''
             row_child.append(
                 dbc.Col(
                     parse_contents(content,
@@ -242,8 +246,7 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
                     width="{}".format(12 // n_cols),
                     )
                 )
-            visible.append(1)
-        children.append(dbc.Row(row_child))
+        children.append(dbc.Row(row_child, className="g-1"))
     return children
 
 
@@ -259,12 +262,15 @@ def parse_full_screen_content(contents, filename):
     img_card = dbc.Card(
         id='full-screen-image',
         children=[
-            dbc.CardImg(id='full-screen-src',
-                        src=contents,
-                        top=True,
-                        className = 'align-self-center',
-                        style={'width': '80vmin', 
-                               'aspect-ratio': '1/1'}),
+            dbc.CardImg(
+                id='full-screen-src',
+                src=contents,
+                top=True,
+                className = 'align-self-center',
+                style={
+                    'width': '80vmin', 
+                    'aspect-ratio': '1/1'}
+                ),
             dbc.CardBody([
                 html.P(filename,
                        className="card-text")

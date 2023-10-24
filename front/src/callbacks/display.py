@@ -91,11 +91,9 @@ def update_output(image_order, thumbnail_slider_value, button_first_page, button
         new_contents = []
         new_filenames = []
         for indx in range(start_indx, max_indx):
-            start2 = time.time()
             content, filename = data_set[image_order[indx]].read_data()
             new_contents.append(content)
             new_filenames.append(filename)
-            print(f'Total time to individual images: {time.time() - start2}')
     if mlcoach_model and tab_selection=='mlcoach':
         if mlcoach_model.split('.')[-1] == 'csv':
             df_prob = pd.read_csv(mlcoach_model)
@@ -182,21 +180,18 @@ def select_thumbnail(value, labels_dict, thumbnail_name_children, color_cycle):
     '''
     changed_id = dash.callback_context.triggered[0]['prop_id']
     labels = Labels(**labels_dict)
-    color = ''
     if len(labels.labels_dict)==0 or value is None or changed_id == 'un-label.n_clicks':
-        return color
+        color = dash.no_update
     elif value % 2 == 1:
-        return 'primary'
+        color = 'primary'
     else:
-        filename = thumbnail_name_children
-        try:
-            label = labels.labels_dict[filename]
-        except:
-            label = []
+        label = labels.labels_dict[thumbnail_name_children]
         if len(label)>0:
             label_indx = labels.labels_list.index(label[0])
             color = color_cycle[label_indx]
-        return color
+        else:
+            color = 'white'
+    return color
 
 
 @callback(
