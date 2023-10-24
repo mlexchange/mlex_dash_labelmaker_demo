@@ -38,7 +38,7 @@ TILED_KEY = str(os.environ['TILED_KEY'])
 DOCKER_DATA = pathlib.Path.home() / 'data'
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 USER = 'admin'
-NUMBER_OF_ROWS = 4
+NUMBER_OF_ROWS = 3
 
 dash_file_explorer = FileManager(DOCKER_DATA, 
                                  UPLOAD_FOLDER_ROOT, 
@@ -75,11 +75,12 @@ app.layout = html.Div(
                         dbc.Col(
                             [
                                 dash_file_explorer.file_explorer,
-                                dcc.Loading(id="loading-display",
-                                            parent_className='transparent-loader-wrapper',
-                                            children=[html.Div(id='output-image-upload')],
-                                            style={'visibility': 'hidden'},
-                                            type="circle"),
+                                dcc.Loading(
+                                    id="loading-display",
+                                    parent_className='transparent-loader-wrapper',
+                                    children=[html.Div(id='output-image-upload')],
+                                    type="circle"
+                                    ),
                                 display()
                             ], width=8),
                     ],
