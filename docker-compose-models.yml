@@ -1,9 +1,0 @@
-version: '3'
-
-services:
-  model1:
-    image: mlexchange1/unsupervised-classifier:1.0
-
-  model2:
-    image: mlexchange1/tensorflow-neural-networks:1.0
-
