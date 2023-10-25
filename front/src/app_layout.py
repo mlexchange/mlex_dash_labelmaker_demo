@@ -75,12 +75,13 @@ app.layout = html.Div(
                         dbc.Col(
                             [
                                 dash_file_explorer.file_explorer,
-                                dcc.Loading(
-                                    id="loading-display",
-                                    parent_className='transparent-loader-wrapper',
-                                    children=[html.Div(id='output-image-upload')],
-                                    type="circle"
-                                    ),
+                                html.Div(id='output-image-upload'),
+                                # dcc.Loading(
+                                #     id="loading-display",
+                                #     parent_className='transparent-loader-wrapper',
+                                #     children=[html.Div(id='output-image-upload')],
+                                #     type="circle"
+                                #     ),
                                 display()
                             ], width=8),
                     ],
