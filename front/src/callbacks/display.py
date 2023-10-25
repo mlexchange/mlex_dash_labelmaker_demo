@@ -150,7 +150,7 @@ def full_screen_thumbnail(double_click, thumbnail_name_children, file_paths):
     data_project.init_from_dict(file_paths)
     data = data_project.data
     data_set = next(item for item in data if item.uri == filename)
-    img_contents, _ = data_set.read_data()
+    img_contents, _ = data_set.read_data(resize=False)
     contents = parse_full_screen_content(img_contents, filename)
     return [contents], [True], [0]*len(double_click)
 
@@ -163,8 +163,9 @@ def full_screen_thumbnail(double_click, thumbnail_name_children, file_paths):
 
     State({'type': 'thumbnail-name', 'index': MATCH}, 'children'),
     State('color-cycle', 'data'),
+    State({'type': 'thumbnail-card', 'index': MATCH}, 'color'),
 )
-def select_thumbnail(value, labels_dict, thumbnail_name_children, color_cycle):
+def select_thumbnail(value, labels_dict, thumbnail_name_children, color_cycle, current_color):
     '''
     This callback assigns a color to thumbnail cards in the following scenarios:
         - An image has been selected, but no label has been assigned (blue)
@@ -175,13 +176,14 @@ def select_thumbnail(value, labels_dict, thumbnail_name_children, color_cycle):
         labels_dict:                Dictionary of labeled images, as follows: {'img1':[], 'img2':[]}
         thumbnail_name_children:    Filename in selected thumbnail
         color_cycle:                List that contains the color cycle associated with the labels
+        current_color:              Current color in thumbnail card
     Returns:
         thumbnail_color:            Color of thumbnail card
     '''
     changed_id = dash.callback_context.triggered[0]['prop_id']
     labels = Labels(**labels_dict)
     if len(labels.labels_dict)==0 or value is None or changed_id == 'un-label.n_clicks':
-        color = dash.no_update
+        color = current_color
     elif value % 2 == 1:
         color = 'primary'
     else:
@@ -194,6 +196,8 @@ def select_thumbnail(value, labels_dict, thumbnail_name_children, color_cycle):
             color = color_cycle[label_indx]
         else:
             color = 'white'
+    if color == current_color:
+        return dash.no_update
     return color
 
 
