@@ -185,7 +185,10 @@ def select_thumbnail(value, labels_dict, thumbnail_name_children, color_cycle):
     elif value % 2 == 1:
         color = 'primary'
     else:
-        label = labels.labels_dict[thumbnail_name_children]
+        try:
+            label = labels.labels_dict[thumbnail_name_children]
+        except:
+            label = []
         if len(label)>0:
             label_indx = labels.labels_list.index(label[0])
             color = color_cycle[label_indx]
