@@ -30,11 +30,13 @@ app = dash.Dash(__name__,
                 suppress_callback_exceptions=True, 
                 long_callback_manager=long_callback_manager)
 
-MLCOACH_URL = str(os.environ['MLCOACH_URL'])
-DATA_CLINIC_URL = str(os.environ['DATA_CLINIC_URL'])
-SPLASH_URL = str(os.environ['SPLASH_URL'])
-MLEX_COMPUTE_URL = str(os.environ['MLEX_COMPUTE_URL'])
-TILED_KEY = str(os.environ['TILED_KEY'])
+MLCOACH_URL = os.getenv('MLCOACH_URL')
+DATA_CLINIC_URL = os.getenv('DATA_CLINIC_URL')
+SPLASH_URL = os.getenv('SPLASH_URL')
+MLEX_COMPUTE_URL = os.getenv('MLEX_COMPUTE_URL')
+TILED_KEY = os.getenv('TILED_KEY')
+if TILED_KEY=='':
+    TILED_KEY = None
 DOCKER_DATA = pathlib.Path.home() / 'data'
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 USER = 'admin'
