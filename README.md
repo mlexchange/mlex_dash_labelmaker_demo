@@ -1,94 +1,36 @@
 # Dash LabelMaker
-Simple labeling application with a Dash UI. This is our first release.
+Image labeling application with a Dash UI.
 
 ## Install
 
-### Install the labeling pipeline (Labelmaker + Data Clinic + MLCoach)
+### Install the labeling pipeline (Labelmaker + Data Clinic + MLCoach + Latent Space Explorer)
 1. First [install the MLExchange platform](https://github.com/mlexchange/mlex).
 	
-2. Clone the following repositories:
-
-	* [mlex\_data\_clinic](https://github.com/mlexchange/mlex_data_clinic)
-	* [mlex\_mlcoach](https://github.com/mlexchange/mlex_mlcoach)
-	* [splash\_ml](https://github.com/als-computing/splash-ml)
-
-	These repositories should be in the same directory, as shown below:
-	
-	```
-	project_directory
-	│
-	│   mlex_data_clinic
-	│   mlex_mlcoach
-	|   mlex_dash_labelmaker_demo
-	│   splash_ml
-	
-	```
+2. Clone this repository in your local device.
 
 3. Inside the `mlex_dash_labelmaker_demo` folder, create an environmental file named `.env` as below:
 
 	```
-	MONGO_DB_USERNAME=your_username
-	MONGO_DB_PASSWORD=your_password
-	# uncomment the line below to use Tiled data streaming service (deprecated atm) 
-	# TILED_KEY=your_tiled_key
+	MONGO_DB_URI=your_mongo_db_uri
+	DEFAULT_TILED_URI=your_default_tiled_uri	#optional
+	TILED_KEY=your_tiled_key					#optional
 	```
 
-4. Run `./install`. Then go to `http://localhost:8057` in web browser and follow the instructions on each tab.
-5. To uninstall the labelmaker pipeline, run `./uninstall`.
+4. To make existing machine learning algorithms available in Data Clinic and MLCoach, make sure to upload the model description, (e.g. [image classification](https://github.com/mlexchange/mlex_image_classification/blob/main/description/Tensorflow-NN_v0.0.3.json) and [autoencoders](https://github.com/mlexchange/mlex_pytorch_autoencoders/blob/main/description/pytorch_autoencoder_v0.0.3.json)) to the content registry.
 
+5. Run `./install`. Then go to `http://localhost:8057` in web browser and follow the instructions on each tab.
 
+6. To uninstall the labelmaker pipeline, run `./uninstall`.
 
----
-### Running as a standalone application (Labelmaker only)
-To start this labeling service, go to the source code folder and execute the following:
-```
-docker-compose up --build
-```
-Go to `http://localhost:8057` in web browser.
+## Ingest data with MLExchange File Manager
 
-Please note that starting the service in this way will not provide connectivity to Data Clinic and MLCoach.
+The MLExchange File Manager supports data access through:
 
-## Ingest data with MLExchange file manager
+1. Loading data from file system: You can access image data located at the ```data``` folder in the main directory. Currently, the supported formats are: PNG, JPG/JPEG, and TIF/TIFF.
 
-### Dataset Description
-Currently, the file manager supports directory based data definition, similar to the following example:
+2. Loading data from [Tiled](https://blueskyproject.io/tiled/): Alternatively, you can access data through Tiled by providing a ```tiled_server_uri``` in the frontend of your application and the ```TILED_KEY``` associated with this server as an environment variable.
 
-```
-data_directory
-│
-│   image001.jpeg
-│   image002.jpeg
-│   ...
-
-```
-
-The supported image formats are: TIFF, TIF, JPG, JPEG, and PNG.
-
-### Instructions
-Put your dataset inside the **data folder** or use **MLExchange data connector** to transfer data to this folder (future release). 
-This folder is mounted to the working directory in the container, and it is your **home data dir (HOME)**. 
-Then go to the webpage and click on **Open File Manager** to lauch MLExchange file manager. It offers several options for users to ingest/manipualte data.   
-
-1. Upload data from **Drag and Drop** to home data dir. 
-Upload either a single file or a zip file (files) through drag and drop.
-User can then browse the newly added files/folder in the path table and move them to a new directory inside HOME.  
-
-2. Browse files or directories in the **HOME** and import the selected files:   
-After selecting which files or directories and filtering the display by format, click on **Import Selected Files or Directories** button on the right side. 
-When importing a directory, you can import **only** files of a specific format by using the rightmost dropdown menu.  
-
-3. Move data into a new directory:  
-Input the destination directory (relative to root path) and select the files/folder from **File Table**. Then click on **Move** button. 
-The selected files/dirs will be (recursively) moved into the new directory and the original dirs will be automatically deleted. 
-If no input, files/dirs will be moved to **HOME**.
-**Please note that folders of the same name (from different dirs) will be merged**.  
-
-4. Deleting files or directories:   
-The selected file paths can be deleted by clicking **Delete the Selected** button. User must click on **Import** button again to ingest the newly selected files/paths 
-
-
-## View paths in different environments
-The File Manager allows users to view file paths either in local paths (mounted to docker) or docker paths. Users can choose which path by toggling the swith below the **Browse** button.
+More information available at [File Manager](https://github.com/mlexchange/mlex_file_manager).
 
 
 ## Labeling instructions:
@@ -103,8 +45,7 @@ Removing an assigned label (un-label):
 2. Click the "un-label" button
 
 ### Label from MLCoach  
-Choose MLCoach tab on the right sidebar. This options allows users to label images by using a trained MLCoach model and
-a given probability threshold. 
+Choose MLCoach tab on the right sidebar. This options allows users to label images by using a trained MLCoach model and a given probability threshold. 
 
 To label images:  
 
@@ -119,17 +60,15 @@ following **Label Manually** procedures.
 For further details on the operation of MLCoach, please refer to its [documentation](https://github.com/mlexchange/mlex_mlcoach).
 
 ### Label from Data Clinic
-Choose Data Clinic tab on the right sidebar. This tab allows users to tag the selected images and their top N most 
-similar images under the same label(s) by using a trained Data Clinic model.
+Choose Data Clinic tab on the right sidebar. This tab allows users to tag similar images under the same label by using a trained Data Clinic model.
 
-Please follow the instructions in the app sidebar. Likewise, users can also manually un-label and re-label following
-**Label Manually** procedures afterwards.
+Please follow the instructions in the app sidebar. Likewise, users can also manually un-label and re-label following **Label Manually** procedures afterwards.
 
 For further details on the operation of Data Clinic, please refer to its [documentation](https://github.com/mlexchange/mlex_data_clinic).
 
 
 ## Copyright
-MLExchange Copyright (c) 2021, The Regents of the University of California,
+MLExchange Copyright (c) 2023, The Regents of the University of California,
 through Lawrence Berkeley National Laboratory (subject to receipt of
 any required approvals from the U.S. Dept. of Energy). All rights reserved.
 
