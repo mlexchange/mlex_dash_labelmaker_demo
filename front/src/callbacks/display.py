@@ -228,7 +228,7 @@ def deselect(label_button_trigger, unlabel_n_clicks, unlabel_all, keybind_label,
     keybind_is_valid = True
     if changed_id == 'keybind-event-listener.event':
         keybind_is_valid = keybind_label['key'].isdigit() and \
-                           int(keybind_label['key']) in range(len(label_button_trigger))
+                           int(keybind_label['key'])-1 in range(len(label_button_trigger))
         if not keybind_is_valid:
             raise PreventUpdate
     if all(x is None for x in label_button_trigger) and unlabel_n_clicks is None and \

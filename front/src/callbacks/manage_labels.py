@@ -130,8 +130,8 @@ def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_butt
     label_comp = dash.no_update
     # Labeling with keyword shortcuts
     if changed_id == 'keybind-event-listener.event':
-        if keybind_label['key'].isdigit() and int(keybind_label['key']) in range(len(label_button_children)):
-            label_class_value = label_button_children[int(keybind_label['key'])]
+        if keybind_label['key'].isdigit() and int(keybind_label['key'])-1 in range(len(label_button_children)):
+            label_class_value = label_button_children[int(keybind_label['key'])-1]
             labels.manual_labeling(label_class_value, 
                                    thumbnail_image_select_value,
                                    thumbnail_name_children)

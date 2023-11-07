@@ -17,41 +17,60 @@ def create_label_button(label_text, label_color, indx):
     label_comp = dbc.Row(
                 [
                     dbc.Col(
-                        dbc.Button(label_text,
-                                   id={'type': 'label-button', 'index': indx},
-                                   n_clicks_timestamp=0,
-                                   size="sm",
-                                   style={'background-color': label_color,
-                                          'border-color': label_color,
-                                          'color':'black', 'width': '100%'}
-                                   ),
+                        dbc.Button(
+                            label_text,
+                            id={'type': 'label-button', 'index': indx},
+                            n_clicks_timestamp=0,
+                            size="sm",
+                            style={
+                                'background-color': label_color,
+                                'border-color': label_color,
+                                'color':'black', 'width': '100%'
+                                }
+                            ),
                         width=10,
-                        style={'margin-right': '2%', 'width': '80%'}
+                        style={
+                            'margin-right': '2%',
+                            'width': '80%'
+                            }
                     ),
                     dbc.Col(
-                        dbc.Button(className="fa fa-edit",
-                                   id={'type': 'color-label-button', 'index': indx},
-                                   size="sm",
-                                   n_clicks_timestamp=0,
-                                   style={'background-color': label_color, 
-                                          'border-color': label_color,
-                                          'color':'black', 'width': '100%'}),
+                        dbc.Button(
+                            className="fa fa-edit",
+                            id={'type': 'color-label-button', 'index': indx},
+                            size="sm",
+                            n_clicks_timestamp=0,
+                            style={
+                                'background-color': label_color, 
+                                'border-color': label_color,
+                                'color': 'black',
+                                'width': '100%'
+                                }
+                            ),
                         width=1,
-                        style={ 'margin-right': '2%', 'width': '8%'}
+                        style={
+                            'margin-right': '2%',
+                            'width': '8%'
+                            }
                     ),
                     dbc.Col(
-                        dbc.Button(className="fa fa-trash",
-                                   id={'type': 'delete-label-button', 'index': indx},
-                                   n_clicks_timestamp=0,
-                                   size="sm",
-                                   style={'background-color': label_color, 
-                                          'border-color': label_color,
-                                          'color':'black', 'width': '100%'}),
+                        dbc.Button(
+                            className="fa fa-trash",
+                            id={'type': 'delete-label-button', 'index': indx},
+                            n_clicks_timestamp=0,
+                            size="sm",
+                            style={
+                                'background-color': label_color, 
+                                'border-color': label_color,
+                                'color':'black',
+                                'width': '100%'
+                                }
+                            ),
                         width=1,
                         style={'width': '8%'}
                     ),
                     dbc.Tooltip(
-                        f'Keyboard shortcut: {indx}',
+                        f'Keyboard shortcut: {indx+1}',
                         target={'type': 'label-button', 'index': indx},
                         placement='top'
                     )
@@ -89,11 +108,18 @@ def create_label_component(label_list, color_cycle=px.colors.qualitative.Light24
         for i in range(len(label_list)):
             comp_row = create_label_button(label_list[i], color_cycle[i], i)
             comp_list.append(comp_row)
-            progress.append(dbc.Progress(id={'type': 'label-percentage', 'index': i},
-                                         value=progress_values[i],
-                                         label=progress_labels[i],
-                                         style={'background-color': color_cycle[i], 
-                                                'color':'black'}, bar=True))
+            progress.append(
+                dbc.Progress(
+                    id={'type': 'label-percentage', 'index': i},
+                    value=progress_values[i],
+                    label=progress_labels[i],
+                    style={
+                        'background-color': color_cycle[i], 
+                        'color':'black'
+                        },
+                    bar=True
+                    )
+                )
     else:
         options = []
         for label in label_list:
@@ -106,24 +132,37 @@ def create_label_component(label_list, color_cycle=px.colors.qualitative.Light24
         ]
         for i in range(len(label_list)):
             progress.append(
-                dbc.Progress(id={'type': 'label-percentage', 'index': i},
-                             style={'background-color': color_cycle[i], 'color':'black'},
-                             bar=True)
+                dbc.Progress(
+                    id={'type': 'label-percentage', 'index': i},
+                    style={
+                        'background-color': color_cycle[i],
+                        'color':'black'
+                        },
+                    bar=True
+                    )
                 )
     comp_list = comp_list + \
                 [
-                    dbc.Button('Unlabel the Selected',
-                               id='un-label',
-                               className="ms-auto",
-                               color = 'primary',
-                               size="sm",
-                               outline=True,
-                               style={'width': '100%', 'margin-bottom': '10px', 'margin-top': '10px'}),
+                    dbc.Button(
+                        'Unlabel the Selected',
+                        id='un-label',
+                        className="ms-auto",
+                        color = 'primary',
+                        size="sm",
+                        outline=True,
+                        style={
+                            'width': '100%',
+                            'margin-bottom': '10px',
+                            'margin-top': '10px'
+                            }
+                        ),
                     dbc.Label('Labeled images:'),
                     dbc.Progress(progress),
-                    dbc.Label(total_num_labeled,
-                              id='total_labeled',
-                              style={'margin-top': '5px'})
+                    dbc.Label(
+                        total_num_labeled,
+                        id='total_labeled',
+                        style={'margin-top': '5px'}
+                        )
                  ]
     return comp_list
 
@@ -162,31 +201,44 @@ def parse_contents(contents, filename, index, probs=None, data_clinic=False):
                 dbc.Card(
                     id={'type': 'thumbnail-card', 'index': index},
                     children=[
-                        html.A(id={'type': 'thumbnail-image', 'index': index},
-                               n_clicks=init_clicks,   
-                               children=[
-                                   dbc.CardImg(
-                                       id={'type': 'thumbnail-src', 'index': index},
-                                       src=contents,
-                                       bottom=False)
+                        html.A(
+                            id={'type': 'thumbnail-image', 'index': index},
+                            n_clicks=init_clicks,   
+                            children=[
+                                dbc.CardImg(
+                                    id={'type': 'thumbnail-src', 'index': index},
+                                    src=contents,
+                                    bottom=False)
                                ]
                            ),
                         dbc.CardBody(
                             [
-                                html.P(id={'type':'thumbnail-name', 'index': index}, 
-                                       children=filename, 
-                                       style={'display': 'none'}),
-                                html.P(id={'type':'thumbnail-name-short', 'index': index}, 
-                                       children=filename.split('/')[-1],
-                                       style={'margin-bottom': '0px', 'margin-top': '0px'}),
-                                html.P(children=text, 
-                                       style=prob_style)
+                                html.P(
+                                    id={'type':'thumbnail-name', 'index': index}, 
+                                    children=filename, 
+                                    style={'display': 'none'}
+                                    ),
+                                html.P(
+                                    id={'type':'thumbnail-name-short', 'index': index}, 
+                                    children=filename.split('/')[-1],
+                                    style={
+                                        'margin-bottom': '0px',
+                                        'margin-top': '0px'
+                                        }
+                                    ),
+                                html.P(
+                                    children=text, 
+                                    style=prob_style
+                                    )
                             ],
                         )
                     ],
                     outline=False,
                     color=color,
-                    style={'margin-bottom': '0px', 'margin-top': '10px'}
+                    style={
+                        'margin-bottom': '0px',
+                        'margin-top': '10px'
+                        }
                     )
             ],
             id={'type': 'double-click-entry', 'index': index}, 
@@ -266,14 +318,16 @@ def parse_full_screen_content(contents, filename):
                 id='full-screen-src',
                 src=contents,
                 top=True,
-                className = 'align-self-center',
+                className='align-self-center',
                 style={
                     'width': '80vmin', 
                     'aspect-ratio': '1/1'}
                 ),
             dbc.CardBody([
-                html.P(filename,
-                       className="card-text")
+                html.P(
+                    filename,
+                    className="card-text"
+                    )
                 ]
             )
         ]
