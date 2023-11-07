@@ -218,14 +218,14 @@ def parse_contents(contents, filename, index, probs=None, similarity=False):
                                     children=filename, 
                                     style={'display': 'none'}
                                     ),
-                                html.P(
-                                    id={'type':'thumbnail-name-short', 'index': index}, 
-                                    children=filename.split('/')[-1],
-                                    style={
-                                        'margin-bottom': '0px',
-                                        'margin-top': '0px'
-                                        }
-                                    ),
+                                # html.P(
+                                #     id={'type':'thumbnail-name-short', 'index': index}, 
+                                #     children=filename.split('/')[-1],
+                                #     style={
+                                #         'margin-bottom': '0px',
+                                #         'margin-top': '0px'
+                                #         }
+                                #     ),
                                 html.P(
                                     children=text, 
                                     style=prob_style
