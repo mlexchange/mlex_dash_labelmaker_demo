@@ -7,6 +7,9 @@ from labels import Labels
 @callback(
     Output("modal-un-label", "is_open"),
     Output({'base_id': 'file-manager', 'name': "confirm-update-data"}, "data"),
+    Output({'base_id': 'file-manager', 'name': "import-dir"}, "n_clicks"),
+    Output({'base_id': 'file-manager', 'name': "clear-data"}, "n_clicks"),
+    Output({'base_id': 'file-manager', 'name': "refresh-data"}, "n_clicks"),
 
     Input("un-label-all", "n_clicks"),
     Input("confirm-un-label-all", "n_clicks"),
@@ -32,6 +35,8 @@ def toggle_modal_unlabel_warning(unlabel_all_clicks, confirm_unlabel_all_clicks,
     Returns:
         modal_is_open:              [Bool] modal unlabel warning is open
         update_data:                Flag indicating that new data can be imported from file manager
+        n_clear:                    Number of clicks of clear data button
+        n_refresh:                  Number of clicks of refresh data button
     '''
     changed_id = dash.callback_context.triggered[0]['prop_id']
     modal_is_open = False
@@ -44,4 +49,31 @@ def toggle_modal_unlabel_warning(unlabel_all_clicks, confirm_unlabel_all_clicks,
         else:
             update_data = False
         modal_is_open = True
-    return modal_is_open, update_data
+    if update_data==True:
+        # Update corresponding button to trigger callback in file manager
+        if n_import>0:
+            n_import=+1
+            n_clear = dash.no_update
+            n_refresh = dash.no_update
+        elif n_clear>0:
+            n_clear=+1
+            n_import = dash.no_update
+            n_refresh = dash.no_update
+        elif n_refresh>0:
+            n_refresh=+1
+            n_clear = dash.no_update
+            n_import = dash.no_update
+    else:
+        # Reset number of clicks in buttons to trigger the corresponding one once deleting labels
+        # is confirmed
+        if 'clear-data' in changed_id:
+            n_import=0
+            n_refresh=0
+        elif 'refresh' in changed_id:
+            n_clear=0
+            n_import=0
+        elif 'import' in changed_id:
+            n_refresh=0
+            n_clear=0
+    print(f'Outputs: {n_import}, {n_clear}, {n_refresh}')
+    return modal_is_open, update_data, n_import, n_clear, n_refresh
