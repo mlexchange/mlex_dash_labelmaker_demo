@@ -97,18 +97,18 @@ class Labels:
                 self.num_imgs_per_label[label] += 1
         pass
 
-    def mlcoach_labeling(self, mlcoach_model, mlcoach_label, threshold):
+    def probability_labeling(self, probability_model, probability_label, threshold):
         '''
-        Labeling process through mlcoach trained model. This process will not overwrite existing 
-        labels in the dictionary
+        Labeling process through probability-based trained model. This process will not overwrite
+        existing labels in the dictionary
         Args:
-            mlcoach_model:          MLCoach model outcome to be used for labeling
-            mlcoach_label:          Label to be assigned across the data set
+            probability_model:      Probability-based model outcome to be used for labeling
+            probability_label:      Label to be assigned across the data set
             threshold:              Probability threshold to assign labels
         '''
-        df_prob = pd.read_parquet(mlcoach_model)
-        mlcoach_filenames = df_prob.index[df_prob[mlcoach_label]>threshold/100].tolist()
-        self.assign_labels(mlcoach_label, mlcoach_filenames, overwrite=False)
+        df_prob = pd.read_parquet(probability_model)
+        probability_filenames = df_prob.index[df_prob[probability_label]>threshold/100].tolist()
+        self.assign_labels(probability_label, probability_filenames, overwrite=False)
         pass
 
     def manual_labeling(self, label, num_clicks, filenames):

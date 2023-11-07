@@ -17,9 +17,9 @@ from callbacks.warning import toggle_modal_unlabel_warning
 app.clientside_callback(
     """
     function(n_clicks, tab_value, mlcoach_url, data_clinic_url) {
-        if (tab_value == 'mlcoach') {
+        if (tab_value == 'probability') {
             window.open(mlcoach_url);
-        } else if (tab_value == 'data_clinic') {
+        } else if (tab_value == 'similarity') {
             window.open(data_clinic_url);
         } 
         return '';
@@ -32,6 +32,7 @@ app.clientside_callback(
     State('data-clinic-url', 'data'),
     prevent_initial_call=True
 )
+
 
 @app.long_callback(
     Output('download-out', 'data'),

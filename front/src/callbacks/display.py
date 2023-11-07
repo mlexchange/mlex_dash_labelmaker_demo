@@ -22,8 +22,8 @@ from app_layout import NUMBER_OF_ROWS
     Input('prev-page', 'n_clicks'),
     Input('next-page', 'n_clicks'),
     Input('last-page', 'n_clicks'),
-    Input('mlcoach-collapse', 'is_open'),
-    Input('mlcoach-model-list', 'value'),
+    Input('probability-collapse', 'is_open'),
+    Input('probability-model-list', 'value'),
     
     State('labels-dict', 'data'),
     State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
@@ -33,7 +33,7 @@ from app_layout import NUMBER_OF_ROWS
     State('previous-tab', 'data')],
     prevent_initial_call=True)
 def update_output(image_order, thumbnail_slider_value, button_first_page, button_prev_page, 
-                  button_next_page, button_last_page, ml_coach_is_open, mlcoach_model, labels_dict, 
+                  button_next_page, button_last_page, probability_is_open, probability_model, labels_dict, 
                   file_paths, find_similar_images, current_page, tab_selection, previous_tab):
     '''
     This callback displays images in the front-end and enables/disables the page navigation buttons
@@ -45,15 +45,15 @@ def update_output(image_order, thumbnail_slider_value, button_first_page, button
         button_prev_page:       Go to previous page
         button_next_page:       Go to next page
         button_last_page:       Go to last page
-        ml_coach_is_open:       MLCoach is the labeling method
-        mlcoach_model:          Selected MLCoach model
+        probability_is_open:    Probability-based labelng is the chosen method
+        probability_model:      Selected probability-based model
         labels_dict:            Dictionary with labeling information, e.g. 
                                 {filename1: [label1,label2], ...}
         file_paths:             Data project information
         find_similar_images:    Find similar images button, n_clicks
         current_page:           Index of the current page
-        tab_selection:          Current tab [Manual, Data Clinic, MLCoach]
-        previous_tab:           List of previous tab selection [Manual, Data Clinic, MLCoach]
+        tab_selection:          Current tab [Manual, Similarity, Probability]
+        previous_tab:           List of previous tab selection [Manual, Similarity, Probability]
     Returns:
         children:               Images to be displayed in front-end according to the current page 
                                 index and # of columns
@@ -76,10 +76,10 @@ def update_output(image_order, thumbnail_slider_value, button_first_page, button
         current_page = current_page + 1
     elif changed_id == 'last-page.n_clicks':
         current_page = math.ceil(num_imgs/(NUMBER_OF_ROWS*thumbnail_slider_value)) - 1
-    elif changed_id == 'mlcoach-collapse.is_open':
-        if tab_selection=='mlcoach':        # if the previous tab is mlcoach, the display should be 
+    elif changed_id == 'probability-collapse.is_open':
+        if tab_selection=='probability':        # if the previous tab is probability, the display should be 
             current_page = 0                # updated to remove the probability list per image
-        elif previous_tab[-2] != 'mlcoach':
+        elif previous_tab[-2] != 'probability':
             raise PreventUpdate
     children = []
     start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
@@ -94,13 +94,13 @@ def update_output(image_order, thumbnail_slider_value, button_first_page, button
             content, filename = data_set[image_order[indx]].read_data()
             new_contents.append(content)
             new_filenames.append(filename)
-    if mlcoach_model and tab_selection=='mlcoach':
-        if mlcoach_model.split('.')[-1] == 'csv':
-            df_prob = pd.read_csv(mlcoach_model)
+    if probability_model and tab_selection=='probability':
+        if probability_model.split('.')[-1] == 'csv':
+            df_prob = pd.read_csv(probability_model)
         else:
-            df_prob = pd.read_parquet(mlcoach_model)
+            df_prob = pd.read_parquet(probability_model)
         children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value,
-                             ml_coach_is_open, df_prob)
+                             probability_is_open, df_prob)
     elif find_similar_images:               # Find similar images has been activated
         pre_highlight = True
         for name in new_filenames:          # if there is one label in page, do not pre-highlight
@@ -108,7 +108,7 @@ def update_output(image_order, thumbnail_slider_value, button_first_page, button
                 pre_highlight = False
         if find_similar_images>0 and pre_highlight:
             children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, \
-                                 thumbnail_slider_value, data_clinic=True)
+                                 thumbnail_slider_value, similarity=True)
         else:
             children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, \
                                  thumbnail_slider_value)
@@ -273,8 +273,8 @@ def display_indicator(n_clicks):
 
 @callback(
     Output('manual-collapse', 'is_open'),
-    Output('mlcoach-collapse', 'is_open'),
-    Output('data-clinic-collapse', 'is_open'),
+    Output('probability-collapse', 'is_open'),
+    Output('similarity-collapse', 'is_open'),
     Output('label-buttons-collapse', 'is_open'),
     Output('goto-webpage-collapse', 'is_open'),
     Output('goto-webpage', 'children'),
@@ -288,19 +288,19 @@ def toggle_tabs_collapse(tab_value, previous_tab):
     '''
     This callback toggles the tabs according to the selected labeling method
     '''
-    keys = ['manual', 'mlcoach', 'data_clinic']
+    keys = ['manual', 'probability', 'similarity']
     tabs = {key: False for key in keys}
     tabs[tab_value] = True
-    if tab_value == 'data_clinic':
+    if tab_value == 'similarity':
         tabs['manual'] = True
     show_label_buttons = True
-    goto_webpage = {'manual': False, 'mlcoach': True, 'data_clinic': True}
+    goto_webpage = {'manual': False, 'probability': True, 'similarity': True}
     button_name = 'Go to MLCoach'
-    if tab_value == 'data_clinic':
+    if tab_value == 'similarity':
         button_name = 'Go to DataClinic'
     if not previous_tab:
         previous_tab = ['init', tab_value]
     else:
         previous_tab.append(tab_value)
-    return tabs['manual'], tabs['mlcoach'], tabs['data_clinic'], \
+    return tabs['manual'], tabs['probability'], tabs['similarity'], \
            show_label_buttons, goto_webpage[tab_value], button_name, previous_tab

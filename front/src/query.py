@@ -32,9 +32,9 @@ class Query(Labels):
     
     def similarity_search(self, model_path, filename):
         unlabeled_indx = self.hide_labeled()            # Get list of indexes of unlabeled images
-        df_clinic = pd.read_parquet(model_path, engine='pyarrow') 
-        f_vec = np.array(df_clinic)[unlabeled_indx,:]   # Get feature vectors of unlabeled images
-        f_vec_int = np.array(df_clinic.loc[filename])   # Identify feature vector of interest
+        df_model = pd.read_parquet(model_path, engine='pyarrow') 
+        f_vec = np.array(df_model)[unlabeled_indx,:]   # Get feature vectors of unlabeled images
+        f_vec_int = np.array(df_model.loc[filename])   # Identify feature vector of interest
         num_data_sets = f_vec.shape[0]
         dist = np.zeros(num_data_sets)
         for ii in range(num_data_sets):                 # Calculate distance vector

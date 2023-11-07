@@ -167,7 +167,7 @@ def create_label_component(label_list, color_cycle=px.colors.qualitative.Light24
     return comp_list
 
 
-def parse_contents(contents, filename, index, probs=None, data_clinic=False):
+def parse_contents(contents, filename, index, probs=None, similarity=False):
     '''
     This function creates the dash components to display thumbnail images
     Args:
@@ -175,7 +175,7 @@ def parse_contents(contents, filename, index, probs=None, data_clinic=False):
         filename:       Filename
         index:          Index of the dash component
         probs:          String of probabilities
-        data_clinic:    Bool indicating if the images should be pre-selected for data clinic mode
+        similarity:     Bool indicating if the images should be pre-selected for similarity-based search mode
     Returns:
         dash component
     '''
@@ -189,7 +189,7 @@ def parse_contents(contents, filename, index, probs=None, data_clinic=False):
                       'margin-top': '1px'}
     else:
         prob_style = {'display': 'none'}
-    if data_clinic:
+    if similarity:
         init_clicks = 1
         color = 'primary'
     else:
@@ -257,7 +257,7 @@ def parse_contents(contents, filename, index, probs=None, data_clinic=False):
 
 
 def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, file=None,
-              data_clinic=False):
+              similarity=False):
     '''
     This function display the images per page
     Args:
@@ -267,7 +267,7 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
         n_cols:             Number of columns
         show_prob:          Bool, show probabilities
         file:               table of filenames and probabilities
-        data_clinic:        Bool indicating if the images should be pre-selected for data clinic mode
+        similarity:         Bool indicating if the images should be pre-selected for similarity-based search mode
     Returns:
         dash component with all the images
     '''
@@ -293,7 +293,7 @@ def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, 
                                    filename,
                                    j * n_cols + i,
                                    probs,
-                                   data_clinic
+                                   similarity
                         ),
                     width="{}".format(12 // n_cols),
                     )

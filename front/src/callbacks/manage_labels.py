@@ -39,7 +39,7 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
 
 @callback(
     Output('label-buttons', 'children'),
-    Output('mlcoach-label-name', 'options'),
+    Output('probability-label-name', 'options'),
     Output('labels-dict', 'data'),
     Output({'type': 'label-percentage', 'index': ALL}, 'value'),
     Output({'type': 'label-percentage', 'index': ALL}, 'label'),
@@ -49,8 +49,8 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
     Input({'type': 'label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input('keybind-event-listener', 'event'),
     Input('un-label', 'n_clicks'),
-    Input('mlcoach-label', 'n_clicks'),
-    Input('mlcoach-model-list', 'value'),
+    Input('probability-label', 'n_clicks'),
+    Input('probability-model-list', 'value'),
     Input('confirm-load-splash', 'n_clicks'),
     Input('modify-list', 'n_clicks'),
     Input({'type': 'delete-label-button', 'index': ALL}, 'n_clicks_timestamp'),
@@ -62,7 +62,7 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
     State('labels-dict', 'data'),
     State('probability-threshold', 'value'),
-    State('mlcoach-label-name', 'value'),
+    State('probability-label-name', 'value'),
     State({'type': 'label-button', 'index': ALL}, 'children'),
     State({'base_id': 'file-manager', 'name': 'project-id'}, 'data'),
     State('event-id', 'value'),
@@ -72,10 +72,10 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
     prevent_initial_call=True
 )
 def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_button,
-                              mlcoach_label_button, mlcoach_model, load_splash_n_clicks,
+                              probability_label_button, probability_model, load_splash_n_clicks,
                               modify_list_n_clicks, del_label_n_clicks, file_paths,
                               submit_color_n_clicks, add_label_name, thumbnail_image_select_value,
-                              thumbnail_name_children, labels_dict, threshold, mlcoach_label,
+                              thumbnail_name_children, labels_dict, threshold, probability_label,
                               label_button_children, project_id, event_id, color_label_t_clicks,
                               new_color, color_cycle):
     '''
@@ -93,8 +93,8 @@ def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_butt
         label_button_n_clicks:          List of timestamps of the clicked label-buttons
         keybind_label:                  Keyword entry
         unlabel_button:                 Un-label button
-        mlcoach_label_button:           Triggers labeling with mlcoach results
-        mlcoach_model:                  Selected mlcoach model
+        probability_label_button:       Triggers labeling with probability results
+        probability_model:              Selected probability-based model
         load_splash_n_clicks:           Triggers loading labeled datasets with splash-ml
         modify_list_n_clicks:           Button to add a new label (tag name)
         del_label_n_clicks:             List of n_clicks to delete a label button  
@@ -105,8 +105,8 @@ def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_butt
         thumbnail_name_children:        Filename of the selected thumbnail image
         labels_dict:                    Dictionary of labeled images, e.g., 
                                         {filename1: [label1, label2], ...}
-        threshold:                      Threshold value for labeling with mlcoach
-        mlcoach_label:                  Selected label to be assigned with mlcoach model
+        threshold:                      Threshold value for labeling with probability
+        probability_label:              Selected label to be assigned with probability model
         label_button_children:          List of label text in label buttons
         project_id:                     Data project id
         event_id:                       Tagging event id for version control of tags
@@ -115,7 +115,7 @@ def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_butt
         color_cycle:                    Color cycle per label
     Returns:
         label_buttons:                  Dash components with the updated list of labels
-        mlcoach_label_options:          Label options from trained model in mlcoach
+        probability_label_options:      Label options from trained model in probability
         labels_dict:                    Dictionary with labeling information, e.g. 
                                         {filename1: [label1, label2], ...}
         label_perc_value:               Numerical values that indicate the percentage of images 
@@ -126,7 +126,7 @@ def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_butt
     '''
     changed_id = dash.callback_context.triggered[-1]['prop_id']
     labels = Labels(**labels_dict)
-    mlcoach_options = dash.no_update
+    probability_options = dash.no_update
     label_comp = dash.no_update
     # Labeling with keyword shortcuts
     if changed_id == 'keybind-event-listener.event':
@@ -145,7 +145,7 @@ def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_butt
         labels.init_labels(filenames, label_button_children)
     # The label dash components (buttons) need to be updated
     elif changed_id in ['modify-list.n_clicks', 'color-cycle.data', 'submit-color-button.n_clicks', 
-                        'mlcoach-model-list.value', 'confirm-load-splash.n_clicks'] or \
+                        'probability-model-list.value', 'confirm-load-splash.n_clicks'] or \
          'delete-label-button' in changed_id:
         label_perc_value = [dash.no_update]*len(labels.labels_list)
         label_perc_label = [dash.no_update]*len(labels.labels_list)
@@ -165,28 +165,28 @@ def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_butt
         # Loading labels from splash-ml
         elif changed_id == 'confirm-load-splash.n_clicks':
             labels.load_splash_labels(project_id, event_id)
-        # Update labels according to mlcoach model selection
-        elif changed_id == 'mlcoach-model-list.value':
-            mlcoach_options = {}
-            if mlcoach_model:
-                df_prob = pd.read_parquet(mlcoach_model)
-                mlcoach_labels = list(df_prob.columns[0:])
-                additional_labels = list(set(mlcoach_labels) - set(labels.labels_list))
+        # Update labels according to probability model selection
+        elif changed_id == 'probability-model-list.value':
+            probability_options = {}
+            if probability_model:
+                df_prob = pd.read_parquet(probability_model)
+                probability_labels = list(df_prob.columns[0:])
+                additional_labels = list(set(probability_labels) - set(labels.labels_list))
                 for additional_label in additional_labels:
                     labels.update_labels_list(add_label=additional_label)
-                mlcoach_options = [{'label':name, 'value':name} for name in mlcoach_labels]
+                probability_options = [{'label':name, 'value':name} for name in probability_labels]
         progress_values, progress_labels, total_num_labeled = labels.get_labeling_progress()
         label_comp = create_label_component(labels.labels_list,
                                             color_cycle,
                                             progress_values=progress_values,
                                             progress_labels=progress_labels,
                                             total_num_labeled=total_num_labeled)
-        return label_comp, mlcoach_options, vars(labels), label_perc_value, label_perc_label, \
+        return label_comp, probability_options, vars(labels), label_perc_value, label_perc_label, \
             total_labeled, color_cycle
-    # Labeling with mlcoach
-    elif changed_id == 'mlcoach-label.n_clicks':
-        if mlcoach_model:
-            labels.mlcoach_labeling(mlcoach_model, mlcoach_label, threshold)
+    # Labeling with probability
+    elif changed_id == 'probability-label.n_clicks':
+        if probability_model:
+            labels.probability_labeling(probability_model, probability_label, threshold)
     # Labeling manually
     else:
         # Unlabel an image
@@ -202,7 +202,7 @@ def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_butt
                                    thumbnail_image_select_value,
                                    thumbnail_name_children) 
     label_perc_value, label_perc_label, total_labeled = labels.get_labeling_progress()   
-    return label_comp, mlcoach_options, vars(labels), label_perc_value, label_perc_label, \
+    return label_comp, probability_options, vars(labels), label_perc_value, label_perc_label, \
            total_labeled, color_cycle
 
 
