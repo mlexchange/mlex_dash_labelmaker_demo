@@ -50,6 +50,15 @@ def display():
             dbc.Modal(
                 id='color-picker-modal',
                 children=[
+                    dbc.Input(
+                        id='modify-label-name',
+                        value='',
+                        placeholder='Type new label name',
+                        style={
+                            'width': '100%',
+                            'margin-top': '1rem'
+                            }
+                    ),
                     daq.ColorPicker(
                         id='label-color-picker',
                         label='Choose label color',
@@ -57,7 +66,7 @@ def display():
                         ),
                     dbc.Button(
                         'Submit', 
-                        id='submit-color-button', 
+                        id='modify-label-button', 
                         style={'width': '100%'}
                         )
                 ],

@@ -17,7 +17,7 @@ from app_layout import DOCKER_DATA, SPLASH_URL
     Output('color-picker-modal', 'is_open'),
 
     Input({'type': 'color-label-button', 'index': ALL}, 'n_clicks'),
-    Input('submit-color-button', 'n_clicks'),
+    Input('modify-label-button', 'n_clicks'),
     prevent_initial_call=True
 )
 def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
@@ -55,7 +55,7 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
     Input('modify-list', 'n_clicks'),
     Input({'type': 'delete-label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input({'base_id': 'file-manager', 'name': 'docker-file-paths'}, 'data'),
-    Input('submit-color-button', 'n_clicks'),
+    Input('modify-label-button', 'n_clicks'),
 
     State('add-label-name', 'value'),
     State({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
@@ -69,15 +69,16 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
     State({'type': 'color-label-button', 'index': ALL}, 'n_clicks_timestamp'),
     State('label-color-picker', 'value'),
     State('color-cycle', 'data'),
+    State('modify-label-name', 'value'),
     prevent_initial_call=True
 )
 def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_button,
                               probability_label_button, probability_model, load_splash_n_clicks,
                               modify_list_n_clicks, del_label_n_clicks, file_paths,
-                              submit_color_n_clicks, add_label_name, thumbnail_image_select_value,
+                              modify_label_n_clicks, add_label_name, thumbnail_image_select_value,
                               thumbnail_name_children, labels_dict, threshold, probability_label,
                               label_button_children, project_id, event_id, color_label_t_clicks,
-                              new_color, color_cycle):
+                              new_color, color_cycle, new_label_name):
     '''
     This callback updates the dictionary of labeled images when:
         - A new image is labeled
@@ -99,7 +100,7 @@ def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_butt
         modify_list_n_clicks:           Button to add a new label (tag name)
         del_label_n_clicks:             List of n_clicks to delete a label button  
         file_paths:                     Data project information
-        submit_color_n_clicks:          Button "submit label color" was clicked
+        modify_label_n_clicks:          Button "submit label modification" was clicked
         add_label_name:                 Label to add (tag name)
         thumbnail_image_select_value:   Selected thumbnail image (n_clicks)
         thumbnail_name_children:        Filename of the selected thumbnail image
@@ -113,6 +114,7 @@ def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_butt
         color_label_t_clicks:           Timestamps of label color buttons
         new_color:                      User defined label color from palette
         color_cycle:                    Color cycle per label
+        new_label_name:                 Label name to update
     Returns:
         label_buttons:                  Dash components with the updated list of labels
         probability_label_options:      Label options from trained model in probability
@@ -144,15 +146,18 @@ def label_selected_thumbnails(label_button_n_clicks, keybind_label, unlabel_butt
         filenames = [data_set.uri for data_set in data_project.data]
         labels.init_labels(filenames, label_button_children)
     # The label dash components (buttons) need to be updated
-    elif changed_id in ['modify-list.n_clicks', 'color-cycle.data', 'submit-color-button.n_clicks', 
+    elif changed_id in ['modify-list.n_clicks', 'modify-label-button.n_clicks', 
                         'probability-model-list.value', 'confirm-load-splash.n_clicks'] or \
          'delete-label-button' in changed_id:
         label_perc_value = [dash.no_update]*len(labels.labels_list)
         label_perc_label = [dash.no_update]*len(labels.labels_list)
         total_labeled = dash.no_update
-        if changed_id == 'submit-color-button.n_clicks':
+        if changed_id == 'modify-label-button.n_clicks':
             mod_indx = color_label_t_clicks.index(max(color_label_t_clicks))
             color_cycle[mod_indx] = new_color['hex']
+            if new_label_name!='':
+                label_to_rename = labels.labels_list[mod_indx]
+                labels.update_labels_list(rename_label=label_to_rename, new_name=new_label_name)
         # A label has been deleted
         elif 'delete-label-button' in changed_id:
             indx_label_to_delete = np.argmax(del_label_n_clicks)

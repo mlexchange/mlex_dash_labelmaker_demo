@@ -53,7 +53,7 @@ class Labels:
             num_imgs_per_label[label] = assigned_labels.count(label)
         return num_imgs_per_label
     
-    def update_labels_list(self, add_label=None, remove_label=None):
+    def update_labels_list(self, add_label=None, remove_label=None, rename_label=None, new_name=None):
         '''
         Updates the labels list
         Args:
@@ -64,11 +64,22 @@ class Labels:
         if add_label is not None:
             self.labels_list.append(add_label)
             self.num_imgs_per_label[add_label] = 0
-        if remove_label is not None:
+        elif remove_label is not None:
             self.labels_list.remove(remove_label)
             self.labels_dict = {key: [val for val in values if val!=remove_label] \
                                 for key, values in self.labels_dict.items()}
             self.num_imgs_per_label.pop(remove_label)
+        elif rename_label is not None and new_name is not None:
+            mod_indx = self.labels_list.index(rename_label)
+            self.labels_list[mod_indx] = new_name
+            new_num_imgs_per_label = {}
+            for label in self.labels_list:
+                new_num_imgs_per_label[label] = self.num_imgs_per_label[label] if label!=new_name \
+                                                else self.num_imgs_per_label[rename_label]
+            self.num_imgs_per_label = new_num_imgs_per_label
+            value_mapping = {rename_label: new_name}
+            self.labels_dict = {key: [value_mapping.get(value, value) for value in values] for 
+                                key, values in self.labels_dict.items()}
         pass
     
     def assign_labels(self, label, filenames_to_label, overwrite=True):
