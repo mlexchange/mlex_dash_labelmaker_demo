@@ -19,6 +19,12 @@ def display():
                     style={'width': '5%'}, 
                     disabled=True
                     ),
+                dbc.Input(
+                    id='current-page',
+                    value=0,
+                    type='number',
+                    style={'width': '8%'}
+                ),
                 dbc.Button(
                     className='fa fa-chevron-right', 
                     id='next-page', 

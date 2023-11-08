@@ -14,7 +14,7 @@ from app_layout import NUMBER_OF_ROWS
     Output('output-image-upload', 'children'),
     [Output('first-page', 'disabled'), Output('prev-page', 'disabled')],
     [Output('next-page', 'disabled'), Output('last-page', 'disabled')],
-    Output('current-page', 'data'),
+    Output('current-page', 'value'),
 
     Input('image-order', 'data'),
     Input('thumbnail-slider', 'value'),
@@ -24,17 +24,18 @@ from app_layout import NUMBER_OF_ROWS
     Input('last-page', 'n_clicks'),
     Input('probability-collapse', 'is_open'),
     Input('probability-model-list', 'value'),
+    Input('current-page', 'value'),
     
     State('labels-dict', 'data'),
     State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
     State('find-similar-unsupervised', 'n_clicks'),
-    State('current-page', 'data'),
     State('tab-group', 'value'),
     State('previous-tab', 'data')],
     prevent_initial_call=True)
 def update_output(image_order, thumbnail_slider_value, button_first_page, button_prev_page, 
-                  button_next_page, button_last_page, probability_is_open, probability_model, labels_dict, 
-                  file_paths, find_similar_images, current_page, tab_selection, previous_tab):
+                  button_next_page, button_last_page, probability_is_open, probability_model, 
+                  current_page, labels_dict, file_paths, find_similar_images, tab_selection, 
+                  previous_tab):
     '''
     This callback displays images in the front-end and enables/disables the page navigation buttons
     Args:
@@ -47,11 +48,11 @@ def update_output(image_order, thumbnail_slider_value, button_first_page, button
         button_last_page:       Go to last page
         probability_is_open:    Probability-based labelng is the chosen method
         probability_model:      Selected probability-based model
+        current_page:           Index of the current page
         labels_dict:            Dictionary with labeling information, e.g. 
                                 {filename1: [label1,label2], ...}
         file_paths:             Data project information
         find_similar_images:    Find similar images button, n_clicks
-        current_page:           Index of the current page
         tab_selection:          Current tab [Manual, Similarity, Probability]
         previous_tab:           List of previous tab selection [Manual, Similarity, Probability]
     Returns:
@@ -67,7 +68,10 @@ def update_output(image_order, thumbnail_slider_value, button_first_page, button
     data_project = DataProject()
     data_project.init_from_dict(file_paths)
     num_imgs = len(image_order)
+    max_num_pages = math.ceil((num_imgs//thumbnail_slider_value)/NUMBER_OF_ROWS)
     # update current page if necessary
+    if current_page>max_num_pages-1:
+        current_page=max_num_pages-1
     if changed_id == 'image-order.data' or changed_id == 'first-page.n_clicks':
         current_page = 0
     elif changed_id == 'prev-page.n_clicks':
@@ -115,9 +119,7 @@ def update_output(image_order, thumbnail_slider_value, button_first_page, button
     else:
         children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value)
     print(f'Total time to display images: {time.time() - start}, with changed if: {changed_id}')
-    return children, 2*[current_page==0], \
-           2*[math.ceil((num_imgs//thumbnail_slider_value)/NUMBER_OF_ROWS)<=current_page+1], \
-           current_page
+    return children, 2*[current_page==0], 2*[max_num_pages<=current_page+1], current_page
 
 
 @callback(

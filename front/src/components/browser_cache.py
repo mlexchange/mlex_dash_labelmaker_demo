@@ -7,7 +7,6 @@ def browser_cache(mlcoach_url, data_clinic_url):
             id="no-display",
             children=[
                 dcc.Store(id='labels-dict', data={'labels_dict': {}, 'labels_list': []}),
-                dcc.Store(id='current-page', data=0),
                 dcc.Store(id='image-order', data=[]),
                 dcc.Store(id='del-label', data=-1),
                 dcc.Store(id='dummy1', data=0),
