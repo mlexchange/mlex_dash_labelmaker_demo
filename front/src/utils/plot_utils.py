@@ -208,6 +208,12 @@ def parse_contents(contents, filename, index, probs=None, similarity=False):
                                 dbc.CardImg(
                                     id={'type': 'thumbnail-src', 'index': index},
                                     src=contents,
+                                    style={
+                                        'height': '10rem',
+                                        'width': '10rem',
+                                        'margin': 'auto',
+                                        'display': 'block'
+                                        },
                                     bottom=False)
                                ]
                            ),
