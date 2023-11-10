@@ -1,4 +1,5 @@
-import math, time
+import math, time, functools
+from multiprocessing import Pool
 import dash
 from dash import Input, Output, State, callback, ALL, MATCH
 from dash.exceptions import PreventUpdate
@@ -8,6 +9,11 @@ from labels import Labels
 from file_manager.data_project import DataProject
 from utils.plot_utils import draw_rows, parse_full_screen_content
 from app_layout import NUMBER_OF_ROWS
+
+
+def read_data(indx, data_set, image_order):
+    content, filename = data_set[image_order[indx]].read_data()
+    return content, filename
 
 
 @callback([
@@ -92,12 +98,29 @@ def update_output(image_order, thumbnail_slider_value, button_first_page, button
     new_filenames = []
     if num_imgs>0:
         data_set = data_project.data
+        # tiled_uris = []
+        # for indx in range(start_indx, max_indx):
+        #     tiled_uris.append(data_set[image_order[indx]].uri)
+        # new_contents, new_filenames = data_set[0].read_datasets(tiled_uris)
+        start = time.time()
+        with Pool() as pool:
+            output = pool.map(
+                functools.partial(read_data,
+                                  data_set=data_set,
+                                  image_order=image_order),
+                range(start_indx, max_indx),
+            )
+        print(f'Loading data done: {time.time()-start}', flush=True)
         new_contents = []
         new_filenames = []
-        for indx in range(start_indx, max_indx):
-            content, filename = data_set[image_order[indx]].read_data()
-            new_contents.append(content)
-            new_filenames.append(filename)
+        for elem in output:
+            new_contents.append(elem[0])
+            new_filenames.append(elem[1])
+        # for indx in range(start_indx, max_indx):
+        #     content, filename = data_set[image_order[indx]].read_data()
+        #     new_contents.append(content)
+        #     new_filenames.append(filename)
+        # print(f'Loading data done: {time.time()-start}')
     if probability_model and tab_selection=='probability':
         if probability_model.split('.')[-1] == 'csv':
             df_prob = pd.read_csv(probability_model)
@@ -111,10 +134,10 @@ def update_output(image_order, thumbnail_slider_value, button_first_page, button
             if labels.labels_dict[name] != []:
                 pre_highlight = False
         if find_similar_images>0 and pre_highlight:
-            children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, \
+            children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS,
                                  thumbnail_slider_value, similarity=True)
         else:
-            children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, \
+            children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS,
                                  thumbnail_slider_value)
     else:
         children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value)
