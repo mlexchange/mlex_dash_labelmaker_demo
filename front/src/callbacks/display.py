@@ -98,29 +98,26 @@ def update_output(image_order, thumbnail_slider_value, button_first_page, button
     new_filenames = []
     if num_imgs>0:
         data_set = data_project.data
-        # tiled_uris = []
-        # for indx in range(start_indx, max_indx):
-        #     tiled_uris.append(data_set[image_order[indx]].uri)
-        # new_contents, new_filenames = data_set[0].read_datasets(tiled_uris)
-        start = time.time()
-        with Pool() as pool:
-            output = pool.map(
-                functools.partial(read_data,
-                                  data_set=data_set,
-                                  image_order=image_order),
-                range(start_indx, max_indx),
-            )
-        print(f'Loading data done: {time.time()-start}', flush=True)
-        new_contents = []
-        new_filenames = []
-        for elem in output:
-            new_contents.append(elem[0])
-            new_filenames.append(elem[1])
-        # for indx in range(start_indx, max_indx):
-        #     content, filename = data_set[image_order[indx]].read_data()
-        #     new_contents.append(content)
-        #     new_filenames.append(filename)
-        # print(f'Loading data done: {time.time()-start}')
+        if data_set[0].type=='tiled':
+            start = time.time()
+            with Pool() as pool:
+                output = pool.map(
+                    functools.partial(read_data,
+                                    data_set=data_set,
+                                    image_order=image_order),
+                    range(start_indx, max_indx),
+                )
+            print(f'Loading data done: {time.time()-start}', flush=True)
+            new_contents = []
+            new_filenames = []
+            for elem in output:
+                new_contents.append(elem[0])
+                new_filenames.append(elem[1])
+        else:
+            for indx in range(start_indx, max_indx):
+                content, filename = data_set[image_order[indx]].read_data()
+                new_contents.append(content)
+                new_filenames.append(filename)
     if probability_model and tab_selection=='probability':
         if probability_model.split('.')[-1] == 'csv':
             df_prob = pd.read_csv(probability_model)
