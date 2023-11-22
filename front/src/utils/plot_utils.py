@@ -167,34 +167,14 @@ def create_label_component(label_list, color_cycle=px.colors.qualitative.Light24
     return comp_list
 
 
-def parse_contents(contents, filename, index, probs=None, similarity=False):
+def parse_contents(index):
     '''
     This function creates the dash components to display thumbnail images
     Args:
-        contents:       Image contents
-        filename:       Filename
         index:          Index of the dash component
-        probs:          String of probabilities
-        similarity:     Bool indicating if the images should be pre-selected for similarity-based search mode
     Returns:
         dash component
     '''
-    text=''
-    if probs:
-        text = probs
-        prob_style = {'display': 'block',
-                      'whiteSpace': 'pre-wrap',
-                      'font-size': '12px',
-                      'margin-bottom': '0px',
-                      'margin-top': '1px'}
-    else:
-        prob_style = {'display': 'none'}
-    if similarity:
-        init_clicks = 1
-        color = 'primary'
-    else:
-        init_clicks = 0
-        color = 'white'
     img_card = html.Div(
         EventListener(
             children=[
@@ -203,11 +183,9 @@ def parse_contents(contents, filename, index, probs=None, similarity=False):
                     children=[
                         html.A(
                             id={'type': 'thumbnail-image', 'index': index},
-                            n_clicks=init_clicks,   
                             children=[
                                 dbc.CardImg(
                                     id={'type': 'thumbnail-src', 'index': index},
-                                    src=contents,
                                     style={
                                         'height': '10rem',
                                         'width': '10rem',
@@ -221,30 +199,16 @@ def parse_contents(contents, filename, index, probs=None, similarity=False):
                             [
                                 html.P(
                                     id={'type':'thumbnail-name', 'index': index}, 
-                                    children=filename, 
                                     style={'display': 'none'}
                                     ),
-                                # html.P(
-                                #     id={'type':'thumbnail-name-short', 'index': index}, 
-                                #     children=filename.split('/')[-1],
-                                #     style={
-                                #         'margin-bottom': '0px',
-                                #         'margin-top': '0px'
-                                #         }
-                                #     ),
                                 html.P(
-                                    children=text, 
-                                    style=prob_style
+                                    id={'type':'thumbnail-prob', 'index': index}, 
                                     )
                             ],
                         )
                     ],
                     outline=False,
-                    color=color,
-                    style={
-                        'margin-bottom': '0px',
-                        'margin-top': '10px'
-                        }
+                    style={'display': 'none'}
                     )
             ],
             id={'type': 'double-click-entry', 'index': index}, 
@@ -262,49 +226,29 @@ def parse_contents(contents, filename, index, probs=None, similarity=False):
     return img_card
 
 
-def draw_rows(list_of_contents, list_of_names, n_rows, n_cols, show_prob=False, file=None,
-              similarity=False):
+def draw_rows(n_rows, n_cols):
     '''
     This function display the images per page
     Args:
-        list_of_contents:   List of contents
-        list_of_names:      List of filenames
         n_rows:             Number of rows
         n_cols:             Number of columns
-        show_prob:          Bool, show probabilities
-        file:               table of filenames and probabilities
-        similarity:         Bool indicating if the images should be pre-selected for similarity-based search mode
     Returns:
         dash component with all the images
     '''
-    n_images = len(list_of_contents)
     n_cols = n_cols
     children = []
-    probs = None
-    if show_prob:
-        filenames = list(file.index)
     for j in range(n_rows):
         row_child = []
         for i in range(n_cols):
-            index = j * n_cols + i
-            if index >= n_images:   # no more images, on hanging row
-                break
-            content = list_of_contents[index]
-            filename = list_of_names[index]
-            if show_prob:
-                probs = file.loc[filename].to_string(header=None) if filename in filenames else ''
             row_child.append(
                 dbc.Col(
-                    parse_contents(content,
-                                   filename,
-                                   j * n_cols + i,
-                                   probs,
-                                   similarity
-                        ),
+                    parse_contents(j * n_cols + i),
                     width="{}".format(12 // n_cols),
                     )
                 )
         children.append(dbc.Row(row_child, className="g-1"))
+    for indx in range(n_rows*n_cols*3):
+        children.append(dcc.Store(id={'type': 'cached-images', 'index': indx}, data=''))
     return children
 
 

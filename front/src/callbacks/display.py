@@ -1,5 +1,4 @@
-import math, time, functools
-from multiprocessing import Pool
+import math, time
 import dash
 from dash import Input, Output, State, callback, ALL, MATCH
 from dash.exceptions import PreventUpdate
@@ -8,71 +7,75 @@ import pandas as pd
 from labels import Labels
 from file_manager.data_project import DataProject
 from utils.plot_utils import draw_rows, parse_full_screen_content
-from app_layout import NUMBER_OF_ROWS
+from app_layout import NUMBER_OF_ROWS, cache
 
 
-def read_data(indx, data_set, image_order):
-    content, filename = data_set[image_order[indx]].read_data()
-    return content, filename
+
+# @callback(
+#     Output({'type': 'cached-images', 'index': MATCH}, 'data'),
+
+#     Input('image-order', 'data'),
+#     Input('current-page', 'value'),
+
+#     State({'type': 'cached-images', 'index': MATCH}, 'id'),
+#     State({'type': 'cached-images', 'index': ALL}, 'data'),
+#     State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
+#     State('thumbnail-slider', 'value')
+# )
+# def update_cached_images(image_order, current_page, card_id, prev_cached_images, file_paths,
+#                          thumbnail_slider_value):
+#     data_project = DataProject()
+#     data_project.init_from_dict(file_paths)
+#     data_set = data_project.data
+#     start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * max(current_page, 0)
+#     card_indx = card_id['index']
+#     max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, len(image_order))
+#     indx = start_indx+card_indx
+#     if indx < max_indx:
+#         content, _ = data_set[image_order[indx]].read_data()
+#     return content
 
 
 @callback([
-    Output('output-image-upload', 'children'),
     [Output('first-page', 'disabled'), Output('prev-page', 'disabled')],
     [Output('next-page', 'disabled'), Output('last-page', 'disabled')],
     Output('current-page', 'value'),
 
     Input('image-order', 'data'),
-    Input('thumbnail-slider', 'value'),
     Input('first-page', 'n_clicks'),
     Input('prev-page', 'n_clicks'),
     Input('next-page', 'n_clicks'),
     Input('last-page', 'n_clicks'),
-    Input('probability-collapse', 'is_open'),
-    Input('probability-model-list', 'value'),
     Input('current-page', 'value'),
+    Input('probability-collapse', 'is_open'),
     
-    State('labels-dict', 'data'),
-    State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
-    State('find-similar-unsupervised', 'n_clicks'),
     State('tab-group', 'value'),
-    State('previous-tab', 'data')],
+    State('previous-tab', 'data'),
+    State('thumbnail-slider', 'value')],
     prevent_initial_call=True)
-def update_output(image_order, thumbnail_slider_value, button_first_page, button_prev_page, 
-                  button_next_page, button_last_page, probability_is_open, probability_model, 
-                  current_page, labels_dict, file_paths, find_similar_images, tab_selection, 
-                  previous_tab):
+def update_page_number(image_order, button_first_page, button_prev_page, button_next_page, 
+                       button_last_page, current_page, probability_is_open, tab_selection, 
+                       previous_tab, thumbnail_slider_value):
     '''
-    This callback displays images in the front-end and enables/disables the page navigation buttons
+    This callback sets up the current page value and enables/disables the page navigation buttons
     Args:
         image_order:            Order of the images according to the selected action (sort, hide, 
                                 new data, etc)
-        thumbnail_slider_value: Number of images per row
         button_first_page:      Go to first page
         button_prev_page:       Go to previous page
         button_next_page:       Go to next page
         button_last_page:       Go to last page
-        probability_is_open:    Probability-based labelng is the chosen method
-        probability_model:      Selected probability-based model
         current_page:           Index of the current page
-        labels_dict:            Dictionary with labeling information, e.g. 
-                                {filename1: [label1,label2], ...}
-        file_paths:             Data project information
-        find_similar_images:    Find similar images button, n_clicks
+        probability_is_open:    Probability-based labelng is the chosen method
         tab_selection:          Current tab [Manual, Similarity, Probability]
         previous_tab:           List of previous tab selection [Manual, Similarity, Probability]
+        thumbnail_slider_value: Number of images per row
     Returns:
-        children:               Images to be displayed in front-end according to the current page 
-                                index and # of columns
         [first_page, prev_page]:Enable/Disable previous page button if current_page==0
         [next_page, last_page]: Enable/Disable next page button if current_page==max_page
         current_page:           Update current page index
     '''
-    start = time.time()
     changed_id = dash.callback_context.triggered[0]['prop_id']
-    labels = Labels(**labels_dict)
-    data_project = DataProject()
-    data_project.init_from_dict(file_paths)
     num_imgs = len(image_order)
     max_num_pages = math.ceil((num_imgs//thumbnail_slider_value)/NUMBER_OF_ROWS)
     # update current page if necessary
@@ -87,59 +90,124 @@ def update_output(image_order, thumbnail_slider_value, button_first_page, button
     elif changed_id == 'last-page.n_clicks':
         current_page = math.ceil(num_imgs/(NUMBER_OF_ROWS*thumbnail_slider_value)) - 1
     elif changed_id == 'probability-collapse.is_open':
-        if tab_selection=='probability':        # if the previous tab is probability, the display should be 
-            current_page = 0                # updated to remove the probability list per image
+        if tab_selection=='probability': # if the previous tab is probability, the display should be 
+            current_page = 0             # updated to remove the probability list per image
         elif previous_tab[-2] != 'probability':
             raise PreventUpdate
-    children = []
+    return 2*[current_page==0], 2*[max_num_pages<=current_page+1], current_page
+
+
+@callback(
+    Output({'type': 'thumbnail-card', 'index': MATCH}, 'style'),
+    Output({'type': 'thumbnail-card', 'index': MATCH}, 'color'),
+    Output({'type': 'thumbnail-name', 'index': MATCH}, 'children'),
+    Output({'type': 'thumbnail-src', 'index': MATCH}, 'src'),
+    Output({'type':'thumbnail-prob', 'index': MATCH}, 'children'),
+    Output({'type':'thumbnail-prob', 'index': MATCH}, 'style'),
+    Output({'type': 'thumbnail-image', 'index': MATCH}, 'n_clicks'),
+
+    Input('image-order', 'data'),
+    Input('probability-collapse', 'is_open'),
+    Input('probability-model-list', 'value'),
+    Input('current-page', 'value'),
+    
+    State('labels-dict', 'data'),
+    State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
+    State('find-similar-unsupervised', 'n_clicks'),
+    State('tab-group', 'value'),
+    State({'type': 'thumbnail-image', 'index': MATCH}, 'id'),
+    State('thumbnail-slider', 'value'),
+    State('cached-images', 'data'),
+)
+@cache.memoize(timeout=0)
+def update_output(image_order, probability_is_open, probability_model, current_page,
+                  labels_dict, file_paths, find_similar_images, tab_selection, card_id,
+                  thumbnail_slider_value, cached_images):
+    '''
+    This callback displays images in the front-end
+    Args:
+        image_order:            Order of the images according to the selected action (sort, hide, 
+                                new data, etc)
+        probability_is_open:    Probability-based labelng is the chosen method
+        probability_model:      Selected probability-based model
+        current_page:           Index of the current page
+        labels_dict:            Dictionary with labeling information, e.g. 
+                                {filename1: [label1,label2], ...}
+        file_paths:             Data project information
+        find_similar_images:    Find similar images button, n_clicks
+        tab_selection:          Current tab [Manual, Similarity, Probability]
+        card_id:                Card ID to identify the card index
+        thumbnail_slider_value: Number of images per row
+    Returns:
+        style:                  Image card style
+        color:                  Image card color
+        filename:               Filename label in image card
+        content:                Content to be displayed in image card'
+        probs:                  Probability information from supervised model
+        prob_style:             Probability style (hidden vs displayed)
+        init_clicks:            Initial number of clicks in image card
+    '''
+    start = time.time()
+    # Define default values
+    init_clicks = 0
+    color = 'white'
+    probs = dash.no_update
+    prob_style = {'display': 'none'}
+    card_indx = int(card_id['index'])
+    # Load labels and data project
+    labels = Labels(**labels_dict)
+    data_project = DataProject()
+    data_project.init_from_dict(file_paths)
+    # Define the card index
+    num_imgs = len(image_order)
     start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
     max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
-    new_contents = []
-    new_filenames = []
-    if num_imgs>0:
+    indx = start_indx+card_indx
+    if indx < max_indx:     # Display image card only if indx is not greater than number of images
         data_set = data_project.data
-        if data_set[0].type=='tiled':
-            start = time.time()
-            with Pool() as pool:
-                output = pool.map(
-                    functools.partial(read_data,
-                                    data_set=data_set,
-                                    image_order=image_order),
-                    range(start_indx, max_indx),
-                )
-            print(f'Loading data done: {time.time()-start}', flush=True)
-            new_contents = []
-            new_filenames = []
-            for elem in output:
-                new_contents.append(elem[0])
-                new_filenames.append(elem[1])
+        filename = data_set[image_order[indx]].uri
+        if filename in cached_images:
+            content = cached_images[filename]
         else:
-            for indx in range(start_indx, max_indx):
-                content, filename = data_set[image_order[indx]].read_data()
-                new_contents.append(content)
-                new_filenames.append(filename)
-    if probability_model and tab_selection=='probability':
-        if probability_model.split('.')[-1] == 'csv':
-            df_prob = pd.read_csv(probability_model)
-        else:
+            content, _ = data_set[image_order[indx]].read_data()
+        if probability_model and tab_selection=='probability':
             df_prob = pd.read_parquet(probability_model)
-        children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value,
-                             probability_is_open, df_prob)
-    elif find_similar_images:               # Find similar images has been activated
-        pre_highlight = True
-        for name in new_filenames:          # if there is one label in page, do not pre-highlight
-            if labels.labels_dict[name] != []:
-                pre_highlight = False
-        if find_similar_images>0 and pre_highlight:
-            children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS,
-                                 thumbnail_slider_value, similarity=True)
-        else:
-            children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS,
-                                 thumbnail_slider_value)
+            probs = df_prob.loc[filename].to_string(header=None)
+            prob_style = {
+                'display': 'block',
+                'whiteSpace': 'pre-wrap',
+                'font-size': '12px',
+                'margin-bottom': '0px',
+                'margin-top': '1px'
+                }
+        elif find_similar_images:               # Find similar images has been activated
+            if labels.labels_dict[filename] == []:
+                init_clicks = 1
+                color = 'primary'
+        style={'margin-bottom': '0px', 'margin-top': '10px'}
     else:
-        children = draw_rows(new_contents, new_filenames, NUMBER_OF_ROWS, thumbnail_slider_value)
-    print(f'Total time to display images: {time.time() - start}, with changed if: {changed_id}')
-    return children, 2*[current_page==0], 2*[max_num_pages<=current_page+1], current_page
+        style={'display': 'none'}
+        filename=''
+        content=''
+    print(f'Display done after {time.time()-start}', flush=True)
+    return style, color, filename, content, probs, prob_style, init_clicks
+
+
+@callback(
+    Output('output-image-upload', 'children'),
+    Input('thumbnail-slider', 'value'),
+)
+def update_rows(thumbnail_slider_value):
+    '''
+    This callback prepares the image cards according to the number of rows selected by the user
+    Args:
+        thumbnail_slider_value: Number of images per row
+    Returns:
+        children:               Images to be displayed in front-end according to the current page 
+                                index and # of columns
+    '''
+    children = draw_rows(NUMBER_OF_ROWS, thumbnail_slider_value)
+    return children
 
 
 @callback(
@@ -178,7 +246,7 @@ def full_screen_thumbnail(double_click, thumbnail_name_children, file_paths):
 
 
 @callback(
-    Output({'type': 'thumbnail-card', 'index': MATCH}, 'color'),
+    Output({'type': 'thumbnail-card', 'index': MATCH}, 'color', allow_duplicate=True),
 
     Input({'type': 'thumbnail-image', 'index': MATCH}, 'n_clicks'),
     Input('labels-dict', 'data'),
@@ -186,6 +254,7 @@ def full_screen_thumbnail(double_click, thumbnail_name_children, file_paths):
     State({'type': 'thumbnail-name', 'index': MATCH}, 'children'),
     State('color-cycle', 'data'),
     State({'type': 'thumbnail-card', 'index': MATCH}, 'color'),
+    prevent_initial_call=True
 )
 def select_thumbnail(value, labels_dict, thumbnail_name_children, color_cycle, current_color):
     '''
@@ -224,7 +293,7 @@ def select_thumbnail(value, labels_dict, thumbnail_name_children, color_cycle, c
 
 
 @callback(
-    Output({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks'),
+    Output({'type': 'thumbnail-image', 'index': ALL}, 'n_clicks', allow_duplicate=True),
 
     Input({'type': 'label-button', 'index': ALL}, 'n_clicks_timestamp'),
     Input('un-label', 'n_clicks'),

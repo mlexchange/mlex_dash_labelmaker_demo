@@ -6,6 +6,7 @@ import dash_bootstrap_components as dbc
 import dash_uploader as du
 import diskcache
 from flask import Flask
+from flask_caching import Cache
 import pathlib
 
 from file_manager.main import FileManager
@@ -29,6 +30,11 @@ app = dash.Dash(__name__,
                 external_stylesheets = external_stylesheets,
                 suppress_callback_exceptions=True, 
                 long_callback_manager=long_callback_manager)
+
+cache = Cache(app.server, config={
+    'CACHE_TYPE': 'filesystem',
+    'CACHE_DIR': '.cache'
+})
 
 MLCOACH_URL = os.getenv('MLCOACH_URL')
 DATA_CLINIC_URL = os.getenv('DATA_CLINIC_URL')
@@ -79,13 +85,13 @@ app.layout = html.Div(
                         dbc.Col(
                             [
                                 dash_file_explorer.file_explorer,
-                                html.Div(id='output-image-upload'),
-                                # dcc.Loading(
-                                #     id="loading-display",
-                                #     parent_className='transparent-loader-wrapper',
-                                #     children=[html.Div(id='output-image-upload')],
-                                #     type="circle"
-                                #     ),
+                                # html.Div(id='output-image-upload'),
+                                dcc.Loading(
+                                    id="loading-display",
+                                    parent_className='transparent-loader-wrapper',
+                                    children=[html.Div(id='output-image-upload')],
+                                    type="circle"
+                                    ),
                                 display()
                             ], width=8),
                     ],
