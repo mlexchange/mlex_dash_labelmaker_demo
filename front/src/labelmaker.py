@@ -1,17 +1,28 @@
+import time
+from functools import partial
+import concurrent.futures
 import dash
 from dash import Input, Output, State, dcc
+from dash.exceptions import PreventUpdate
 
 from labels import Labels
 from file_manager.data_project import DataProject
-from app_layout import app, USER, long_callback_manager
+from app_layout import app, USER, long_callback_manager, NUMBER_OF_ROWS
 from callbacks.display_order import display_index
-from callbacks.display import update_output, full_screen_thumbnail, select_thumbnail, deselect,\
-    update_hide_button_text, display_indicator, toggle_tabs_collapse
+from callbacks.display import update_output, full_screen_thumbnail, deselect,\
+    update_hide_button_text, display_indicator, toggle_tabs_collapse, update_page_number, update_rows
 from callbacks.help import toggle_help_modal
 from callbacks.manage_labels import toggle_color_picker_modal, label_selected_thumbnails,\
     load_from_splash_modal
 from callbacks.update_models import update_trained_model_list
 from callbacks.warning import toggle_modal_unlabel_warning
+
+
+THREAD = concurrent.futures.ThreadPoolExecutor()
+
+def get_images(data_set, indx):
+    content, _ = data_set[indx].read_data()
+    return content
 
 
 app.clientside_callback(
@@ -93,6 +104,50 @@ def save_labels(button_save_disk_n_clicks, button_save_splash_n_clicks, button_c
         else:
             return dash.no_update, False, dash.no_update, True
     return dash.no_update, True, 'No labels to save', False
+
+
+@app.long_callback(
+    Output('cached-images', 'data'),
+
+    Input('image-order', 'data'),
+    Input('current-page', 'value'),
+
+    State('cached-images', 'data'),
+    State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
+    State('thumbnail-slider', 'value'),
+    
+    State('cache_working', 'data'),
+    running=[
+        (Output('cache_working', 'data'), True, False),
+    ],
+    manager=long_callback_manager,
+    prevent_initial_call=True
+)
+def update_cached_images(image_order, current_page, prev_cached_images, file_paths, 
+                         thumbnail_slider_value, working_cache):
+    if working_cache:
+        raise PreventUpdate
+    start = time.time()
+    print(f'Updating page {current_page}', flush=True)
+    cached_images = {}
+    data_project = DataProject()
+    data_project.init_from_dict(file_paths)
+    data_set = data_project.data
+    start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * max(current_page-1, 0)
+    max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value * 3, len(image_order))
+    list_indx = []
+    for indx in range(start_indx, max_indx):
+        uri = data_set[image_order[indx]].uri
+        if uri in prev_cached_images:
+            cached_images[uri] = prev_cached_images[uri]
+        else:
+            list_indx.append(image_order[indx])
+    cached_content = list(THREAD.map(partial(get_images, data_set), list_indx))
+    for indx in range(len(list_indx)):
+        uri = data_set[list_indx[indx]].uri
+        cached_images[uri] = cached_content[indx]
+    print(f'Cache ready after: {time.time()-start}', flush=True)
+    return cached_images
 
 
 if __name__ == '__main__':
