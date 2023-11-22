@@ -10,32 +10,6 @@ from utils.plot_utils import draw_rows, parse_full_screen_content
 from app_layout import NUMBER_OF_ROWS, cache
 
 
-
-# @callback(
-#     Output({'type': 'cached-images', 'index': MATCH}, 'data'),
-
-#     Input('image-order', 'data'),
-#     Input('current-page', 'value'),
-
-#     State({'type': 'cached-images', 'index': MATCH}, 'id'),
-#     State({'type': 'cached-images', 'index': ALL}, 'data'),
-#     State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
-#     State('thumbnail-slider', 'value')
-# )
-# def update_cached_images(image_order, current_page, card_id, prev_cached_images, file_paths,
-#                          thumbnail_slider_value):
-#     data_project = DataProject()
-#     data_project.init_from_dict(file_paths)
-#     data_set = data_project.data
-#     start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * max(current_page, 0)
-#     card_indx = card_id['index']
-#     max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, len(image_order))
-#     indx = start_indx+card_indx
-#     if indx < max_indx:
-#         content, _ = data_set[image_order[indx]].read_data()
-#     return content
-
-
 @callback([
     [Output('first-page', 'disabled'), Output('prev-page', 'disabled')],
     [Output('next-page', 'disabled'), Output('last-page', 'disabled')],
@@ -117,12 +91,11 @@ def update_page_number(image_order, button_first_page, button_prev_page, button_
     State('tab-group', 'value'),
     State({'type': 'thumbnail-image', 'index': MATCH}, 'id'),
     State('thumbnail-slider', 'value'),
-    State('cached-images', 'data'),
 )
 @cache.memoize(timeout=0)
 def update_output(image_order, probability_is_open, probability_model, current_page,
                   labels_dict, file_paths, find_similar_images, tab_selection, card_id,
-                  thumbnail_slider_value, cached_images):
+                  thumbnail_slider_value):
     '''
     This callback displays images in the front-end
     Args:
@@ -166,10 +139,7 @@ def update_output(image_order, probability_is_open, probability_model, current_p
     if indx < max_indx:     # Display image card only if indx is not greater than number of images
         data_set = data_project.data
         filename = data_set[image_order[indx]].uri
-        if filename in cached_images:
-            content = cached_images[filename]
-        else:
-            content, _ = data_set[image_order[indx]].read_data()
+        content, _ = data_set[image_order[indx]].read_data()
         if probability_model and tab_selection=='probability':
             df_prob = pd.read_parquet(probability_model)
             probs = df_prob.loc[filename].to_string(header=None)
