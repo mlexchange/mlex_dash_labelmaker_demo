@@ -187,8 +187,7 @@ def parse_contents(index):
                                 dbc.CardImg(
                                     id={'type': 'thumbnail-src', 'index': index},
                                     style={
-                                        'height': '10rem',
-                                        'width': '10rem',
+                                        'width': '100%',
                                         'margin': 'auto',
                                         'display': 'block'
                                         },
