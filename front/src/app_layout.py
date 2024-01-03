@@ -80,8 +80,17 @@ app.layout = html.Div(
                                 dbc.AccordionItem(
                                     display_settings(), 
                                     title='Display Settings'),
-                            ], style = {'position': 'sticky', 'top': '10%'})
-                        ], width=4),
+                                ], 
+                                style={
+                                    'position': 'sticky',
+                                    'top': '10%',
+                                    'width': '100%'
+                                    }
+                                )
+                            ],
+                            width=4,
+                            style={'display': 'flex'}
+                        ),
                         dbc.Col(
                             [
                                 dash_file_explorer.file_explorer,
