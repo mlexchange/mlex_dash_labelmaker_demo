@@ -206,6 +206,7 @@ class Labels:
                 else:
                     indx = uri_list.index(filename)
                     new_dataset = datasets[indx]
+                    new_dataset = {key: value for key, value in new_dataset.items() if key in {'uri', 'type'}}
                     new_dataset['project'] = project_id
                     new_dataset['tags'] = [{'name': str(label), 'event_id': new_event_id}]
                     response = requests.post(f'{SPLASH_URL}/datasets',
