@@ -96,4 +96,4 @@ def save_labels(button_save_disk_n_clicks, button_save_splash_n_clicks, button_c
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=8057)
+    app.run_server(host='0.0.0.0', port=8057, processes=4, threaded=False, debug=True)
