@@ -9,26 +9,23 @@ DEFAULT_UID = "425f6781-e42b-23e2-a341-2431564214523"
 class FileType(str, Enum):
     uri = "uri"
     dir = "dir"
+    file = "file"
 
 
 class Location(str, Enum):
     splash = "splash"
     local = "local"
-    
-class OperationType(str, Enum):
-    import_dataset = 'import_dataset'
-    export_dataset = 'export_dataset'
+    tiled = "tiled"
 
 
 class DataPath(BaseModel):
     file_path: List[str]
     file_type: FileType
-    where: Location
+    file_location: Location
 
 
 class Dataset(BaseModel):
-  uid: str = DEFAULT_UID
-  user_id: Optional[str]
-  operation_type: OperationType
-  datapath: DataPath
-  filenames: List[str]
+    uid: str = DEFAULT_UID
+    user_id: Optional[str]
+    datapath: DataPath
+    labelpath: Optional[DataPath]

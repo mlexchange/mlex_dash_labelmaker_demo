@@ -1,54 +1,51 @@
+import logging
 import os
-import uuid
-import configparser
-import pymongo
-import json
-from typing import List, Optional
 from fastapi import FastAPI
-import requests
-from uuid import uuid4
+from pymongo import MongoClient
 
-from pydantic import BaseModel, ValidationError
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
-from model import Dataset, OperationType
+from src.model import Dataset
+from src.data_service import DataService
 
+logger = logging.getLogger('splash_ml')
 
-MONGO_DB_USERNAME = str(os.environ['MONGO_INITDB_ROOT_USERNAME'])
-MONGO_DB_PASSWORD = str(os.environ['MONGO_INITDB_ROOT_PASSWORD'])
-MONGO_DB_URI = "mongodb://%s:%s@mongodb:27017/?authSource=admin" % (MONGO_DB_USERNAME, MONGO_DB_PASSWORD)
+def init_logging():
+    ch = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    logger.setLevel(logging.INFO)
+
+MONGO_DB_USERNAME = str(os.environ.get('MONGO_INITDB_ROOT_USERNAME', default=""))
+MONGO_DB_PASSWORD = str(os.environ.get('MONGO_INITDB_ROOT_PASSWORD', default=""))
+MONGO_DB_URI = "mongodb://%s:%s@mongodb:27017/?authSource=admin" % \
+               (MONGO_DB_USERNAME, MONGO_DB_PASSWORD)
 API_URL_PREFIX = "/api/v0"
 
-client = pymongo.MongoClient(MONGO_DB_URI)
-db = client['labelmaker']
-mycollection = db['datapath']
-
+init_logging()
 
 app = FastAPI(openapi_url ="/api/labelmaker/openapi.json",
               docs_url    ="/api/labelmaker/docs",
-              redoc_url   ="/api/labelmaker/redoc",
-             )
+              redoc_url   ="/api/labelmaker/redoc")
+
+def set_data_service(new_data_svc: DataService):
+    global data_svc
+    data_svc = new_data_svc
+
+@app.on_event("startup")
+async def startup_event():
+    logger.debug('!!!!!!!!!starting server')
+    db = MongoClient(MONGO_DB_URI)
+    set_data_service(DataService(db))
 
 
-@app.get(API_URL_PREFIX+"/datapath/{operation_type}", tags=['datapath'])
-def get_datapath(operation_type: OperationType, user_id: str = None):
-  subqueries = [{'operation_type': operation_type}]
-  if user_id:
-      subqueries.append({"user_id": user_id}) 
-  query = {"$and": subqueries}
-  return mycollection.find_one(query, {'_id': 0})
+@app.get(API_URL_PREFIX+"/dataset", tags=['datapath'])
+def get_dataset(user_id: str = None) -> Dataset:
+  dataset = data_svc.get_dataset(user_id)
+  return dataset
 
 
-@app.post(API_URL_PREFIX+"/datapath", tags=['datapath'])
-def add_datapath(dataset: Dataset):
-  # check if dataset exists
-  current_dataset = mycollection.find_one({'user_id': dataset.user_id, 'operation_type': dataset.operation_type})
-  if current_dataset:
-    dataset.uid = current_dataset['uid']
-    dataset_dict = dataset.dict()
-    mycollection.update_one({'uid': current_dataset['uid']}, {'$set': dataset_dict}, upsert=False)
-  else:
-    dataset.uid = str(uuid4())
-    dataset_dict = dataset.dict()
-    mycollection.insert_one(dataset_dict)
-  return dataset.uid
+@app.post(API_URL_PREFIX+"/dataset", tags=['datapath'])
+def add_dataset(dataset: Dataset) -> str:
+  uid = data_svc.add_dataset(dataset)
+  return uid
+
