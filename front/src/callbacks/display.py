@@ -84,6 +84,7 @@ def update_page_number(image_order, button_first_page, button_prev_page, button_
     Input('probability-collapse', 'is_open'),
     Input('probability-model-list', 'value'),
     Input('current-page', 'value'),
+    Input({'base_id': 'file-manager', 'name': 'log-toggle'}, 'on'),
     
     State('labels-dict', 'data'),
     State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
@@ -93,7 +94,7 @@ def update_page_number(image_order, button_first_page, button_prev_page, button_
     State('thumbnail-slider', 'value'),
 )
 @cache.memoize(timeout=0)
-def update_output(image_order, probability_is_open, probability_model, current_page,
+def update_output(image_order, probability_is_open, probability_model, current_page, log,
                   labels_dict, file_paths, find_similar_images, tab_selection, card_id,
                   thumbnail_slider_value):
     '''
@@ -104,6 +105,7 @@ def update_output(image_order, probability_is_open, probability_model, current_p
         probability_is_open:    Probability-based labelng is the chosen method
         probability_model:      Selected probability-based model
         current_page:           Index of the current page
+        log:                    Log toggle
         labels_dict:            Dictionary with labeling information, e.g. 
                                 {filename1: [label1,label2], ...}
         file_paths:             Data project information
@@ -120,6 +122,8 @@ def update_output(image_order, probability_is_open, probability_model, current_p
         prob_style:             Probability style (hidden vs displayed)
         init_clicks:            Initial number of clicks in image card
     '''
+    changed_id = dash.callback_context.triggered[0]['prop_id']
+    print(f'Updating display due to {changed_id}', flush=True)
     start = time.time()
     # Define default values
     init_clicks = 0
@@ -128,18 +132,20 @@ def update_output(image_order, probability_is_open, probability_model, current_p
     prob_style = {'display': 'none'}
     card_indx = int(card_id['index'])
     # Load labels and data project
-    labels = Labels(**labels_dict)
+    start1 = time.time()
+    # labels = Labels(**labels_dict)
     data_project = DataProject()
-    data_project.init_from_dict(file_paths)
     # Define the card index
     num_imgs = len(image_order)
     start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
     max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
     indx = start_indx+card_indx
     if indx < max_indx:     # Display image card only if indx is not greater than number of images
+        data_project.init_from_dict([file_paths[image_order[indx]]])
+        print(f'Data project done after {time.time()-start1}', flush=True)
         data_set = data_project.data
-        filename = data_set[image_order[indx]].uri
-        content, _ = data_set[image_order[indx]].read_data()
+        filename = data_set[0].uri
+        content, _ = data_set[0].read_data(log=log)
         if probability_model and tab_selection=='probability':
             df_prob = pd.read_parquet(probability_model)
             probs = df_prob.loc[filename].to_string(header=None)
@@ -151,7 +157,7 @@ def update_output(image_order, probability_is_open, probability_model, current_p
                 'margin-top': '1px'
                 }
         elif find_similar_images:               # Find similar images has been activated
-            if labels.labels_dict[filename] == []:
+            if filename not in labels_dict.keys() or labels_dict[filename] == []:
                 init_clicks = 1
                 color = 'primary'
         style={'margin-bottom': '0px', 'margin-top': '10px'}
@@ -189,15 +195,17 @@ def update_rows(thumbnail_slider_value):
 
     State({'type': 'thumbnail-name', 'index': ALL}, 'children'),
     State({'base_id': 'file-manager', 'name': 'docker-file-paths'},'data'),
+    State({'base_id': 'file-manager', 'name': 'log-toggle'}, 'on'),
     prevent_initial_call=True
 )
-def full_screen_thumbnail(double_click, thumbnail_name_children, file_paths):
+def full_screen_thumbnail(double_click, thumbnail_name_children, file_paths, log):
     '''
     This callback opens the modal pop-up window with the full size image that was double-clicked
     Args:
         double_click:               List of number of times that every card has been double-clicked
         thumbnail_name_children:    List of the thumbnails filenames
         file_paths:                 Data project information
+        log:                        Log toggle
     Returns:
         contents:                   Contents for pop-up window
         open_modal:                 Open/close modal
@@ -210,7 +218,7 @@ def full_screen_thumbnail(double_click, thumbnail_name_children, file_paths):
     data_project.init_from_dict(file_paths)
     data = data_project.data
     data_set = next(item for item in data if item.uri == filename)
-    img_contents, _ = data_set.read_data(resize=False)
+    img_contents, _ = data_set.read_data(resize=False, log=log)
     contents = parse_full_screen_content(img_contents, filename)
     return [contents], [True], [0]*len(double_click)
 
@@ -241,19 +249,20 @@ def select_thumbnail(value, labels_dict, thumbnail_name_children, color_cycle, c
     Returns:
         thumbnail_color:            Color of thumbnail card
     '''
+    print('I am here')
     changed_id = dash.callback_context.triggered[0]['prop_id']
-    labels = Labels(**labels_dict)
-    if len(labels.labels_dict)==0 or value is None or changed_id == 'un-label.n_clicks':
+    # labels = Labels(**labels_dict)
+    if len(labels_dict['labels_dict'])==0 or value is None or changed_id == 'un-label.n_clicks':
         color = current_color
     elif value % 2 == 1:
         color = 'primary'
     else:
         try:
-            label = labels.labels_dict[thumbnail_name_children]
+            label = labels_dict['labels_dict'][thumbnail_name_children]
         except:
             label = []
         if len(label)>0:
-            label_indx = labels.labels_list.index(label[0])
+            label_indx = labels_dict['labels_list'].index(label[0])
             color = color_cycle[label_indx]
         else:
             color = 'white'
