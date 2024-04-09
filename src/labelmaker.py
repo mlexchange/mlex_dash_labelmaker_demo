@@ -3,14 +3,16 @@ from dash import Input, Output, State, dcc
 from file_manager.data_project import DataProject
 
 from app_layout import app, long_callback_manager
-from callbacks.display import deselect  # noqa: F401
-from callbacks.display import display_indicator  # noqa: F401
-from callbacks.display import full_screen_thumbnail  # noqa: F401
-from callbacks.display import toggle_tabs_collapse  # noqa: F401
-from callbacks.display import update_hide_button_text  # noqa: F401
-from callbacks.display import update_output  # noqa: F401
-from callbacks.display import update_page_number  # noqa: F401
-from callbacks.display import update_rows  # noqa: F401
+from callbacks.display import (  # noqa: F401
+    deselect,
+    display_indicator,
+    full_screen_thumbnail,
+    toggle_tabs_collapse,
+    update_hide_button_text,
+    update_output,
+    update_page_number,
+    update_rows,
+)
 from callbacks.display_order import display_index  # noqa: F401
 from callbacks.help import toggle_help_modal  # noqa: F401
 from callbacks.manage_labels import (  # noqa: F401
