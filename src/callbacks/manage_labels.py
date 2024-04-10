@@ -52,7 +52,7 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
     Input("confirm-load-splash", "n_clicks"),
     Input("modify-list", "n_clicks"),
     Input({"type": "delete-label-button", "index": ALL}, "n_clicks_timestamp"),
-    Input({"base_id": "file-manager", "name": "docker-file-paths"}, "data"),
+    Input({"base_id": "file-manager", "name": "data_project_dict"}, "data"),
     Input("modify-label-button", "n_clicks"),
     State("add-label-name", "value"),
     State({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
@@ -78,7 +78,7 @@ def label_selected_thumbnails(
     load_splash_n_clicks,
     modify_list_n_clicks,
     del_label_n_clicks,
-    file_paths,
+    data_project_dict,
     modify_label_n_clicks,
     add_label_name,
     thumbnail_image_select_value,
@@ -114,7 +114,7 @@ def label_selected_thumbnails(
         load_splash_n_clicks:           Triggers loading labeled datasets with splash-ml
         modify_list_n_clicks:           Button to add a new label (tag name)
         del_label_n_clicks:             List of n_clicks to delete a label button
-        file_paths:                     Data project information
+        data_project_dict:                     Data project information
         modify_label_n_clicks:          Button "submit label modification" was clicked
         add_label_name:                 Label to add (tag name)
         thumbnail_image_select_value:   Selected thumbnail image (n_clicks)
@@ -157,9 +157,9 @@ def label_selected_thumbnails(
         else:
             raise PreventUpdate
     # A new data set has been selected
-    elif "docker-file-paths" in changed_id:
-        data_project = DataProject()
-        data_project.init_from_dict(file_paths)
+    elif "data_project_dict" in changed_id:
+        data_project = DataProject.from_dict(data_project_dict)
+        # TODO: Build label dict as user labels images
         filenames = [data_set.uri for data_set in data_project.data]
         labels.init_labels(filenames, label_button_children)
     # The label dash components (buttons) need to be updated
@@ -264,17 +264,17 @@ def label_selected_thumbnails(
     Output("modal-load-splash", "is_open"),
     Input("button-load-splash", "n_clicks"),
     Input("confirm-load-splash", "n_clicks"),
-    State({"base_id": "file-manager", "name": "docker-file-paths"}, "data"),
+    State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State({"base_id": "file-manager", "name": "project-id"}, "data"),
     prevent_initial_call=True,
 )
-def load_from_splash_modal(load_n_click, confirm_load, file_paths, project_id):
+def load_from_splash_modal(load_n_click, confirm_load, data_project_dict, project_id):
     """
     Load labels from splash-ml associated with the project_id
     Args:
         load_n_click:       Number of clicks in load from splash-ml button
         confirm_load:       Number of clicks in confim button within loading from splash-ml modal
-        file_paths:         Data project information
+        data_project_dict:         Data project information
         project_id:         Project id associated with the current data project
     Returns:
         event_id:           Available tagging event IDs associated with the current data project
@@ -286,8 +286,7 @@ def load_from_splash_modal(load_n_click, confirm_load, file_paths, project_id):
     ):  # if confirmed, load chosen tagging event
         return dash.no_update, False
     # If unconfirmed, retrieve the tagging event IDs associated with the current data project
-    data_project = DataProject()
-    data_project.init_from_dict(file_paths)
+    data_project = DataProject.from_dict(data_project_dict)
     num_imgs = len(data_project.data)
     response = requests.post(
         f"{SPLASH_URL}/datasets/search",
