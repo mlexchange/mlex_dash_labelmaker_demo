@@ -1,12 +1,11 @@
 import os
-import pathlib
 
 import dash
 import dash_bootstrap_components as dbc
-import dash_uploader as du
 import diskcache
 from dash import dcc, html
 from dash.long_callback import DiskcacheLongCallbackManager
+from dotenv import load_dotenv
 from file_manager.main import FileManager
 from flask import Flask
 from flask_caching import Cache
@@ -36,28 +35,27 @@ app = dash.Dash(
 
 cache = Cache(app.server, config={"CACHE_TYPE": "filesystem", "CACHE_DIR": ".cache"})
 
+load_dotenv(".env")
+
 MLCOACH_URL = os.getenv("MLCOACH_URL")
 DATA_CLINIC_URL = os.getenv("DATA_CLINIC_URL")
 SPLASH_URL = os.getenv("SPLASH_URL")
 MLEX_COMPUTE_URL = os.getenv("MLEX_COMPUTE_URL")
 DEFAULT_TILED_URI = os.getenv("DEFAULT_TILED_URI")
+DEFAULT_TILED_QUERY = os.getenv("DEFAULT_TILED_QUERY")
 TILED_KEY = os.getenv("TILED_KEY")
 if TILED_KEY == "":
     TILED_KEY = None
-DOCKER_DATA = pathlib.Path.home() / "data"
-UPLOAD_FOLDER_ROOT = DOCKER_DATA / "upload"
+READ_DIR = os.getenv("READ_DIR")
+WRITE_DIR = os.getenv("WRITE_DIR")
 USER = "admin"
 NUMBER_OF_ROWS = 3
 
 dash_file_explorer = FileManager(
-    DOCKER_DATA,
-    UPLOAD_FOLDER_ROOT,
+    READ_DIR,
     api_key=TILED_KEY,
-    splash_uri=SPLASH_URL,
-    default_tiled_uri=DEFAULT_TILED_URI,
 )
 dash_file_explorer.init_callbacks(app)
-du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 
 # APP LAYOUT
 app.title = "Label Maker"
