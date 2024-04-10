@@ -2,12 +2,13 @@ import math
 import time
 
 import dash
-import pandas as pd
+
+# import pandas as pd
 from dash import ALL, MATCH, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 
-from app_layout import NUMBER_OF_ROWS, cache
+from app_layout import NUMBER_OF_ROWS  # , cache
 from utils.plot_utils import draw_rows, parse_full_screen_content
 
 
@@ -16,7 +17,7 @@ from utils.plot_utils import draw_rows, parse_full_screen_content
         [Output("first-page", "disabled"), Output("prev-page", "disabled")],
         [Output("next-page", "disabled"), Output("last-page", "disabled")],
         Output("current-page", "value"),
-        Input("image-order", "data"),
+        Input({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
         Input("first-page", "n_clicks"),
         Input("prev-page", "n_clicks"),
         Input("next-page", "n_clicks"),
@@ -30,7 +31,7 @@ from utils.plot_utils import draw_rows, parse_full_screen_content
     prevent_initial_call=True,
 )
 def update_page_number(
-    image_order,
+    num_imgs,
     button_first_page,
     button_prev_page,
     button_next_page,
@@ -61,7 +62,6 @@ def update_page_number(
         current_page:           Update current page index
     """
     changed_id = dash.callback_context.triggered[0]["prop_id"]
-    num_imgs = len(image_order)
     max_num_pages = math.ceil((num_imgs // thumbnail_slider_value) / NUMBER_OF_ROWS)
     # update current page if necessary
     if current_page > max_num_pages - 1:
@@ -91,37 +91,35 @@ def update_page_number(
 
 
 @callback(
-    Output({"type": "thumbnail-card", "index": MATCH}, "style"),
-    Output({"type": "thumbnail-card", "index": MATCH}, "color"),
-    Output({"type": "thumbnail-name", "index": MATCH}, "children"),
-    Output({"type": "thumbnail-src", "index": MATCH}, "src"),
-    Output({"type": "thumbnail-prob", "index": MATCH}, "children"),
-    Output({"type": "thumbnail-prob", "index": MATCH}, "style"),
-    Output({"type": "thumbnail-image", "index": MATCH}, "n_clicks"),
+    Output({"type": "thumbnail-card", "index": ALL}, "style"),
+    Output({"type": "thumbnail-card", "index": ALL}, "color"),
+    Output({"type": "thumbnail-name", "index": ALL}, "children"),
+    Output({"type": "thumbnail-src", "index": ALL}, "src"),
+    Output({"type": "thumbnail-prob", "index": ALL}, "children"),
+    Output({"type": "thumbnail-prob", "index": ALL}, "style"),
+    Output({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
     Input("image-order", "data"),
     Input("probability-collapse", "is_open"),
     Input("probability-model-list", "value"),
     Input("current-page", "value"),
-    Input({"base_id": "file-manager", "name": "log-toggle"}, "on"),
+    Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State("labels-dict", "data"),
-    State({"base_id": "file-manager", "name": "docker-file-paths"}, "data"),
     State("find-similar-unsupervised", "n_clicks"),
     State("tab-group", "value"),
-    State({"type": "thumbnail-image", "index": MATCH}, "id"),
     State("thumbnail-slider", "value"),
+    prevent_initial_call=True,
 )
-@cache.memoize(timeout=0)
+# @cache.memoize(timeout=0)
 def update_output(
     image_order,
     probability_is_open,
     probability_model,
     current_page,
-    log,
+    data_project_dict,
+    # log,
     labels_dict,
-    file_paths,
     find_similar_images,
     tab_selection,
-    card_id,
     thumbnail_slider_value,
 ):
     """
@@ -135,7 +133,7 @@ def update_output(
         log:                    Log toggle
         labels_dict:            Dictionary with labeling information, e.g.
                                 {filename1: [label1,label2], ...}
-        file_paths:             Data project information
+        data_project_dict:             Data project information
         find_similar_images:    Find similar images button, n_clicks
         tab_selection:          Current tab [Manual, Similarity, Probability]
         card_id:                Card ID to identify the card index
@@ -149,53 +147,67 @@ def update_output(
         prob_style:             Probability style (hidden vs displayed)
         init_clicks:            Initial number of clicks in image card
     """
-    changed_id = dash.callback_context.triggered[0]["prop_id"]
-    print(f"Updating display due to {changed_id}", flush=True)
+    data_project = DataProject.from_dict(data_project_dict)
+    if len(data_project.datasets) == 0:
+        raise PreventUpdate
+    # changed_id = dash.callback_context.triggered[0]["prop_id"]
     start = time.time()
     # Define default values
     init_clicks = 0
     color = "white"
     probs = dash.no_update
     prob_style = {"display": "none"}
-    card_indx = int(card_id["index"])
     # Load labels and data project
     start1 = time.time()
     # labels = Labels(**labels_dict)
-    data_project = DataProject()
-    # Define the card index
-    num_imgs = len(image_order)
+    num_imgs = data_project.datasets[-1].cumulative_data_count
     start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
     max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
-    indx = start_indx + card_indx
-    if (
-        indx < max_indx
-    ):  # Display image card only if indx is not greater than number of images
-        data_project.init_from_dict([file_paths[image_order[indx]]])
-        print(f"Data project done after {time.time()-start1}", flush=True)
-        data_set = data_project.data
-        filename = data_set[0].uri
-        content, _ = data_set[0].read_data(log=log)
-        if probability_model and tab_selection == "probability":
-            df_prob = pd.read_parquet(probability_model)
-            probs = df_prob.loc[filename].to_string(header=None)
-            prob_style = {
-                "display": "block",
-                "whiteSpace": "pre-wrap",
-                "font-size": "12px",
-                "margin-bottom": "0px",
-                "margin-top": "1px",
-            }
-        elif find_similar_images:  # Find similar images has been activated
-            if filename not in labels_dict.keys() or labels_dict[filename] == []:
-                init_clicks = 1
-                color = "primary"
-        style = {"margin-bottom": "0px", "margin-top": "10px"}
-    else:
-        style = {"display": "none"}
-        filename = ""
-        content = ""
+    # contents, uris = data_project.read_datasets(image_order[start_indx:max_indx], resize=True)
+    contents, uris = data_project.read_datasets(
+        list(range(start_indx, max_indx)), resize=True
+    )
+    print(f"Data project done after {time.time()-start1}", flush=True)
+    # if probability_model and tab_selection == "probability":
+    #     #TODO: Read block
+    #     df_prob = pd.read_parquet(probability_model)
+    #     probs = df_prob.loc[filename].to_string(header=None)
+    #     prob_style = {
+    #         "display": "block",
+    #         "whiteSpace": "pre-wrap",
+    #         "font-size": "12px",
+    #         "margin-bottom": "0px",
+    #         "margin-top": "1px",
+    #     }
+    # elif find_similar_images:  # Find similar images has been activated
+    #     #TODO: Fix this
+    #     if filename not in labels_dict.keys() or labels_dict[filename] == []:
+    #         init_clicks = 1
+    #         color = "primary"
+    # style = {"margin-bottom": "0px", "margin-top": "10px"}
+    none_style = {"display": "none"}
+    # filename = ""
+    # content = ""
+    styles = [{"margin-bottom": "0px", "margin-top": "10px"}] * len(contents) + [
+        none_style
+    ] * (NUMBER_OF_ROWS * thumbnail_slider_value - len(contents))
+    colors = [color] * len(contents) + ["white"] * (
+        NUMBER_OF_ROWS * thumbnail_slider_value - len(contents)
+    )
+    uris = uris + [""] * (NUMBER_OF_ROWS * thumbnail_slider_value - len(contents))
+    contents = contents + [""] * (
+        NUMBER_OF_ROWS * thumbnail_slider_value - len(contents)
+    )
     print(f"Display done after {time.time()-start}", flush=True)
-    return style, color, filename, content, probs, prob_style, init_clicks
+    return (
+        styles,
+        colors,
+        uris,
+        contents,
+        [probs] * len(uris),
+        [prob_style] * len(uris),
+        [init_clicks] * len(uris),
+    )
 
 
 @callback(
@@ -221,17 +233,19 @@ def update_rows(thumbnail_slider_value):
     Output({"type": "double-click-entry", "index": ALL}, "n_events"),
     Input({"type": "double-click-entry", "index": ALL}, "n_events"),
     State({"type": "thumbnail-name", "index": ALL}, "children"),
-    State({"base_id": "file-manager", "name": "docker-file-paths"}, "data"),
+    State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State({"base_id": "file-manager", "name": "log-toggle"}, "on"),
     prevent_initial_call=True,
 )
-def full_screen_thumbnail(double_click, thumbnail_name_children, file_paths, log):
+def full_screen_thumbnail(
+    double_click, thumbnail_name_children, data_project_dict, log
+):
     """
     This callback opens the modal pop-up window with the full size image that was double-clicked
     Args:
         double_click:               List of number of times that every card has been double-clicked
         thumbnail_name_children:    List of the thumbnails filenames
-        file_paths:                 Data project information
+        data_project_dict:                 Data project information
         log:                        Log toggle
     Returns:
         contents:                   Contents for pop-up window
@@ -241,11 +255,12 @@ def full_screen_thumbnail(double_click, thumbnail_name_children, file_paths, log
     if 1 not in double_click:
         raise PreventUpdate
     filename = thumbnail_name_children[double_click.index(1)]
-    data_project = DataProject()
-    data_project.init_from_dict(file_paths)
-    data = data_project.data
-    data_set = next(item for item in data if item.uri == filename)
-    img_contents, _ = data_set.read_data(resize=False, log=log)
+    data_project = DataProject.from_dict(data_project_dict)
+    # data = data_project.data
+    # data_set = next(item for item in data if item.uri == filename)
+    img_contents, _ = data_project.read_datasets(
+        [0], resize=False
+    )  # TODO: I need the index
     contents = parse_full_screen_content(img_contents, filename)
     return [contents], [True], [0] * len(double_click)
 
@@ -276,7 +291,6 @@ def select_thumbnail(
     Returns:
         thumbnail_color:            Color of thumbnail card
     """
-    print("I am here")
     changed_id = dash.callback_context.triggered[0]["prop_id"]
     # labels = Labels(**labels_dict)
     if (
