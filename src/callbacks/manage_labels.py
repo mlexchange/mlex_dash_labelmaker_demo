@@ -52,7 +52,7 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
     Input("confirm-load-splash", "n_clicks"),
     Input("modify-list", "n_clicks"),
     Input({"type": "delete-label-button", "index": ALL}, "n_clicks_timestamp"),
-    Input({"base_id": "file-manager", "name": "data_project_dict"}, "data"),
+    Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     Input("modify-label-button", "n_clicks"),
     State("add-label-name", "value"),
     State({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
@@ -61,7 +61,7 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
     State("probability-threshold", "value"),
     State("probability-label-name", "value"),
     State({"type": "label-button", "index": ALL}, "children"),
-    State({"base_id": "file-manager", "name": "project-id"}, "data"),
+    # State({"base_id": "file-manager", "name": "project-id"}, "data"),
     State("event-id", "value"),
     State({"type": "color-label-button", "index": ALL}, "n_clicks_timestamp"),
     State("label-color-picker", "value"),
@@ -87,7 +87,7 @@ def label_selected_thumbnails(
     threshold,
     probability_label,
     label_button_children,
-    project_id,
+    # project_id,
     event_id,
     color_label_t_clicks,
     new_color,
@@ -157,11 +157,11 @@ def label_selected_thumbnails(
         else:
             raise PreventUpdate
     # A new data set has been selected
-    elif "data_project_dict" in changed_id:
-        data_project = DataProject.from_dict(data_project_dict)
-        # TODO: Build label dict as user labels images
-        filenames = [data_set.uri for data_set in data_project.data]
-        labels.init_labels(filenames, label_button_children)
+    elif "data-project-dict" in changed_id:
+        # TODO: No need to parse an empty list
+        # TODO: Fix unlabel all
+        labels.init_labels([], label_button_children)
+        print(f"Labels initialized: {labels.labels_list}", flush=True)
     # The label dash components (buttons) need to be updated
     elif (
         changed_id
@@ -195,7 +195,8 @@ def label_selected_thumbnails(
             labels.update_labels_list(add_label=add_label_name)
         # Loading labels from splash-ml
         elif changed_id == "confirm-load-splash.n_clicks":
-            labels.load_splash_labels(project_id, event_id)
+            data_project = DataProject.from_dict(data_project_dict)
+            labels.load_splash_labels(data_project.project_id, event_id)
         # Update labels according to probability model selection
         elif changed_id == "probability-model-list.value":
             probability_options = {}

@@ -294,12 +294,7 @@ def select_thumbnail(
         thumbnail_color:            Color of thumbnail card
     """
     changed_id = dash.callback_context.triggered[0]["prop_id"]
-    # labels = Labels(**labels_dict)
-    if (
-        len(labels_dict["labels_dict"]) == 0
-        or value is None
-        or changed_id == "un-label.n_clicks"
-    ):
+    if value is None or changed_id == "un-label.n_clicks":
         color = current_color
     elif value % 2 == 1:
         color = "primary"

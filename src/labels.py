@@ -111,12 +111,12 @@ class Labels:
                 )
             )
         for filename in filenames_to_label:
-            current_labels = self.labels_dict[filename]
-            if len(current_labels) > 0:
+            current_labels = self.labels_dict.get(filename, [])
+            if current_labels:
                 self.num_imgs_per_label[current_labels[0]] -= 1
-                if label is None:
-                    self.labels_dict[filename] = []
-            if label is not None:
+            if label is None:
+                self.labels_dict[filename] = []
+            else:
                 self.labels_dict[filename] = [label]
                 self.num_imgs_per_label[label] += 1
         pass

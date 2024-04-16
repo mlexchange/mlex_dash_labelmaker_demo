@@ -15,12 +15,11 @@ from callbacks.display import (  # noqa: F401; full_screen_thumbnail,
 
 # from callbacks.display_order import display_index  # noqa: F401
 from callbacks.help import toggle_help_modal  # noqa: F401
-
-# from callbacks.manage_labels import (  # noqa: F401
-#     label_selected_thumbnails,
-#     load_from_splash_modal,
-#     toggle_color_picker_modal,
-# )
+from callbacks.manage_labels import (  # noqa: F401
+    label_selected_thumbnails,
+    load_from_splash_modal,
+    toggle_color_picker_modal,
+)
 from callbacks.update_models import update_trained_model_list  # noqa: F401
 from callbacks.warning import toggle_modal_unlabel_warning  # noqa: F401
 from labels import Labels
