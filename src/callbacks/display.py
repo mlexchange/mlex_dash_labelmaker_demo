@@ -14,6 +14,7 @@ from utils.plot_utils import draw_rows, parse_full_screen_content
 
 @callback(
     [
+        Output("image-order", "data"),
         [Output("first-page", "disabled"), Output("prev-page", "disabled")],
         [Output("next-page", "disabled"), Output("last-page", "disabled")],
         Output("current-page", "value"),
@@ -83,7 +84,10 @@ def update_page_number(
             current_page = 0  # updated to remove the probability list per image
         elif previous_tab[-2] != "probability":
             raise PreventUpdate
+    start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
+    max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
     return (
+        list(range(start_indx, max_indx)),
         2 * [current_page == 0],
         2 * [max_num_pages <= current_page + 1],
         current_page,
@@ -101,7 +105,7 @@ def update_page_number(
     Input("image-order", "data"),
     Input("probability-collapse", "is_open"),
     Input("probability-model-list", "value"),
-    Input("current-page", "value"),
+    # Input("current-page", "value"),
     Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State("labels-dict", "data"),
     State("find-similar-unsupervised", "n_clicks"),
@@ -114,7 +118,7 @@ def update_output(
     image_order,
     probability_is_open,
     probability_model,
-    current_page,
+    # current_page,
     data_project_dict,
     # log,
     labels_dict,
@@ -160,13 +164,11 @@ def update_output(
     # Load labels and data project
     start1 = time.time()
     # labels = Labels(**labels_dict)
-    num_imgs = data_project.datasets[-1].cumulative_data_count
-    start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
-    max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
+    # num_imgs = data_project.datasets[-1].cumulative_data_count
+    # start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
+    # max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
     # contents, uris = data_project.read_datasets(image_order[start_indx:max_indx], resize=True)
-    contents, uris = data_project.read_datasets(
-        list(range(start_indx, max_indx)), resize=True
-    )
+    contents, uris = data_project.read_datasets(image_order, resize=True)
     print(f"Data project done after {time.time()-start1}", flush=True)
     # if probability_model and tab_selection == "probability":
     #     #TODO: Read block
