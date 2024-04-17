@@ -123,12 +123,7 @@ def save_labels_to_disk(
 
         path_save = labels.save_to_directory(data_project)
         response = "Download will start shortly"
-        return (
-            dcc.send_file(f"{path_save}.zip", filename="files.zip"),
-            True,
-            response,
-            False,
-        )
+        return (dcc.send_file(f"{path_save}.zip", filename="files.zip"), True, response)
 
     return dash.no_update, True, "No labels to save"
 

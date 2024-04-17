@@ -271,24 +271,32 @@ class Labels:
         """
         with tempfile.TemporaryDirectory() as temp_dir:
             data_path = os.path.join(temp_dir, "downloaded_images")
+
+            # Get the system's temporary directory
+            tmp_dir = tempfile.gettempdir()
+
             # create a folder per label
             for label_key in self.labels_list:
                 if self.num_imgs_per_label[label_key] > 0:
                     label_dir = data_path / Path(label_key)
                     label_dir.mkdir(parents=True, exist_ok=True)
-            for indx, (uri, label) in enumerate(self.labels_dict.items()):
+
+            # save images to the corresponding label folder
+            for index, label in self.labels_dict.items():
                 if len(label) > 0:
-                    img, uri = data_project.data[indx].read_data(export="pillow")
+                    img, uri = data_project.read_datasets([int(index)], export="pillow")
                     label_dir = f"{data_path}/{label[0]}"
-                    base_name = uri.split("/")[-1].split(".")[0]
+                    base_name = uri[0].split("/")[-1].split(".")[0]
                     filename = Path(f"{base_name}.tif")
                     i = 0  # check duplicate uri and save under different name if needed
                     while filename.exists():
                         filename = Path(f"{label_dir}/{base_name}_{i}.tif")
                         i += 1
-                    img.save(f"{label_dir}/{filename}")
-            shutil.make_archive("/app/tmp/results", "zip", data_path)
-        return "/app/tmp/results"
+                    img[0].save(f"{label_dir}/{filename}")
+
+            archive_path = os.path.join(tmp_dir, "results")
+            shutil.make_archive(archive_path, "zip", data_path)
+        return archive_path
 
     def get_labeling_progress(self):
         """
