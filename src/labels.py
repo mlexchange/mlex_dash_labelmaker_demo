@@ -282,21 +282,45 @@ class Labels:
                     label_dir.mkdir(parents=True, exist_ok=True)
 
             # save images to the corresponding label folder
-            for index, label in self.labels_dict.items():
-                if len(label) > 0:
-                    img, uri = data_project.read_datasets([int(index)], export="pillow")
-                    label_dir = f"{data_path}/{label[0]}"
-                    base_name = uri[0].split("/")[-1].split(".")[0]
-                    filename = Path(f"{base_name}.tif")
-                    i = 0  # check duplicate uri and save under different name if needed
-                    while filename.exists():
-                        filename = Path(f"{label_dir}/{base_name}_{i}.tif")
-                        i += 1
-                    img[0].save(f"{label_dir}/{filename}")
+            indexes = self.labels_dict.keys()
+            imgs, uris = data_project.read_datasets(
+                list(map(int, indexes)),
+                export="pillow",
+                resize=False,
+            )
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = []
+                for index, (_, label) in enumerate(self.labels_dict.items()):
+                    if len(label) > 0:
+                        save_image = partial(
+                            self._save_image,
+                            data_path,
+                            label,
+                            imgs[index],
+                            uris[index],
+                        )
+                        # Submit the function to the executor
+                        futures.append(executor.submit(save_image))
+
+                # Wait for all futures to complete
+                concurrent.futures.wait(futures)
 
             archive_path = os.path.join(tmp_dir, "results")
             shutil.make_archive(archive_path, "zip", data_path)
         return archive_path
+
+    @staticmethod
+    def _save_image(data_path, label, image, uri):
+        label_dir = f"{data_path}/{label[0]}"
+        base_name = uri.split("/")[-1].split(".")[0]
+        filename = Path(f"{base_name}.tif")
+        i = 0  # check duplicate uri and save under different name if needed
+        while filename.exists():
+            filename = Path(f"{label_dir}/{base_name}_{i}.tif")
+            i += 1
+        image.save(f"{label_dir}/{filename}")
+        pass
 
     def get_labeling_progress(self):
         """
