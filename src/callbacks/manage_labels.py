@@ -56,7 +56,7 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
     Input("modify-label-button", "n_clicks"),
     State("add-label-name", "value"),
     State({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
-    State({"type": "thumbnail-name", "index": ALL}, "children"),
+    # State({"type": "thumbnail-name", "index": ALL}, "children"),
     State("labels-dict", "data"),
     State("probability-threshold", "value"),
     State("probability-label-name", "value"),
@@ -67,6 +67,7 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
     State("label-color-picker", "value"),
     State("color-cycle", "data"),
     State("modify-label-name", "value"),
+    State("image-order", "data"),
     prevent_initial_call=True,
 )
 def label_selected_thumbnails(
@@ -82,7 +83,7 @@ def label_selected_thumbnails(
     modify_label_n_clicks,
     add_label_name,
     thumbnail_image_select_value,
-    thumbnail_name_children,
+    # thumbnail_name_children,
     labels_dict,
     threshold,
     probability_label,
@@ -93,6 +94,7 @@ def label_selected_thumbnails(
     new_color,
     color_cycle,
     new_label_name,
+    image_order,
 ):
     """
     This callback updates the dictionary of labeled images when:
@@ -152,16 +154,13 @@ def label_selected_thumbnails(
         ):
             label_class_value = label_button_children[int(keybind_label["key"]) - 1]
             labels.manual_labeling(
-                label_class_value, thumbnail_image_select_value, thumbnail_name_children
+                label_class_value, thumbnail_image_select_value, image_order
             )
         else:
             raise PreventUpdate
     # A new data set has been selected
     elif "data-project-dict" in changed_id:
-        # TODO: No need to parse an empty list
-        # TODO: Fix unlabel all
-        labels.init_labels([], label_button_children)
-        print(f"Labels initialized: {labels.labels_list}", flush=True)
+        labels.init_labels(label_button_children)
     # The label dash components (buttons) need to be updated
     elif (
         changed_id
@@ -196,7 +195,7 @@ def label_selected_thumbnails(
         # Loading labels from splash-ml
         elif changed_id == "confirm-load-splash.n_clicks":
             data_project = DataProject.from_dict(data_project_dict)
-            labels.load_splash_labels(data_project.project_id, event_id)
+            labels.load_splash_labels(data_project, event_id)
         # Update labels according to probability model selection
         elif changed_id == "probability-model-list.value":
             probability_options = {}
@@ -238,15 +237,13 @@ def label_selected_thumbnails(
     else:
         # Unlabel an image
         if changed_id == "un-label.n_clicks":
-            labels.manual_labeling(
-                None, thumbnail_image_select_value, thumbnail_name_children
-            )
+            labels.manual_labeling(None, thumbnail_image_select_value, image_order)
         # Label an image
         else:
             indx = np.argmax(label_button_n_clicks)
             label_class_value = label_button_children[indx]
             labels.manual_labeling(
-                label_class_value, thumbnail_image_select_value, thumbnail_name_children
+                label_class_value, thumbnail_image_select_value, image_order
             )
     label_perc_value, label_perc_label, total_labeled = labels.get_labeling_progress()
     return (
@@ -266,17 +263,15 @@ def label_selected_thumbnails(
     Input("button-load-splash", "n_clicks"),
     Input("confirm-load-splash", "n_clicks"),
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
-    State({"base_id": "file-manager", "name": "project-id"}, "data"),
     prevent_initial_call=True,
 )
-def load_from_splash_modal(load_n_click, confirm_load, data_project_dict, project_id):
+def load_from_splash_modal(load_n_click, confirm_load, data_project_dict):
     """
     Load labels from splash-ml associated with the project_id
     Args:
         load_n_click:       Number of clicks in load from splash-ml button
         confirm_load:       Number of clicks in confim button within loading from splash-ml modal
-        data_project_dict:         Data project information
-        project_id:         Project id associated with the current data project
+        data_project_dict:  Data project information
     Returns:
         event_id:           Available tagging event IDs associated with the current data project
         modal_load_splash:  True/False to open/close loading from splash-ml modal
@@ -288,7 +283,8 @@ def load_from_splash_modal(load_n_click, confirm_load, data_project_dict, projec
         return dash.no_update, False
     # If unconfirmed, retrieve the tagging event IDs associated with the current data project
     data_project = DataProject.from_dict(data_project_dict)
-    num_imgs = len(data_project.data)
+    project_id = data_project.project_id
+    num_imgs = data_project.datasets[-1].cumulative_data_count
     response = requests.post(
         f"{SPLASH_URL}/datasets/search",
         params={"page[limit]": num_imgs},

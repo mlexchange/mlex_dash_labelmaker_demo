@@ -137,7 +137,7 @@ def update_output(
         log:                    Log toggle
         labels_dict:            Dictionary with labeling information, e.g.
                                 {filename1: [label1,label2], ...}
-        data_project_dict:             Data project information
+        data_project_dict:      Data project information
         find_similar_images:    Find similar images button, n_clicks
         tab_selection:          Current tab [Manual, Similarity, Probability]
         card_id:                Card ID to identify the card index
@@ -271,13 +271,14 @@ def full_screen_thumbnail(
     Output({"type": "thumbnail-card", "index": MATCH}, "color", allow_duplicate=True),
     Input({"type": "thumbnail-image", "index": MATCH}, "n_clicks"),
     Input("labels-dict", "data"),
-    State({"type": "thumbnail-name", "index": MATCH}, "children"),
     State("color-cycle", "data"),
     State({"type": "thumbnail-card", "index": MATCH}, "color"),
+    State({"type": "thumbnail-card", "index": MATCH}, "id"),
+    State("image-order", "data"),
     prevent_initial_call=True,
 )
 def select_thumbnail(
-    value, labels_dict, thumbnail_name_children, color_cycle, current_color
+    value, labels_dict, color_cycle, current_color, card_id, image_order
 ):
     """
     This callback assigns a color to thumbnail cards in the following scenarios:
@@ -287,9 +288,10 @@ def select_thumbnail(
     Args:
         value:                      Thumbnail card that triggered the callback (n_clicks)
         labels_dict:                Dictionary of labeled images, as follows: {'img1':[], 'img2':[]}
-        thumbnail_name_children:    Filename in selected thumbnail
         color_cycle:                List that contains the color cycle associated with the labels
         current_color:              Current color in thumbnail card
+        card_id:                    Card ID to identify the card index
+        image_order:                Order of the images according to the selected action (sort,hide)
     Returns:
         thumbnail_color:            Color of thumbnail card
     """
@@ -299,14 +301,12 @@ def select_thumbnail(
     elif value % 2 == 1:
         color = "primary"
     else:
-        try:
-            label = labels_dict["labels_dict"][thumbnail_name_children]
-        except Exception as e:
-            print(f"Error: {e}")
-            label = []
-        if len(label) > 0:
-            label_indx = labels_dict["labels_list"].index(label[0])
-            color = color_cycle[label_indx]
+        card_index = card_id["index"]
+        if str(image_order[card_index]) in labels_dict["labels_dict"].keys():
+            label = labels_dict["labels_dict"][str(image_order[card_index])]
+            if len(label) > 0:
+                label_indx = labels_dict["labels_list"].index(label[0])
+                color = color_cycle[label_indx]
         else:
             color = "white"
     if color == current_color:

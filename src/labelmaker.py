@@ -45,75 +45,134 @@ app.clientside_callback(
 
 
 @app.long_callback(
-    Output("download-out", "data"),
     Output("storage-modal", "is_open"),
     Output("storage-body-modal", "children"),
-    Output("modal-save-splash", "is_open"),
-    Input("button-save-disk", "n_clicks"),
-    Input("button-save-splash", "n_clicks"),
     Input("confirm-save-splash", "n_clicks"),
-    Input("close-storage-modal", "n_clicks"),
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
-    State({"base_id": "file-manager", "name": "project-id"}, "data"),
     State("labels-dict", "data"),
     State("tagger-id", "value"),
     manager=long_callback_manager,
     prevent_initial_call=True,
 )
-def save_labels(
-    button_save_disk_n_clicks,
-    button_save_splash_n_clicks,
+def save_labels_to_splash(
     button_confirm_splash_n_clicks,
-    close_modal_n_clicks,
     data_project_dict,
-    project_id,
     labels_dict,
     tagger_id,
 ):
     """
     This callback saves the labels to disk or to splash-ml
     Args:
-        button_save_disk_n_clicks:      Button to save to disk
-        button_save_splash_n_clicks:    Button to save to splash-ml
         button_confirm_splash_n_clicks: Button to confirm save to splash-ml
-        close_modal_n_clicks:           Button to close the confirmation message
-        data_project_dict:                     Data project information
-        project_id:                     Project id associated with the current data project
+        data_project_dict:              Data project information
         labels_dict:                    Dictionary of labeled images (docker path), as follows:
                                         {filename1: [label1, label2], ...}
         tagger_id:                      ID to identify the user/tagger
     Returns:
-        download_out:                   Download output
         storage_modal_open:             Open/closes the confirmation message
-        storag_body_modal:              Confirmation message
-        modal_save_splash:              Open/close save to splash modal to collect the tagger id
+        storage_body_modal:             Confirmation message
     """
-    changed_id = dash.callback_context.triggered[-1]["prop_id"]
-    if changed_id == "close-storage-modal.n_clicks":
-        return dash.no_update, False, dash.no_update, False
     labels = Labels(**labels_dict)
     if sum(labels.num_imgs_per_label.values()) > 0:
-        if "confirm-save-splash.n_clicks" in changed_id:
-            status = labels.save_to_splash(tagger_id, data_project_dict, project_id)
-            if len(status) == 0:
-                response = "Labels stored in splash-ml"
-            else:
-                response = f"Error. {status}"
-            return dash.no_update, True, response, False
-        elif "button-save-disk.n_clicks" in changed_id:
-            data_project = DataProject.from_dict(data_project_dict)
-            path_save = labels.save_to_directory(data_project)
-            response = "Download will start shortly"
-            return (
-                dcc.send_file(f"{path_save}.zip", filename="files.zip"),
-                True,
-                response,
-                False,
-            )
+        # Load data project
+        data_project = DataProject.from_dict(data_project_dict)
+
+        status = labels.save_to_splash(tagger_id, data_project)
+        # Remove None elements
+        status = list(filter(None, status))
+        if len(status) == 0:
+            response = "Labels stored in splash-ml"
         else:
-            return dash.no_update, False, dash.no_update, True
-    return dash.no_update, True, "No labels to save", False
+            response = f"Error. {status}"
+        return True, response
+
+    return True, "No labels to save"
+
+
+@app.long_callback(
+    Output("download-out", "data"),
+    Output("storage-modal", "is_open", allow_duplicate=True),
+    Output("storage-body-modal", "children", allow_duplicate=True),
+    Input("button-save-disk", "n_clicks"),
+    State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
+    State("labels-dict", "data"),
+    manager=long_callback_manager,
+    prevent_initial_call=True,
+)
+def save_labels_to_disk(
+    button_save_disk_n_clicks,
+    data_project_dict,
+    labels_dict,
+):
+    """
+    This callback saves the labels to disk or to splash-ml
+    Args:
+        button_save_disk_n_clicks:      Button to save to disk
+        data_project_dict:              Data project information
+        labels_dict:                    Dictionary of labeled images (docker path), as follows:
+                                        {filename1: [label1, label2], ...}
+    Returns:
+        download_out:                   Download output
+        storage_modal_open:             Open/closes the confirmation message
+        storage_body_modal:             Confirmation message
+    """
+    labels = Labels(**labels_dict)
+    if sum(labels.num_imgs_per_label.values()) > 0:
+        # Load data project
+        data_project = DataProject.from_dict(data_project_dict)
+
+        path_save = labels.save_to_directory(data_project)
+        response = "Download will start shortly"
+        return (
+            dcc.send_file(f"{path_save}.zip", filename="files.zip"),
+            True,
+            response,
+            False,
+        )
+
+    return dash.no_update, True, "No labels to save"
+
+
+@app.callback(
+    Output("storage-modal", "is_open", allow_duplicate=True),
+    Input("close-storage-modal", "n_clicks"),
+    prevent_initial_call=True,
+)
+def close_storage_modal(close_modal_n_clicks):
+    """
+    This callback closes the storage modal
+    Args:
+        close_modal_n_clicks: Button to close the confirmation message
+    Returns:
+        storage_modal_open:  Open/closes the confirmation message
+    """
+    return False
+
+
+@app.callback(
+    Output("modal-save-splash", "is_open", allow_duplicate=True),
+    Input("button-save-splash", "n_clicks"),
+    Input("confirm-save-splash", "n_clicks"),
+    State("modal-save-splash", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_splash_modal(
+    button_save_splash_n_clicks,
+    button_confirm_splash_n_clicks,
+    storage_modal_open,
+):
+    """
+    This callback toggles the splash modal
+    Args:
+        button_save_splash_n_clicks:    Button to save to splash-ml
+        button_confirm_splash_n_clicks: Button to confirm save to splash-ml
+    Returns:
+        storage_modal_open:             Open/closes the confirmation message
+    """
+    return not storage_modal_open
 
 
 if __name__ == "__main__":
-    app.run_server(host="127.0.0.1", port=8057, processes=4, threaded=False, debug=True)
+    app.run_server(
+        host="127.0.0.1", port=8057, debug=True
+    )  # , processes=4, threaded=False, debug=True)
