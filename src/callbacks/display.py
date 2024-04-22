@@ -295,7 +295,7 @@ def display_indicator_on(n_clicks, similarity_model):
     """
     if similarity_model is None:
         raise PreventUpdate
-    file_path = ".current_similarities.hdf5"
+    file_path = ".current_image_order.hdf5"
     if os.path.exists(file_path):
         os.remove(file_path)
     return "green", "Find Similar Images: ON"
@@ -305,18 +305,28 @@ def display_indicator_on(n_clicks, similarity_model):
     Output("similarity-on-off-indicator", "color"),
     Output("similarity-on-off-indicator", "label"),
     Input("exit-similar-unsupervised", "n_clicks"),
+    Input({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
+    Input("button-hide", "n_clicks"),
+    Input("button-sort", "n_clicks"),
+    State("similarity-on-off-indicator", "color"),
 )
-def display_indicator_off(n_clicks):
+def display_indicator_off(n_clicks, num_data_points, hide, sort, current_color):
     """
     This callback controls the light indicator in the DataClinic tab, which indicates whether the
     similarity-based image display is ON or OFF
     Args:
-        n_clicks:   The button "Exit Similar Images" triggers this callback
+        n_clicks:        The button "Exit Similar Images" triggers this callback
+        num_data_points: Total number of data points
+        hide:            Hide button
+        sort:            Sort button
+        current_color:   Current indicator color
     Returns:
-        color:      Indicator color
-        label:      Indicator label
+        color:           Indicator color
+        label:           Indicator label
     """
-    file_path = ".current_similarities.hdf5"
+    if current_color == "#596D4E":
+        raise PreventUpdate
+    file_path = ".current_image_order.hdf5"
     if os.path.exists(file_path):
         os.remove(file_path)
     return "#596D4E", "Find Similar Images: OFF"

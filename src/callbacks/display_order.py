@@ -1,6 +1,7 @@
 import math
 import os
 
+import dash
 import h5py
 import numpy as np
 from dash import ALL, Input, Output, State, callback
@@ -123,6 +124,7 @@ from src.query import Query
     Input({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
     Input("current-page", "value"),
     Input("similarity-on-off-indicator", "color"),
+    Input("button-hide", "n_clicks"),
     State("probability-collapse", "is_open"),
     State("tab-group", "value"),
     State("previous-tab", "data"),
@@ -138,6 +140,7 @@ def update_image_order(
     num_imgs,
     current_page,
     similarity_on_off_color,
+    button_hide_n_clicks,
     probability_is_open,
     tab_selection,
     previous_tab,
@@ -157,6 +160,7 @@ def update_image_order(
         num_imgs:                   Number of images in the dataset
         current_page:               Current page number
         similarity_on_off_color:    Color of the similarity-based search button
+        button_hide_n_clicks:       Hide button
         probability_is_open:        Probability tab is open
         tab_selection:              Current tab [Manual, Similarity, Probability]
         previous_tab:               Previous tab
@@ -174,7 +178,13 @@ def update_image_order(
     start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
     max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
     indices = list(range(start_indx, max_indx))
-    if similarity_on_off_color == "green":
+    if os.path.exists(".current_image_order.hdf5"):
+        with h5py.File(".current_image_order.hdf5", "r") as f:
+            ordered_indx = f["indices"]
+            if len(ordered_indx) < len(indices):
+                indices = indices[: len(ordered_indx)]
+            image_order = ordered_indx[indices]
+    elif similarity_on_off_color == "green":
         query = Query(num_imgs=num_imgs, **labels_dict)
         for indx, n_click in enumerate(thumb_n_clicks):
             if n_click % 2 == 0 or timestamp[indx] is None:
@@ -182,28 +192,45 @@ def update_image_order(
         clicked_ind = timestamp.index(max(timestamp))  # retrieve clicked index
         if clicked_ind is not None and similarity_model:
             if similarity_model:
-                if os.path.exists(".current_similarities.hdf5"):
-                    with h5py.File(".current_similarities.hdf5", "r") as f:
-                        ordered_indx = f["indices"]
-                        if len(ordered_indx) < len(indices):
-                            indices = indices[: len(ordered_indx)]
-                        image_order = ordered_indx[indices]
-                else:
-                    ordered_indx = query.similarity_search(
-                        similarity_model,
-                        current_image_order[int(clicked_ind)],
-                    )
-                    with h5py.File(".current_similarities.hdf5", "w") as f:
-                        store_ordered_indx = np.array(ordered_indx)
-                        f.create_dataset("indices", data=store_ordered_indx)
-                    if len(ordered_indx) < len(indices):
-                        indices = indices[: len(ordered_indx)]
-                    image_order = ordered_indx[indices]
+                ordered_indx = query.similarity_search(
+                    similarity_model,
+                    current_image_order[int(clicked_ind)],
+                )
+                with h5py.File(".current_image_order.hdf5", "w") as f:
+                    store_ordered_indx = np.array(ordered_indx)
+                    f.create_dataset("indices", data=store_ordered_indx)
+                if len(ordered_indx) < len(indices):
+                    indices = indices[: len(ordered_indx)]
+                image_order = ordered_indx[indices]
         else:
             raise PreventUpdate
+    elif button_hide_n_clicks and button_hide_n_clicks % 2 == 1:
+        query = Query(num_imgs=num_imgs, **labels_dict)
+        image_order = query.hide_labeled()
+        with h5py.File(".current_image_order.hdf5", "w") as f:
+            store_ordered_indx = np.array(image_order)
+            f.create_dataset("indices", data=store_ordered_indx)
+        image_order = [image_order[i] for i in indices]
     else:
         image_order = indices
     return image_order
+
+
+@callback(
+    Output("image-order", "data", allow_duplicate=True),
+    Input("button-hide", "n_clicks"),
+    prevent_initial_call=True,
+)
+def unhide_labeled_images(
+    button_hide_n_clicks,
+):
+    """
+    Unhide labeled images
+    """
+    if button_hide_n_clicks % 2 != 1:
+        if os.path.exists(".current_image_order.hdf5"):
+            os.remove(".current_image_order.hdf5")
+    return dash.no_update
 
 
 @callback(
