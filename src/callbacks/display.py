@@ -1,4 +1,3 @@
-import math
 import time
 
 import dash
@@ -8,118 +7,8 @@ from dash import ALL, MATCH, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 
-from src.app_layout import NUMBER_OF_ROWS  # , cache
-from src.query import Query
+from src.app_layout import NUMBER_OF_ROWS
 from src.utils.plot_utils import draw_rows, parse_full_screen_content
-
-
-@callback(
-    [
-        Output("image-order", "data"),
-        [Output("first-page", "disabled"), Output("prev-page", "disabled")],
-        [Output("next-page", "disabled"), Output("last-page", "disabled")],
-        Output("current-page", "value"),
-        Input({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
-        Input("similarity-on-off-indicator", "color"),
-        Input("first-page", "n_clicks"),
-        Input("prev-page", "n_clicks"),
-        Input("next-page", "n_clicks"),
-        Input("last-page", "n_clicks"),
-        Input("current-page", "value"),
-        Input("probability-collapse", "is_open"),
-        State("tab-group", "value"),
-        State("previous-tab", "data"),
-        State("thumbnail-slider", "value"),
-        State("similarity-model-list", "value"),
-        State({"type": "thumbnail-image", "index": ALL}, "n_clicks_timestamp"),
-        State({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
-        State("labels-dict", "data"),
-    ],
-    prevent_initial_call=True,
-)
-def update_page_number(
-    num_imgs,
-    similarity_on_off_color,
-    button_first_page,
-    button_prev_page,
-    button_next_page,
-    button_last_page,
-    current_page,
-    probability_is_open,
-    tab_selection,
-    previous_tab,
-    thumbnail_slider_value,
-    similarity_model,
-    timestamp,
-    thumb_n_clicks,
-    labels_dict,
-):
-    """
-    This callback sets up the current page value and enables/disables the page navigation buttons
-    Args:
-        image_order:            Order of the images according to the selected action (sort, hide,
-                                new data, etc)
-        button_first_page:      Go to first page
-        button_prev_page:       Go to previous page
-        button_next_page:       Go to next page
-        button_last_page:       Go to last page
-        current_page:           Index of the current page
-        probability_is_open:    Probability-based labelng is the chosen method
-        tab_selection:          Current tab [Manual, Similarity, Probability]
-        previous_tab:           List of previous tab selection [Manual, Similarity, Probability]
-        thumbnail_slider_value: Number of images per row
-    Returns:
-        [first_page, prev_page]:Enable/Disable previous page button if current_page==0
-        [next_page, last_page]: Enable/Disable next page button if current_page==max_page
-        current_page:           Update current page index
-    """
-    changed_id = dash.callback_context.triggered[0]["prop_id"]
-    max_num_pages = math.ceil((num_imgs // thumbnail_slider_value) / NUMBER_OF_ROWS)
-    # update current page if necessary
-    if current_page > max_num_pages:
-        current_page = max_num_pages - 1
-    if changed_id == "image-order.data" or changed_id == "first-page.n_clicks":
-        current_page = 0
-    elif changed_id == "prev-page.n_clicks":
-        current_page = current_page - 1
-    elif changed_id == "next-page.n_clicks":
-        current_page = current_page + 1
-    elif changed_id == "last-page.n_clicks":
-        current_page = (
-            math.ceil(num_imgs / (NUMBER_OF_ROWS * thumbnail_slider_value)) - 1
-        )
-    elif changed_id == "probability-collapse.is_open":
-        if (
-            tab_selection == "probability"
-        ):  # if the previous tab is probability, the display should be
-            current_page = 0  # updated to remove the probability list per image
-        elif previous_tab[-2] != "probability":
-            raise PreventUpdate
-    elif changed_id == "similarity-on-off-indicator.color":
-        current_page = 0
-    start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
-    max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
-    if similarity_on_off_color == "green":
-        query = Query(num_imgs=num_imgs, **labels_dict)
-        for indx, n_click in enumerate(thumb_n_clicks):
-            if n_click % 2 == 0 or timestamp[indx] is None:
-                timestamp[indx] = 0
-        clicked_ind = timestamp.index(max(timestamp))  # retrieve clicked index
-        if clicked_ind is not None and similarity_model:
-            if similarity_model:
-                image_order = query.similarity_search(
-                    similarity_model,
-                    int(clicked_ind),
-                    list(range(start_indx, max_indx)),
-                )
-    else:
-        image_order = list(range(start_indx, max_indx))
-    return (
-        image_order,
-        2 * [current_page == 0],
-        2 * [max_num_pages <= current_page + 1],
-        current_page,
-    )
 
 
 @callback(
@@ -132,7 +21,7 @@ def update_page_number(
     Output({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
     Input("image-order", "data"),
     Input("probability-model-list", "value"),
-    # Input("current-page", "value"),
+    # Input("current-page-store-store", "value"),
     Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State("probability-collapse", "is_open"),
     State("labels-dict", "data"),

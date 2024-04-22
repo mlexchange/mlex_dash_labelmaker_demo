@@ -2,18 +2,17 @@ import dash
 from dash import Input, Output, State, dcc
 from file_manager.data_project import DataProject
 
+from callbacks.display_order import *  # noqa: F403, F401
 from src.app_layout import app, long_callback_manager
 from src.callbacks.display import (  # noqa: F401; full_screen_thumbnail,
     deselect,
-    display_indicator,
+    display_indicator_off,
+    display_indicator_on,
     toggle_tabs_collapse,
     update_hide_button_text,
     update_output,
-    update_page_number,
     update_rows,
 )
-
-# from callbacks.display_order import display_index  # noqa: F401
 from src.callbacks.help import toggle_help_modal  # noqa: F401
 from src.callbacks.manage_labels import (  # noqa: F401
     label_selected_thumbnails,
