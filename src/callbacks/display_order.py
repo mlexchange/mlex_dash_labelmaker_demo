@@ -1,6 +1,10 @@
 import math
+import os
 
+import h5py
+import numpy as np
 from dash import ALL, Input, Output, State, callback
+from dash.exceptions import PreventUpdate
 
 from src.app_layout import NUMBER_OF_ROWS
 from src.query import Query
@@ -169,6 +173,7 @@ def update_image_order(
     """
     start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
     max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
+    indices = list(range(start_indx, max_indx))
     if similarity_on_off_color == "green":
         query = Query(num_imgs=num_imgs, **labels_dict)
         for indx, n_click in enumerate(thumb_n_clicks):
@@ -177,13 +182,27 @@ def update_image_order(
         clicked_ind = timestamp.index(max(timestamp))  # retrieve clicked index
         if clicked_ind is not None and similarity_model:
             if similarity_model:
-                image_order = query.similarity_search(
-                    similarity_model,
-                    current_image_order[int(clicked_ind)],
-                    list(range(start_indx, max_indx)),
-                )
+                if os.path.exists(".current_similarities.hdf5"):
+                    with h5py.File(".current_similarities.hdf5", "r") as f:
+                        ordered_indx = f["indices"]
+                        if len(ordered_indx) < len(indices):
+                            indices = indices[: len(ordered_indx)]
+                        image_order = ordered_indx[indices]
+                else:
+                    ordered_indx = query.similarity_search(
+                        similarity_model,
+                        current_image_order[int(clicked_ind)],
+                    )
+                    with h5py.File(".current_similarities.hdf5", "w") as f:
+                        store_ordered_indx = np.array(ordered_indx)
+                        f.create_dataset("indices", data=store_ordered_indx)
+                    if len(ordered_indx) < len(indices):
+                        indices = indices[: len(ordered_indx)]
+                    image_order = ordered_indx[indices]
+        else:
+            raise PreventUpdate
     else:
-        image_order = list(range(start_indx, max_indx))
+        image_order = indices
     return image_order
 
 

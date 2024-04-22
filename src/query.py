@@ -32,7 +32,7 @@ class Query(Labels):
         unlabeled_indices = set(range(self.num_imgs)) - set(labeled_indices)
         return list(unlabeled_indices)
 
-    def similarity_search(self, model_path, index_interest, indices):
+    def similarity_search(self, model_path, index_interest):
         unlabeled_indx = self.hide_labeled()  # Get list of indexes of unlabeled images
         df_model = pd.read_parquet(model_path, engine="pyarrow")
         dist = cdist(
@@ -41,6 +41,4 @@ class Query(Labels):
             "cosine",
         ).squeeze()
         ordered_indx = np.array(unlabeled_indx)[np.argsort(dist)]
-        if len(ordered_indx) < len(indices):
-            indices = indices[: len(ordered_indx)]
-        return ordered_indx[indices]
+        return ordered_indx

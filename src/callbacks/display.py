@@ -1,3 +1,4 @@
+import os
 import time
 
 import dash
@@ -8,6 +9,7 @@ from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 
 from src.app_layout import NUMBER_OF_ROWS
+from src.query import Query
 from src.utils.plot_utils import draw_rows, parse_full_screen_content
 
 
@@ -71,20 +73,13 @@ def update_output(
     data_project = DataProject.from_dict(data_project_dict)
     if len(data_project.datasets) == 0:
         raise PreventUpdate
-    # changed_id = dash.callback_context.triggered[0]["prop_id"]
     start = time.time()
     # Define default values
-    init_clicks = 0
     color = "white"
     probs = dash.no_update
     prob_style = {"display": "none"}
     # Load labels and data project
     start1 = time.time()
-    # labels = Labels(**labels_dict)
-    # num_imgs = data_project.datasets[-1].cumulative_data_count
-    # start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
-    # max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
-    # contents, uris = data_project.read_datasets(image_order[start_indx:max_indx], resize=True)
     contents, uris = data_project.read_datasets(image_order, resize=True)
     print(f"Data project done after {time.time()-start1}", flush=True)
     # if probability_model and tab_selection == "probability":
@@ -98,16 +93,6 @@ def update_output(
     #         "margin-bottom": "0px",
     #         "margin-top": "1px",
     #     }
-    if similarity_on_off_color == "green":  # Find similar images has been activated
-        init_clicks = 1
-        color = "primary"
-    # style = {"margin-bottom": "0px", "margin-top": "10px"}
-    none_style = {"display": "none"}
-    # filename = ""
-    # content = ""
-    styles = [{"margin-bottom": "0px", "margin-top": "10px"}] * len(contents) + [
-        none_style
-    ] * (NUMBER_OF_ROWS * thumbnail_slider_value - len(contents))
     colors = [color] * len(contents) + ["white"] * (
         NUMBER_OF_ROWS * thumbnail_slider_value - len(contents)
     )
@@ -115,6 +100,20 @@ def update_output(
     contents = contents + [""] * (
         NUMBER_OF_ROWS * thumbnail_slider_value - len(contents)
     )
+    none_style = {"display": "none"}
+    styles = [{"margin-bottom": "0px", "margin-top": "10px"}] * len(contents) + [
+        none_style
+    ] * (NUMBER_OF_ROWS * thumbnail_slider_value - len(contents))
+    if similarity_on_off_color == "green":  # Find similar images has been activated
+        init_clicks = 1
+        color = "primary"
+        query = Query(
+            num_imgs=data_project.datasets[-1].cumulative_data_count, **labels_dict
+        )
+        unlabeled_indices = query.hide_labeled()
+        init_clicks = [1 if image in unlabeled_indices else 0 for image in image_order]
+    else:
+        init_clicks = [0] * len(uris)
     print(f"Display done after {time.time()-start}", flush=True)
     return (
         styles,
@@ -123,7 +122,7 @@ def update_output(
         contents,
         [probs] * len(uris),
         [prob_style] * len(uris),
-        [init_clicks] * len(uris),
+        init_clicks,
     )
 
 
@@ -280,18 +279,25 @@ def update_hide_button_text(n1, current_text):
     Output("similarity-on-off-indicator", "color", allow_duplicate=True),
     Output("similarity-on-off-indicator", "label", allow_duplicate=True),
     Input("find-similar-unsupervised", "n_clicks"),
+    State("similarity-model-list", "value"),
     prevent_initial_call=True,
 )
-def display_indicator_on(n_clicks):
+def display_indicator_on(n_clicks, similarity_model):
     """
     This callback controls the light indicator in the DataClinic tab, which indicates whether the
     similarity-based image display is ON or OFF
     Args:
-        n_clicks:   The button "Find Similar Images" triggers this callback
+        n_clicks:           The button "Find Similar Images" triggers this callback
+        similarity_model:   Selected similarity-based model
     Returns:
-        color:      Indicator color
-        label:      Indicator label
+        color:              Indicator color
+        label:              Indicator label
     """
+    if similarity_model is None:
+        raise PreventUpdate
+    file_path = ".current_similarities.hdf5"
+    if os.path.exists(file_path):
+        os.remove(file_path)
     return "green", "Find Similar Images: ON"
 
 
@@ -310,6 +316,9 @@ def display_indicator_off(n_clicks):
         color:      Indicator color
         label:      Indicator label
     """
+    file_path = ".current_similarities.hdf5"
+    if os.path.exists(file_path):
+        os.remove(file_path)
     return "#596D4E", "Find Similar Images: OFF"
 
 
