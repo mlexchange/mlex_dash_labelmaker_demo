@@ -8,8 +8,9 @@ from dash import ALL, MATCH, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 
-from app_layout import NUMBER_OF_ROWS  # , cache
-from utils.plot_utils import draw_rows, parse_full_screen_content
+from src.app_layout import NUMBER_OF_ROWS  # , cache
+from src.query import Query
+from src.utils.plot_utils import draw_rows, parse_full_screen_content
 
 
 @callback(
@@ -19,6 +20,7 @@ from utils.plot_utils import draw_rows, parse_full_screen_content
         [Output("next-page", "disabled"), Output("last-page", "disabled")],
         Output("current-page", "value"),
         Input({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
+        Input("similarity-on-off-indicator", "color"),
         Input("first-page", "n_clicks"),
         Input("prev-page", "n_clicks"),
         Input("next-page", "n_clicks"),
@@ -28,11 +30,16 @@ from utils.plot_utils import draw_rows, parse_full_screen_content
         State("tab-group", "value"),
         State("previous-tab", "data"),
         State("thumbnail-slider", "value"),
+        State("similarity-model-list", "value"),
+        State({"type": "thumbnail-image", "index": ALL}, "n_clicks_timestamp"),
+        State({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
+        State("labels-dict", "data"),
     ],
     prevent_initial_call=True,
 )
 def update_page_number(
     num_imgs,
+    similarity_on_off_color,
     button_first_page,
     button_prev_page,
     button_next_page,
@@ -42,6 +49,10 @@ def update_page_number(
     tab_selection,
     previous_tab,
     thumbnail_slider_value,
+    similarity_model,
+    timestamp,
+    thumb_n_clicks,
+    labels_dict,
 ):
     """
     This callback sets up the current page value and enables/disables the page navigation buttons
@@ -65,7 +76,7 @@ def update_page_number(
     changed_id = dash.callback_context.triggered[0]["prop_id"]
     max_num_pages = math.ceil((num_imgs // thumbnail_slider_value) / NUMBER_OF_ROWS)
     # update current page if necessary
-    if current_page > max_num_pages - 1:
+    if current_page > max_num_pages:
         current_page = max_num_pages - 1
     if changed_id == "image-order.data" or changed_id == "first-page.n_clicks":
         current_page = 0
@@ -84,10 +95,27 @@ def update_page_number(
             current_page = 0  # updated to remove the probability list per image
         elif previous_tab[-2] != "probability":
             raise PreventUpdate
+    elif changed_id == "similarity-on-off-indicator.color":
+        current_page = 0
     start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
     max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
+    if similarity_on_off_color == "green":
+        query = Query(num_imgs=num_imgs, **labels_dict)
+        for indx, n_click in enumerate(thumb_n_clicks):
+            if n_click % 2 == 0 or timestamp[indx] is None:
+                timestamp[indx] = 0
+        clicked_ind = timestamp.index(max(timestamp))  # retrieve clicked index
+        if clicked_ind is not None and similarity_model:
+            if similarity_model:
+                image_order = query.similarity_search(
+                    similarity_model,
+                    int(clicked_ind),
+                    list(range(start_indx, max_indx)),
+                )
+    else:
+        image_order = list(range(start_indx, max_indx))
     return (
-        list(range(start_indx, max_indx)),
+        image_order,
         2 * [current_page == 0],
         2 * [max_num_pages <= current_page + 1],
         current_page,
@@ -103,12 +131,12 @@ def update_page_number(
     Output({"type": "thumbnail-prob", "index": ALL}, "style"),
     Output({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
     Input("image-order", "data"),
-    Input("probability-collapse", "is_open"),
     Input("probability-model-list", "value"),
     # Input("current-page", "value"),
     Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
+    State("probability-collapse", "is_open"),
     State("labels-dict", "data"),
-    State("find-similar-unsupervised", "n_clicks"),
+    State("similarity-on-off-indicator", "color"),
     State("tab-group", "value"),
     State("thumbnail-slider", "value"),
     prevent_initial_call=True,
@@ -116,13 +144,13 @@ def update_page_number(
 # @cache.memoize(timeout=0)
 def update_output(
     image_order,
-    probability_is_open,
     probability_model,
     # current_page,
     data_project_dict,
     # log,
+    probability_is_open,
     labels_dict,
-    find_similar_images,
+    similarity_on_off_color,
     tab_selection,
     thumbnail_slider_value,
 ):
@@ -181,11 +209,9 @@ def update_output(
     #         "margin-bottom": "0px",
     #         "margin-top": "1px",
     #     }
-    # elif find_similar_images:  # Find similar images has been activated
-    #     #TODO: Fix this
-    #     if filename not in labels_dict.keys() or labels_dict[filename] == []:
-    #         init_clicks = 1
-    #         color = "primary"
+    if similarity_on_off_color == "green":  # Find similar images has been activated
+        init_clicks = 1
+        color = "primary"
     # style = {"margin-bottom": "0px", "margin-top": "10px"}
     none_style = {"display": "none"}
     # filename = ""
@@ -302,13 +328,13 @@ def select_thumbnail(
         color = "primary"
     else:
         card_index = card_id["index"]
-        if str(image_order[card_index]) in labels_dict["labels_dict"].keys():
-            label = labels_dict["labels_dict"][str(image_order[card_index])]
-            if len(label) > 0:
-                label_indx = labels_dict["labels_list"].index(label[0])
-                color = color_cycle[label_indx]
-        else:
-            color = "white"
+        color = "white"
+        if card_index < len(image_order):
+            if str(image_order[card_index]) in labels_dict["labels_dict"].keys():
+                label = labels_dict["labels_dict"][str(image_order[card_index])]
+                if len(label) > 0:
+                    label_indx = labels_dict["labels_list"].index(label[0])
+                    color = color_cycle[label_indx]
     if color == current_color:
         return dash.no_update
     return color
@@ -368,11 +394,12 @@ def update_hide_button_text(n1, current_text):
 
 
 @callback(
-    Output("on-off-display", "color"),
-    Output("on-off-display", "label"),
+    Output("similarity-on-off-indicator", "color", allow_duplicate=True),
+    Output("similarity-on-off-indicator", "label", allow_duplicate=True),
     Input("find-similar-unsupervised", "n_clicks"),
+    prevent_initial_call=True,
 )
-def display_indicator(n_clicks):
+def display_indicator_on(n_clicks):
     """
     This callback controls the light indicator in the DataClinic tab, which indicates whether the
     similarity-based image display is ON or OFF
@@ -382,10 +409,25 @@ def display_indicator(n_clicks):
         color:      Indicator color
         label:      Indicator label
     """
-    if n_clicks == 0 or n_clicks is None:
-        return "#596D4E", "Find Similar Images: OFF"
-    else:
-        return "green", "Find Similar Images: ON"
+    return "green", "Find Similar Images: ON"
+
+
+@callback(
+    Output("similarity-on-off-indicator", "color"),
+    Output("similarity-on-off-indicator", "label"),
+    Input("exit-similar-unsupervised", "n_clicks"),
+)
+def display_indicator_off(n_clicks):
+    """
+    This callback controls the light indicator in the DataClinic tab, which indicates whether the
+    similarity-based image display is ON or OFF
+    Args:
+        n_clicks:   The button "Exit Similar Images" triggers this callback
+    Returns:
+        color:      Indicator color
+        label:      Indicator label
+    """
+    return "#596D4E", "Find Similar Images: OFF"
 
 
 @callback(

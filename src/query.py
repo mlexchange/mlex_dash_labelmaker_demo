@@ -3,16 +3,17 @@ from itertools import chain
 
 import numpy as np
 import pandas as pd
-from scipy.spatial.distance import cosine
+from scipy.spatial.distance import cdist
 
-from labels import Labels
+from src.labels import Labels
 
 logging.basicConfig(encoding="utf-8", level=logging.INFO)
 
 
 class Query(Labels):
-    def __init__(self, **kwargs):
+    def __init__(self, num_imgs, **kwargs):
         super().__init__(**kwargs)
+        self.num_imgs = num_imgs
         pass
 
     def sort_labels(self):
@@ -27,21 +28,19 @@ class Query(Labels):
         return labeled_filenames + unlabeled_filenames
 
     def hide_labeled(self):
-        list_values = list(self.labels_dict.values())
-        indx = [i for i, x in enumerate(list_values) if x == []]
-        return indx
+        labeled_indices = [int(k) for k, v in self.labels_dict.items() if v != []]
+        unlabeled_indices = set(range(self.num_imgs)) - set(labeled_indices)
+        return list(unlabeled_indices)
 
-    def similarity_search(self, model_path, filename):
+    def similarity_search(self, model_path, index_interest, indices):
         unlabeled_indx = self.hide_labeled()  # Get list of indexes of unlabeled images
         df_model = pd.read_parquet(model_path, engine="pyarrow")
-        f_vec = np.array(df_model)[
-            unlabeled_indx, :
-        ]  # Get feature vectors of unlabeled images
-        f_vec_int = np.array(
-            df_model.loc[filename]
-        )  # Identify feature vector of interest
-        num_data_sets = f_vec.shape[0]
-        dist = np.zeros(num_data_sets)
-        for ii in range(num_data_sets):  # Calculate distance vector
-            dist[ii] = cosine(f_vec_int, f_vec[ii])
-        return np.array(unlabeled_indx)[np.argsort(dist)]
+        dist = cdist(
+            df_model.iloc[index_interest, :].values[np.newaxis, :],
+            df_model.loc[unlabeled_indx].values,
+            "cosine",
+        ).squeeze()
+        ordered_indx = np.array(unlabeled_indx)[np.argsort(dist)]
+        if len(ordered_indx) < len(indices):
+            indices = indices[: len(ordered_indx)]
+        return ordered_indx[indices]

@@ -3,7 +3,7 @@ import dash_daq as daq
 from dash import dcc, html
 from dash_extensions import EventListener
 
-from utils.plot_utils import create_label_component
+from src.utils.plot_utils import create_label_component
 
 LABEL_LIST = {"Label_1": [], "Label_2": []}
 
@@ -218,7 +218,7 @@ def label_method():
                         ],
                     ),
                     daq.Indicator(
-                        id="on-off-display",
+                        id="similarity-on-off-indicator",
                         label="Find Similar Images: OFF",
                         color="#596D4E",
                         size=30,
