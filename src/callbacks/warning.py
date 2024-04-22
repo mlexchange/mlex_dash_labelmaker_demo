@@ -2,7 +2,7 @@ import dash
 import numpy as np
 from dash import Input, Output, State, callback
 
-from labels import Labels
+from src.labels import Labels
 
 
 @callback(

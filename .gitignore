@@ -2,6 +2,10 @@
 **pycache**
 *.py[cod]
 *$py.class
+**cache**
+src/assets/mlex_loading.gif
+docker-compose.override.y*ml
+**.pkl
 
 # C extensions
 *.so
