@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from app_layout import SPLASH_URL
+from src.app_layout import SPLASH_URL
 
 logging.basicConfig(encoding="utf-8", level=logging.INFO)
 

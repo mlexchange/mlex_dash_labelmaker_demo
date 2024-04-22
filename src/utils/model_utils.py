@@ -2,7 +2,7 @@ import os
 
 import requests
 
-from app_layout import MLEX_COMPUTE_URL
+from src.app_layout import MLEX_COMPUTE_URL
 
 
 def get_trained_models_list(user, app, similarity=True):

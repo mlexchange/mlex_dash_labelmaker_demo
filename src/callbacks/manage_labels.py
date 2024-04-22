@@ -8,9 +8,9 @@ from dash import ALL, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 
-from app_layout import SPLASH_URL
-from labels import Labels
-from utils.plot_utils import create_label_component
+from src.app_layout import SPLASH_URL
+from src.labels import Labels
+from src.utils.plot_utils import create_label_component
 
 
 @callback(

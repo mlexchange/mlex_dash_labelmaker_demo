@@ -10,6 +10,7 @@ RUN pip3 install --upgrade pip &&\
 
 WORKDIR /app/work
 ENV HOME /app/work
+ENV PYTHONPATH "${PYTHONPATH}:/app/work"
 COPY src src
 
 CMD ["bash"]

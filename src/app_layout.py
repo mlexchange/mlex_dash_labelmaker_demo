@@ -10,12 +10,12 @@ from file_manager.main import FileManager
 from flask import Flask
 from flask_caching import Cache
 
-from components.browser_cache import browser_cache
-from components.display import display
-from components.display_settings import display_settings
-from components.header import header
-from components.label_method import label_method
-from components.store import store_options
+from src.components.browser_cache import browser_cache
+from src.components.display import display
+from src.components.display_settings import display_settings
+from src.components.header import header
+from src.components.label_method import label_method
+from src.components.store import store_options
 
 cache = diskcache.Cache("./cache")
 long_callback_manager = DiskcacheLongCallbackManager(cache)
@@ -46,13 +46,12 @@ DEFAULT_TILED_QUERY = os.getenv("DEFAULT_TILED_QUERY")
 TILED_KEY = os.getenv("TILED_KEY")
 if TILED_KEY == "":
     TILED_KEY = None
-READ_DIR = os.getenv("READ_DIR")
-WRITE_DIR = os.getenv("WRITE_DIR")
+DATA_DIR = os.getenv("DATA_DIR")
 USER = "admin"
 NUMBER_OF_ROWS = 3
 
 dash_file_explorer = FileManager(
-    READ_DIR,
+    DATA_DIR,
     api_key=TILED_KEY,
 )
 dash_file_explorer.init_callbacks(app)

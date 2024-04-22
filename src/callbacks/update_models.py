@@ -1,8 +1,8 @@
 import dash
 from dash import Input, Output, callback
 
-from app_layout import USER
-from utils.model_utils import get_trained_models_list
+from src.app_layout import USER
+from src.utils.model_utils import get_trained_models_list
 
 
 @callback(
