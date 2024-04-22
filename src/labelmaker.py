@@ -4,10 +4,11 @@ from file_manager.data_project import DataProject
 
 from callbacks.display_order import *  # noqa: F403, F401
 from src.app_layout import app, long_callback_manager
-from src.callbacks.display import (  # noqa: F401; full_screen_thumbnail,
+from src.callbacks.display import (  # noqa: F401;
     deselect,
     display_indicator_off,
     display_indicator_on,
+    full_screen_thumbnail,
     toggle_tabs_collapse,
     update_hide_button_text,
     update_output,

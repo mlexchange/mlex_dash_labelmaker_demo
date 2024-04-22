@@ -149,20 +149,17 @@ def update_rows(thumbnail_slider_value):
     Output({"type": "full-screen-modal", "index": ALL}, "is_open"),
     Output({"type": "double-click-entry", "index": ALL}, "n_events"),
     Input({"type": "double-click-entry", "index": ALL}, "n_events"),
-    State({"type": "thumbnail-name", "index": ALL}, "children"),
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State({"base_id": "file-manager", "name": "log-toggle"}, "on"),
+    State("image-order", "data"),
     prevent_initial_call=True,
 )
-def full_screen_thumbnail(
-    double_click, thumbnail_name_children, data_project_dict, log
-):
+def full_screen_thumbnail(double_click, data_project_dict, log, image_order):
     """
     This callback opens the modal pop-up window with the full size image that was double-clicked
     Args:
         double_click:               List of number of times that every card has been double-clicked
-        thumbnail_name_children:    List of the thumbnails filenames
-        data_project_dict:                 Data project information
+        data_project_dict:          Data project information
         log:                        Log toggle
     Returns:
         contents:                   Contents for pop-up window
@@ -171,14 +168,11 @@ def full_screen_thumbnail(
     """
     if 1 not in double_click:
         raise PreventUpdate
-    filename = thumbnail_name_children[double_click.index(1)]
     data_project = DataProject.from_dict(data_project_dict)
-    # data = data_project.data
-    # data_set = next(item for item in data if item.uri == filename)
-    img_contents, _ = data_project.read_datasets(
-        [0], resize=False
-    )  # TODO: I need the index
-    contents = parse_full_screen_content(img_contents, filename)
+    img_contents, img_uri = data_project.read_datasets(
+        [image_order[double_click.index(1)]], resize=False, log=log
+    )
+    contents = parse_full_screen_content(img_contents, img_uri)
     return [contents], [True], [0] * len(double_click)
 
 
