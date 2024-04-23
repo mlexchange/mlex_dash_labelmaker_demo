@@ -138,12 +138,14 @@ def undo_sort_or_hide_labeled_images(
     Input({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
     Input("first-page", "n_clicks"),
     Input("find-similar-unsupervised", "n_clicks"),
+    Input("button-sort", "n_clicks"),
     prevent_initial_call=True,
 )
 def go_to_first_page(
     num_imgs,
     button_first_page,
     button_find_similar_images,
+    button_sort_n_clicks,
 ):
     """
     Update the current page to the first page
