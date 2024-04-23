@@ -16,16 +16,14 @@ class Query(Labels):
         self.num_imgs = num_imgs
         pass
 
-    def sort_labels(self):
+    def sort_labeled(self):
         labeled = {}
-        for indx, label in enumerate(self.labels_dict.values()):
+        for key, label in self.labels_dict.items():
             if len(label) > 0:
-                labeled.setdefault(label[0], []).append(indx)
-        labeled_filenames = list(chain(*labeled.values()))
-        unlabeled_filenames = list(
-            set(range(len(self.labels_dict))) - set(labeled_filenames)
-        )
-        return labeled_filenames + unlabeled_filenames
+                labeled.setdefault(label[0], []).append(int(key))
+        labeled_indices = list(chain(*labeled.values()))
+        unlabeled_indices = list(set(range(self.num_imgs)) - set(labeled_indices))
+        return labeled_indices + unlabeled_indices
 
     def hide_labeled(self):
         labeled_indices = [int(k) for k, v in self.labels_dict.items() if v != []]

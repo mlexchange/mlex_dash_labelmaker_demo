@@ -269,10 +269,22 @@ def deselect(
     State("button-hide", "children"),
     prevent_initial_call=True,
 )
-def update_hide_button_text(n1, current_text):
-    if current_text == "Hide" and n1 != 0:
+def update_hide_button_text(n_clicks, current_text):
+    if current_text == "Hide" and n_clicks != 0:
         return "Unhide"
     return "Hide"
+
+
+@callback(
+    Output("button-sort", "children"),
+    Input("button-sort", "n_clicks"),
+    State("button-sort", "children"),
+    prevent_initial_call=True,
+)
+def update_sort_button_text(n_clicks, current_text):
+    if current_text == "Sort" and n_clicks != 0:
+        return "Undo Sort"
+    return "Sort"
 
 
 @callback(
