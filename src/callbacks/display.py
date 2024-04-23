@@ -114,6 +114,7 @@ def update_output(
         init_clicks = [1 if image in unlabeled_indices else 0 for image in image_order]
     else:
         init_clicks = [0] * len(uris)
+    init_clicks += [0] * (NUMBER_OF_ROWS * thumbnail_slider_value - len(init_clicks))
     print(f"Display done after {time.time()-start}", flush=True)
     return (
         styles,

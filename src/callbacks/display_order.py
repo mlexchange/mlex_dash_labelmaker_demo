@@ -12,7 +12,7 @@ from src.query import Query
 
 
 @callback(
-    Output("image-order", "data"),
+    Output("image-order", "data", allow_duplicate=True),
     Input({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
     Input("current-page", "value"),
     Input("similarity-on-off-indicator", "color"),
@@ -66,63 +66,75 @@ def update_image_order(
         thumb_n_clicks:             Number of clicks per card/filename in current page
         labels_dict:                Dictionary with labeling information, e.g.
                                     {filename1: [label1,label2], ...}
+        current_image_order:        Current order of the images
     Returns:
         image_order:                Order of the images according to the selected action
                                     (sort, hide, new data, etc)
     """
+    # Calculate the start and end index of the images to be displayed
     start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
     max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
-    indices = list(range(start_indx, max_indx))
+
+    # Check if image order has been previously stored and load accordingly
     if os.path.exists(".current_image_order.hdf5"):
         with h5py.File(".current_image_order.hdf5", "r") as f:
-            ordered_indx = f["indices"]
-            if len(ordered_indx) < len(indices):
-                indices = indices[: len(ordered_indx)]
-            image_order = ordered_indx[indices]
+            ordered_indx = f["indices"][:]
+
+    # Check if the similarity-based search is activated
     elif similarity_on_off_color == "green":
         query = Query(num_imgs=num_imgs, **labels_dict)
+
+        # Check if the user has selected an image to find similar images
         for indx, n_click in enumerate(thumb_n_clicks):
             if n_click % 2 == 0 or timestamp[indx] is None:
                 timestamp[indx] = 0
-        clicked_ind = timestamp.index(max(timestamp))  # retrieve clicked index
+        clicked_ind = timestamp.index(max(timestamp))
+
+        # If an image and model are selected, find similar images
         if clicked_ind is not None and similarity_model:
-            if similarity_model:
-                ordered_indx = query.similarity_search(
-                    similarity_model,
-                    current_image_order[int(clicked_ind)],
-                )
-                with h5py.File(".current_image_order.hdf5", "w") as f:
-                    store_ordered_indx = np.array(ordered_indx)
-                    f.create_dataset("indices", data=store_ordered_indx)
-                if len(ordered_indx) < len(indices):
-                    indices = indices[: len(ordered_indx)]
-                image_order = ordered_indx[indices]
+            ordered_indx = query.similarity_search(
+                similarity_model,
+                current_image_order[int(clicked_ind)],
+            )
+
+            with h5py.File(".current_image_order.hdf5", "w") as f:
+                store_ordered_indx = np.array(ordered_indx)
+                f.create_dataset("indices", data=store_ordered_indx)
         else:
             raise PreventUpdate
+
+    # Check if the hide button is selected
     elif button_hide_n_clicks and button_hide_n_clicks % 2 == 1:
         query = Query(num_imgs=num_imgs, **labels_dict)
-        image_order = query.hide_labeled()
+        ordered_indx = query.hide_labeled()
         with h5py.File(".current_image_order.hdf5", "w") as f:
-            store_ordered_indx = np.array(image_order)
+            store_ordered_indx = np.array(ordered_indx)
             f.create_dataset("indices", data=store_ordered_indx)
-        image_order = [image_order[i] for i in indices]
+        ordered_indx = np.array(ordered_indx)
+
+    # Check if the sort button is selected
     elif button_sort_n_clicks and button_sort_n_clicks % 2 == 1:
         query = Query(num_imgs=num_imgs, **labels_dict)
-        image_order = query.sort_labeled()
+        ordered_indx = query.sort_labeled()
         with h5py.File(".current_image_order.hdf5", "w") as f:
-            store_ordered_indx = np.array(image_order)
+            store_ordered_indx = np.array(ordered_indx)
             f.create_dataset("indices", data=store_ordered_indx)
-        image_order = [image_order[i] for i in indices]
+        ordered_indx = np.array(ordered_indx)
+
+    # Otherwise, return page indices
     else:
-        image_order = indices
+        return list(range(start_indx, max_indx))
+
+    indices = list(range(start_indx, min(max_indx, len(ordered_indx))))
+    image_order = ordered_indx[indices]
+
     return image_order
 
 
 @callback(
-    Output("image-order", "data", allow_duplicate=True),
+    Output("image-order", "data"),
     Input("button-hide", "n_clicks"),
     Input("button-sort", "n_clicks"),
-    prevent_initial_call=True,
 )
 def undo_sort_or_hide_labeled_images(
     button_hide_n_clicks,
@@ -224,7 +236,9 @@ def go_to_users_input(
     max_num_pages = math.ceil((num_imgs // thumbnail_slider_value) / NUMBER_OF_ROWS)
     if current_page > max_num_pages:
         current_page = max_num_pages - 1
-    return current_page
+        return current_page
+    else:
+        raise PreventUpdate
 
 
 @callback(
