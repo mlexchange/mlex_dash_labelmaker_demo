@@ -2,8 +2,7 @@ import os
 import time
 
 import dash
-
-# import pandas as pd
+import pandas as pd
 from dash import ALL, MATCH, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
@@ -18,31 +17,21 @@ from src.utils.plot_utils import draw_rows, parse_full_screen_content
     Output({"type": "thumbnail-card", "index": ALL}, "color"),
     Output({"type": "thumbnail-name", "index": ALL}, "children"),
     Output({"type": "thumbnail-src", "index": ALL}, "src"),
-    Output({"type": "thumbnail-prob", "index": ALL}, "children"),
-    Output({"type": "thumbnail-prob", "index": ALL}, "style"),
     Output({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
     Input("image-order", "data"),
-    Input("probability-model-list", "value"),
-    # Input("current-page-store-store", "value"),
     Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
-    State("probability-collapse", "is_open"),
     State("labels-dict", "data"),
     State("similarity-on-off-indicator", "color"),
-    State("tab-group", "value"),
     State("thumbnail-slider", "value"),
     prevent_initial_call=True,
 )
 # @cache.memoize(timeout=0)
 def update_output(
     image_order,
-    probability_model,
-    # current_page,
     data_project_dict,
     # log,
-    probability_is_open,
     labels_dict,
     similarity_on_off_color,
-    tab_selection,
     thumbnail_slider_value,
 ):
     """
@@ -50,8 +39,6 @@ def update_output(
     Args:
         image_order:            Order of the images according to the selected action (sort, hide,
                                 new data, etc)
-        probability_is_open:    Probability-based labelng is the chosen method
-        probability_model:      Selected probability-based model
         current_page:           Index of the current page
         log:                    Log toggle
         labels_dict:            Dictionary with labeling information, e.g.
@@ -66,44 +53,26 @@ def update_output(
         color:                  Image card color
         filename:               Filename label in image card
         content:                Content to be displayed in image card'
-        probs:                  Probability information from supervised model
-        prob_style:             Probability style (hidden vs displayed)
         init_clicks:            Initial number of clicks in image card
     """
     data_project = DataProject.from_dict(data_project_dict)
     if len(data_project.datasets) == 0:
         raise PreventUpdate
+    num_imgs_per_page = NUMBER_OF_ROWS * thumbnail_slider_value
     start = time.time()
     # Define default values
     color = "white"
-    probs = dash.no_update
-    prob_style = {"display": "none"}
     # Load labels and data project
     start1 = time.time()
     contents, uris = data_project.read_datasets(image_order, resize=True)
     print(f"Data project done after {time.time()-start1}", flush=True)
-    # if probability_model and tab_selection == "probability":
-    #     #TODO: Read block
-    #     df_prob = pd.read_parquet(probability_model)
-    #     probs = df_prob.loc[filename].to_string(header=None)
-    #     prob_style = {
-    #         "display": "block",
-    #         "whiteSpace": "pre-wrap",
-    #         "font-size": "12px",
-    #         "margin-bottom": "0px",
-    #         "margin-top": "1px",
-    #     }
-    colors = [color] * len(contents) + ["white"] * (
-        NUMBER_OF_ROWS * thumbnail_slider_value - len(contents)
-    )
+    colors = [color] * len(contents) + ["white"] * (num_imgs_per_page - len(contents))
     uris = uris + [""] * (NUMBER_OF_ROWS * thumbnail_slider_value - len(contents))
-    contents = contents + [""] * (
-        NUMBER_OF_ROWS * thumbnail_slider_value - len(contents)
-    )
+    contents = contents + [""] * (num_imgs_per_page - len(contents))
     none_style = {"display": "none"}
     styles = [{"margin-bottom": "0px", "margin-top": "10px"}] * len(contents) + [
         none_style
-    ] * (NUMBER_OF_ROWS * thumbnail_slider_value - len(contents))
+    ] * (num_imgs_per_page - len(contents))
     if similarity_on_off_color == "green":  # Find similar images has been activated
         init_clicks = 1
         color = "primary"
@@ -114,17 +83,58 @@ def update_output(
         init_clicks = [1 if image in unlabeled_indices else 0 for image in image_order]
     else:
         init_clicks = [0] * len(uris)
-    init_clicks += [0] * (NUMBER_OF_ROWS * thumbnail_slider_value - len(init_clicks))
+    init_clicks += [0] * (num_imgs_per_page - len(init_clicks))
     print(f"Display done after {time.time()-start}", flush=True)
     return (
         styles,
         colors,
         uris,
         contents,
-        [probs] * len(uris),
-        [prob_style] * len(uris),
         init_clicks,
     )
+
+
+@callback(
+    Output({"type": "thumbnail-prob", "index": ALL}, "children"),
+    Output({"type": "thumbnail-prob", "index": ALL}, "style"),
+    Input("image-order", "data"),
+    Input("probability-model-list", "value"),
+    State("probability-collapse", "is_open"),
+    State("tab-group", "value"),
+    State("thumbnail-slider", "value"),
+    prevent_initial_call=True,
+)
+def update_probabilities(
+    image_order,
+    probability_model,
+    probability_is_open,
+    tab_selection,
+    thumbnail_slider_value,
+):
+    if probability_model and tab_selection == "probability":
+        num_imgs_per_page = NUMBER_OF_ROWS * thumbnail_slider_value
+        df_prob = pd.read_parquet(probability_model)
+        probs = df_prob.iloc[image_order]
+        probs = [
+            " \n".join([f"{col}: {row[col]}" for col in probs.columns])
+            for _, row in probs.iterrows()
+        ]
+        if len(probs) < num_imgs_per_page:
+            probs += [""] * (num_imgs_per_page - len(probs))
+        prob_style = [
+            {
+                "display": "block",
+                "whiteSpace": "pre-wrap",
+                "font-size": "12px",
+                "margin-bottom": "0px",
+                "margin-top": "1px",
+            }
+        ] * len(probs)
+        return (
+            probs,
+            prob_style,
+        )
+    raise PreventUpdate
 
 
 @callback(

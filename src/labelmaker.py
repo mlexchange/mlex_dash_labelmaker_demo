@@ -12,6 +12,7 @@ from src.callbacks.display import (  # noqa: F401;
     toggle_tabs_collapse,
     update_hide_button_text,
     update_output,
+    update_probabilities,
     update_rows,
 )
 from src.callbacks.help import toggle_help_modal  # noqa: F401
