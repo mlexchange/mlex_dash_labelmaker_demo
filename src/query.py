@@ -26,7 +26,7 @@ class Query(Labels):
         return labeled_indices + unlabeled_indices
 
     def hide_labeled(self):
-        labeled_indices = [int(k) for k, v in self.labels_dict.items() if v != []]
+        labeled_indices = self._get_labeled_indices()
         unlabeled_indices = set(range(self.num_imgs)) - set(labeled_indices)
         return list(unlabeled_indices)
 

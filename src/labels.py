@@ -90,25 +90,23 @@ class Labels:
             }
         pass
 
-    def assign_labels(self, label, indexes_to_label, overwrite=True):
+    def _get_labeled_indices(self):
+        return [int(k) for k, v in self.labels_dict.items() if v != []]
+
+    def assign_labels(self, label, indices_to_label, overwrite=True):
         """
         Assign labels in dictionary with or without overwriting existing labels
         Args:
             label:                  Label to be assigned
-            indexes_to_label:       List of indexes to be labeled
+            indices_to_label:       List of indexes to be labeled
             overwrite:              If True, the new label will overwrite any existing label in the
                                     dictionary, ow the label is not overwritten and the new label is
                                     ignored when the image is already labeled
         """
         if not overwrite:
-            indexes = list(self.labels_dict.keys())
-            labeled_indexes = [
-                key for key, value in self.labels_dict.items() if bool(value)
-            ]
-            indexes_to_label = list(
-                (set(indexes) - set(labeled_indexes)).intersection(indexes_to_label)
-            )
-        for index in indexes_to_label:
+            labeled_indices = self._get_labeled_indices()
+            indices_to_label = list((set(indices_to_label) - set(labeled_indices)))
+        for index in indices_to_label:
             current_labels = self.labels_dict.get(index, [])
             if current_labels:
                 self.num_imgs_per_label[current_labels[0]] -= 1
@@ -129,10 +127,9 @@ class Labels:
             threshold:              Probability threshold to assign labels
         """
         df_prob = pd.read_parquet(probability_model)
-        probability_filenames = df_prob.index[
-            df_prob[probability_label] > threshold / 100
-        ].tolist()
-        self.assign_labels(probability_label, probability_filenames, overwrite=False)
+        indices = np.where(df_prob[probability_label] > threshold / 100)[0].tolist()
+        print(indices, flush=True)
+        self.assign_labels(probability_label, indices, overwrite=False)
         pass
 
     def manual_labeling(self, label, num_clicks, img_indexes):
