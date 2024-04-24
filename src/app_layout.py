@@ -97,7 +97,6 @@ app.layout = html.Div(
                         dbc.Col(
                             [
                                 dash_file_explorer.file_explorer,
-                                # html.Div(id='output-image-upload'),
                                 dcc.Loading(
                                     id="loading-display",
                                     parent_className="transparent-loader-wrapper",

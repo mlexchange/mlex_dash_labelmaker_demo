@@ -261,6 +261,13 @@ def label_method():
                 is_open=False,
                 style={"color": "red"},
             ),
+            dbc.Modal(
+                id="modal-help",
+                children=[
+                    dbc.ModalHeader(dbc.ModalTitle("Help")),
+                    dbc.ModalBody(id="help-body"),
+                ],
+            ),
             EventListener(
                 events=[
                     {
