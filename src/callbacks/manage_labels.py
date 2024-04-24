@@ -262,16 +262,14 @@ def label_selected_thumbnails(
     Output("modal-load-splash", "is_open"),
     Input("button-load-splash", "n_clicks"),
     Input("confirm-load-splash", "n_clicks"),
-    State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     prevent_initial_call=True,
 )
-def load_from_splash_modal(load_n_click, confirm_load, data_project_dict):
+def load_from_splash_modal(load_n_click, confirm_load):
     """
     Load labels from splash-ml associated with the project_id
     Args:
         load_n_click:       Number of clicks in load from splash-ml button
         confirm_load:       Number of clicks in confim button within loading from splash-ml modal
-        data_project_dict:  Data project information
     Returns:
         event_id:           Available tagging event IDs associated with the current data project
         modal_load_splash:  True/False to open/close loading from splash-ml modal
@@ -281,24 +279,15 @@ def load_from_splash_modal(load_n_click, confirm_load, data_project_dict):
         changed_id == "confirm-load-splash.n_clicks"
     ):  # if confirmed, load chosen tagging event
         return dash.no_update, False
-    # If unconfirmed, retrieve the tagging event IDs associated with the current data project
-    data_project = DataProject.from_dict(data_project_dict)
-    project_id = data_project.project_id
-    num_imgs = data_project.datasets[-1].cumulative_data_count
-    response = requests.post(
-        f"{SPLASH_URL}/datasets/search",
-        params={"page[limit]": num_imgs},
-        json={"project": project_id},
+
+    response = requests.get(
+        f"{SPLASH_URL}/events", params={"page[offset]": 0, "page[limit]": 1000}
     )
-    event_ids = []
-    for dataset in response.json():
-        for tag in dataset["tags"]:
-            if tag["event_id"] not in event_ids:
-                event_ids.append(tag["event_id"])
+    event_ids = response.json()
+
     # Present the tagging event options with their corresponding tagger id and runtime
     options = []
-    for event_id in event_ids:
-        tagging_event = requests.get(f"{SPLASH_URL}/events/{event_id}").json()
+    for tagging_event in event_ids:
         tagging_event_time = datetime.strptime(
             tagging_event["run_time"], "%Y-%m-%dT%H:%M:%S.%f"
         )
@@ -311,7 +300,7 @@ def load_from_splash_modal(load_n_click, confirm_load, data_project_dict):
             {
                 "label": f"Tagger ID: {tagging_event['tagger_id']}, \
                                  modified: {tagging_event_time}",
-                "value": event_id,
+                "value": tagging_event["uid"],
             }
         )
     return options, True
