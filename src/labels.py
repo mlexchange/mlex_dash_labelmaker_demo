@@ -319,9 +319,11 @@ class Labels:
         image.save(f"{label_dir}/{filename}")
         pass
 
-    def get_labeling_progress(self):
+    def get_labeling_progress(self, total_num_images):
         """
         Calculates the labeling progress
+        Args:
+            total_num_images:   Total number of images in the data set
         Returns:
             progress_values:    [float] Percentage of images assigned to each label
             progress_labels:    [str] Number of images assigned to each label
@@ -334,6 +336,6 @@ class Labels:
         )
         progress_labels = list(map(str, num_imgs_per_label))
         total_num_labeled = (
-            f"Labeled {np.sum(num_imgs_per_label)} out of {len(self.labels_dict)}"
+            f"Labeled {np.sum(num_imgs_per_label)} out of {total_num_images}"
         )
         return progress_values, progress_labels, total_num_labeled

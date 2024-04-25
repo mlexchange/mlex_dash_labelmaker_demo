@@ -66,6 +66,7 @@ def toggle_color_picker_modal(color_label_n_clicks, submit_n_clicks):
     State("color-cycle", "data"),
     State("modify-label-name", "value"),
     State("image-order", "data"),
+    State({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
     prevent_initial_call=True,
 )
 def label_selected_thumbnails(
@@ -91,6 +92,7 @@ def label_selected_thumbnails(
     color_cycle,
     new_label_name,
     image_order,
+    num_imgs,
 ):
     """
     This callback updates the dictionary of labeled images when:
@@ -116,18 +118,18 @@ def label_selected_thumbnails(
         modify_label_n_clicks:          Button "submit label modification" was clicked
         add_label_name:                 Label to add (tag name)
         thumbnail_image_select_value:   Selected thumbnail image (n_clicks)
-        thumbnail_name_children:        Filename of the selected thumbnail image
         labels_dict:                    Dictionary of labeled images, e.g.,
                                         {filename1: [label1, label2], ...}
         threshold:                      Threshold value for labeling with probability
         probability_label:              Selected label to be assigned with probability model
         label_button_children:          List of label text in label buttons
-        project_id:                     Data project id
         event_id:                       Tagging event id for version control of tags
         color_label_t_clicks:           Timestamps of label color buttons
         new_color:                      User defined label color from palette
         color_cycle:                    Color cycle per label
         new_label_name:                 Label name to update
+        image_order:                    Order of the images
+        num_imgs:                       Number of images in the dataset
     Returns:
         label_buttons:                  Dash components with the updated list of labels
         probability_label_options:      Label options from trained model in probability
@@ -207,7 +209,7 @@ def label_selected_thumbnails(
                     {"label": name, "value": name} for name in probability_labels
                 ]
         progress_values, progress_labels, total_num_labeled = (
-            labels.get_labeling_progress()
+            labels.get_labeling_progress(num_imgs)
         )
         label_comp = create_label_component(
             labels.labels_list,
@@ -241,7 +243,9 @@ def label_selected_thumbnails(
             labels.manual_labeling(
                 label_class_value, thumbnail_image_select_value, image_order
             )
-    label_perc_value, label_perc_label, total_labeled = labels.get_labeling_progress()
+    label_perc_value, label_perc_label, total_labeled = labels.get_labeling_progress(
+        num_imgs
+    )
     return (
         label_comp,
         probability_options,
