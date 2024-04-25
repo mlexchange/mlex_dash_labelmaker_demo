@@ -52,28 +52,46 @@ def update_output(
         style:                  Image card style
         color:                  Image card color
         filename:               Filename label in image card
-        content:                Content to be displayed in image card'
+        content:                Content to be displayed in image card
         init_clicks:            Initial number of clicks in image card
     """
+    num_imgs_per_page = NUMBER_OF_ROWS * thumbnail_slider_value
+    color = "white"
+    none_style = {"display": "none"}
+
+    if data_project_dict == {}:
+        return (
+            [none_style] * num_imgs_per_page,
+            [dash.no_update] * num_imgs_per_page,
+            [dash.no_update] * num_imgs_per_page,
+            [dash.no_update] * num_imgs_per_page,
+            [dash.no_update] * num_imgs_per_page,
+        )
+
     data_project = DataProject.from_dict(data_project_dict)
     if len(data_project.datasets) == 0:
-        raise PreventUpdate
-    num_imgs_per_page = NUMBER_OF_ROWS * thumbnail_slider_value
+        return (
+            [none_style] * num_imgs_per_page,
+            [dash.no_update] * num_imgs_per_page,
+            [dash.no_update] * num_imgs_per_page,
+            [dash.no_update] * num_imgs_per_page,
+            [dash.no_update] * num_imgs_per_page,
+        )
+
     start = time.time()
-    # Define default values
-    color = "white"
     # Load labels and data project
-    start1 = time.time()
     contents, uris = data_project.read_datasets(image_order, resize=True)
-    print(f"Data project done after {time.time()-start1}", flush=True)
+    print(f"Data project done after {time.time()-start}", flush=True)
+
     colors = [color] * len(contents) + ["white"] * (num_imgs_per_page - len(contents))
     uris = uris + [""] * (NUMBER_OF_ROWS * thumbnail_slider_value - len(contents))
     contents = contents + [""] * (num_imgs_per_page - len(contents))
-    none_style = {"display": "none"}
-    styles = [{"margin-bottom": "0px", "margin-top": "10px"}] * len(contents) + [
+    styles = [{"margin-bottom": "0px", "margin-top": "10px"}] * len(image_order) + [
         none_style
-    ] * (num_imgs_per_page - len(contents))
-    if similarity_on_off_color == "green":  # Find similar images has been activated
+    ] * (num_imgs_per_page - len(image_order))
+
+    # Find similar images has been activated
+    if similarity_on_off_color == "green":
         init_clicks = 1
         color = "primary"
         query = Query(
@@ -83,6 +101,7 @@ def update_output(
         init_clicks = [1 if image in unlabeled_indices else 0 for image in image_order]
     else:
         init_clicks = [0] * len(uris)
+
     init_clicks += [0] * (num_imgs_per_page - len(init_clicks))
     print(f"Display done after {time.time()-start}", flush=True)
     return (
