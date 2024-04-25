@@ -47,15 +47,22 @@ def toggle_modal_unlabel_warning(
     modal_is_open = False
     update_data = True
     labels = Labels(**labels_dict)
+
+    # Check if there are labels to unlabel
     if (
         changed_id != "confirm-un-label-all.n_clicks"
         and np.sum(np.array(list(labels.num_imgs_per_label.values()))) > 0
-    ):  # if there are labels
-        if changed_id == "un-label-all.n_clicks":
-            update_data = dash.no_update
-        else:
-            update_data = False
+    ):
+        update_data = False
         modal_is_open = True
+        return (
+            modal_is_open,
+            update_data,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
+
     if update_data:
         # Update corresponding button to trigger callback in file manager
         if n_import > 0:
@@ -82,5 +89,5 @@ def toggle_modal_unlabel_warning(
         elif "import" in changed_id:
             n_refresh = 0
             n_clear = 0
-    print(f"Outputs: {n_import}, {n_clear}, {n_refresh}")
+
     return modal_is_open, update_data, n_import, n_clear, n_refresh
