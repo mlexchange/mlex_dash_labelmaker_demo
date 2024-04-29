@@ -179,7 +179,7 @@ def update_rows(thumbnail_slider_value):
     Output({"type": "double-click-entry", "index": ALL}, "n_events"),
     Input({"type": "double-click-entry", "index": ALL}, "n_events"),
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
-    State({"base_id": "file-manager", "name": "log-toggle"}, "on"),
+    State("log-transform", "on"),
     State("image-order", "data"),
     prevent_initial_call=True,
 )
