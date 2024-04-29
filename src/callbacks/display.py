@@ -16,7 +16,7 @@ from src.utils.plot_utils import draw_rows, parse_full_screen_content
     Output({"type": "thumbnail-card", "index": ALL}, "style"),
     Output({"type": "thumbnail-card", "index": ALL}, "color"),
     Output({"type": "thumbnail-name", "index": ALL}, "children"),
-    Output({"type": "thumbnail-src", "index": ALL}, "src"),
+    Output({"type": "processed-data-store", "index": ALL}, "data"),
     Output({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
     Input("image-order", "data"),
     Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),

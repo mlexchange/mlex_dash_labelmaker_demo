@@ -11,6 +11,7 @@ from flask import Flask
 from flask_caching import Cache
 
 from src.components.browser_cache import browser_cache
+from src.components.data_transformations import data_transformations
 from src.components.display import display
 from src.components.display_settings import display_settings
 from src.components.header import header
@@ -75,15 +76,27 @@ app.layout = html.Div(
                                 dbc.Accordion(
                                     [
                                         dbc.AccordionItem(
-                                            label_method(), title="Labeling Method"
+                                            data_transformations(),
+                                            title="Data Transformations",
+                                            item_id="data-transformations",
                                         ),
                                         dbc.AccordionItem(
-                                            store_options(), title="Store Options"
+                                            label_method(),
+                                            title="Labeling Method",
+                                            item_id="label-method",
                                         ),
                                         dbc.AccordionItem(
-                                            display_settings(), title="Display Settings"
+                                            store_options(),
+                                            title="Store Options",
+                                            item_id="store-options",
+                                        ),
+                                        dbc.AccordionItem(
+                                            display_settings(),
+                                            title="Display Settings",
+                                            item_id="display-settings",
                                         ),
                                     ],
+                                    active_item="label-method",
                                     style={
                                         "position": "sticky",
                                         "top": "10%",

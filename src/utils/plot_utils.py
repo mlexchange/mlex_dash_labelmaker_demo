@@ -189,6 +189,10 @@ def parse_contents(index):
                                 ),
                             ],
                         ),
+                        dcc.Store(
+                            id={"type": "processed-data-store", "index": index},
+                            data=None,
+                        ),
                     ],
                     outline=False,
                     style={"display": "none"},
