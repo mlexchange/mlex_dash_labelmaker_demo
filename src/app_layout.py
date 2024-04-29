@@ -1,3 +1,4 @@
+import logging
 import os
 
 import dash
@@ -51,9 +52,14 @@ DATA_DIR = os.getenv("DATA_DIR")
 USER = "admin"
 NUMBER_OF_ROWS = 3
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 dash_file_explorer = FileManager(
     DATA_DIR,
     api_key=TILED_KEY,
+    logger=logger,
 )
 dash_file_explorer.init_callbacks(app)
 

@@ -128,7 +128,6 @@ class Labels:
         """
         df_prob = pd.read_parquet(probability_model)
         indices = np.where(df_prob[probability_label] > threshold / 100)[0].tolist()
-        print(indices, flush=True)
         self.assign_labels(probability_label, indices, overwrite=False)
         pass
 

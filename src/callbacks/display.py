@@ -7,7 +7,7 @@ from dash import ALL, MATCH, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 
-from src.app_layout import NUMBER_OF_ROWS
+from src.app_layout import NUMBER_OF_ROWS, logger
 from src.query import Query
 from src.utils.plot_utils import draw_rows, parse_full_screen_content
 
@@ -81,7 +81,7 @@ def update_output(
     start = time.time()
     # Load labels and data project
     contents, uris = data_project.read_datasets(image_order, resize=True)
-    print(f"Data project done after {time.time()-start}", flush=True)
+    logger.info(f"Data project done after {time.time()-start}")
 
     colors = [color] * len(contents) + ["white"] * (num_imgs_per_page - len(contents))
     uris = uris + [""] * (NUMBER_OF_ROWS * thumbnail_slider_value - len(contents))
@@ -103,7 +103,7 @@ def update_output(
         init_clicks = [0] * len(uris)
 
     init_clicks += [0] * (num_imgs_per_page - len(init_clicks))
-    print(f"Display done after {time.time()-start}", flush=True)
+    logger.info(f"Display done after {time.time()-start}")
     return (
         styles,
         colors,
