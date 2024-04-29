@@ -1,8 +1,7 @@
 import dash
-from dash import Input, Output, State, dcc
+from dash import MATCH, ClientsideFunction, Input, Output, State, dcc
 from file_manager.data_project import DataProject
 
-from callbacks.display_order import *  # noqa: F403, F401
 from src.app_layout import app, long_callback_manager
 from src.callbacks.display import (  # noqa: F401;
     deselect,
@@ -15,6 +14,7 @@ from src.callbacks.display import (  # noqa: F401;
     update_probabilities,
     update_rows,
 )
+from src.callbacks.display_order import *  # noqa: F403, F401
 from src.callbacks.help import toggle_help_modal  # noqa: F401
 from src.callbacks.manage_labels import (  # noqa: F401
     label_selected_thumbnails,
@@ -24,6 +24,15 @@ from src.callbacks.manage_labels import (  # noqa: F401
 from src.callbacks.update_models import update_trained_model_list  # noqa: F401
 from src.callbacks.warning import toggle_modal_unlabel_warning  # noqa: F401
 from src.labels import Labels
+
+app.clientside_callback(
+    ClientsideFunction(namespace="clientside", function_name="transform_image"),
+    Output({"type": "thumbnail-src", "index": MATCH}, "src"),
+    Input("log-transform", "on"),
+    Input({"type": "processed-data-store", "index": MATCH}, "data"),
+    prevent_initial_call=True,
+)
+
 
 app.clientside_callback(
     """
@@ -170,5 +179,5 @@ def toggle_splash_modal(
 
 if __name__ == "__main__":
     app.run_server(
-        host="0.0.0.0", port=8050, debug=True
+        host="127.0.0.1", port=8057, debug=True
     )  # , processes=4, threaded=False, debug=True)

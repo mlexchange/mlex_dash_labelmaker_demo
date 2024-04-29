@@ -1,26 +1,37 @@
-# Dash LabelMaker
+# Label Maker
 Image labeling application with a Dash UI.
 
 ## Install
 
 ### Install the labeling pipeline (Labelmaker + Data Clinic + MLCoach + Latent Space Explorer)
-1. First [install the MLExchange platform](https://github.com/mlexchange/mlex).
-	
-2. Clone this repository in your local device.
+1. Clone this repository in your local device
 
-3. Inside the `mlex_dash_labelmaker_demo` folder, create an environmental file named `.env` as below:
+2. Inside the `mlex_labelmaker` folder, create an environmental file named `.env` as below:
 
 	```
-	MONGO_DB_URI=your_mongo_db_uri
-	DEFAULT_TILED_URI=your_default_tiled_uri	#optional
-	TILED_KEY=your_tiled_key					#optional
+	# Directory setup
+	DATA_DIR=/path/to/data
+
+	# Apps URLs
+	MLCOACH_URL=http://localhost:8062
+	DATA_CLINIC_URL=http://localhost:8072
+	LATENT_SPACE_EXPLORER_URL=http://localhost:8092
+
+	# Services URLs
+	SPLASH_URL=http://splash:80/api/v0
+	MLEX_COMPUTE_URL=http://job-service:8080/api/v0
+	MLEX_CONTENT_URL=http://content-api:8000/api/v0
+
+	# Default Tiled setup
+	DEFAULT_TILED_URI=
+	DEFAULT_TILED_QUERY=
+
+	# Mongo env
+	MONGO_DB_USERNAME=local_test
+	MONGO_DB_PASSWORD=<your-password>
 	```
 
-4. To make existing machine learning algorithms available in Data Clinic and MLCoach, make sure to upload the model description, (e.g. [image classification](https://github.com/mlexchange/mlex_image_classification/blob/main/description/Tensorflow-NN_v0.0.3.json) and [autoencoders](https://github.com/mlexchange/mlex_pytorch_autoencoders/blob/main/description/pytorch_autoencoder_v0.0.3.json)) to the content registry.
-
-5. Run `./install`. Then go to `http://localhost:8057` in web browser and follow the instructions on each tab.
-
-6. To uninstall the labelmaker pipeline, run `./uninstall`.
+3. Run `docker compose up`
 
 ## Ingest data with MLExchange File Manager
 
@@ -36,22 +47,22 @@ More information available at [File Manager](https://github.com/mlexchange/mlex_
 ## Labeling instructions:
 
 ### Label manually
-Assigning a new label:  
-1. Select all the images to be labeled  
-2. Choose label to be assigned  
+Assigning a new label:
+1. Select all the images to be labeled
+2. Choose label to be assigned
 
-Removing an assigned label (un-label):  
-1. Select all the images to be unlabeled  
+Removing an assigned label (un-label):
+1. Select all the images to be unlabeled
 2. Click the "un-label" button
 
-### Label from MLCoach  
-Choose MLCoach tab on the right sidebar. This options allows users to label images by using a trained MLCoach model and a given probability threshold. 
+### Label from MLCoach
+Choose MLCoach tab on the right sidebar. This options allows users to label images by using a trained MLCoach model and a given probability threshold.
 
-To label images:  
+To label images:
 
-1. Choose an MLCoach model from the dropdown. The probability of each label will be shown under each image according to 
+1. Choose an MLCoach model from the dropdown. The probability of each label will be shown under each image according to
 the selected model.
-2. Click on the label-name (e.g. "Label 1") and set a probability threshold.  
+2. Click on the label-name (e.g. "Label 1") and set a probability threshold.
 3. Click "Label with Threshold" button.
 
 The images will be automatically labeled based on the threshold. After which, users can manually un-label and re-label
@@ -99,16 +110,3 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
-
-
-
-
-
-
-
-
-
-
-
-
-
