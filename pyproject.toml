@@ -28,7 +28,7 @@ dependencies = [
     "mlex_file_manager@git+https://github.com/mlexchange/mlex_file_manager",
     "numpy",
     "pandas",
-    "Pillow==8.3.2",
+    "Pillow",
     "python-dotenv",
     "requests==2.26.0",
     "tiled[client]==0.1.0a107",
