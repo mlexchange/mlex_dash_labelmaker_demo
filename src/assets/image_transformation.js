@@ -8,8 +8,6 @@ if (typeof window.dash_clientside.clientside === 'undefined') {
 
 
 window.dash_clientside.clientside.transform_image = function(logToggle, data) {
-    console.log("Received logToggle:", logToggle); // Check logToggle value
-    console.log("Received src:", data); // Check src value
     src = data;
     // If logToggle is false or src is not provided, return the original src
     if (!logToggle || !src) {
