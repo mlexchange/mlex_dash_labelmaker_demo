@@ -6,6 +6,7 @@
 src/assets/mlex_loading.gif
 docker-compose.override.y*ml
 **.pkl
+**database**
 
 # C extensions
 *.so
