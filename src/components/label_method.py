@@ -272,7 +272,7 @@ def label_method():
                 events=[
                     {
                         "event": "keydown",
-                        "props": ["key", "ctrlKey", "ctrlKey", "timeStamp"],
+                        "props": ["key", "ctrlKey", "timeStamp"],
                         "repeat": True,
                     }
                 ],
