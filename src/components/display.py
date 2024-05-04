@@ -21,7 +21,11 @@ def display():
                         disabled=True,
                     ),
                     dbc.Input(
-                        id="current-page", value=0, type="number", style={"width": "8%"}
+                        id="current-page",
+                        value=0,
+                        type="number",
+                        style={"width": "8%"},
+                        debounce=True,
                     ),
                     dbc.Button(
                         className="fa fa-chevron-right",
