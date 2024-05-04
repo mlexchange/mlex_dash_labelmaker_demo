@@ -1,7 +1,7 @@
 import dash
 from dash import Input, Output, callback
 
-from src.app_layout import USER
+from src.app_layout import DATA_DIR, USER
 from src.utils.model_utils import get_trained_models_list
 
 
@@ -27,12 +27,18 @@ def update_trained_model_list(
         similarity_model_list:          List of trained models in data clinic and mlcoach
     """
     if tab_value == "probability":
-        prob_models = get_trained_models_list(USER, "mlcoach", False)
+        prob_models = get_trained_models_list(
+            USER, "mlcoach", False, DATA_DIR != "/app/work/data"
+        )
         similarity_models = dash.no_update
     elif tab_value == "similarity":
         prob_models = dash.no_update
-        data_clinic_models = get_trained_models_list(USER, "data_clinic")
-        ml_coach_models = get_trained_models_list(USER, "mlcoach")
+        data_clinic_models = get_trained_models_list(
+            USER, "data_clinic", True, DATA_DIR != "/app/work/data"
+        )
+        ml_coach_models = get_trained_models_list(
+            USER, "mlcoach", True, DATA_DIR != "/app/work/data"
+        )
         similarity_models = data_clinic_models + ml_coach_models
     else:
         return dash.no_update, dash.no_update

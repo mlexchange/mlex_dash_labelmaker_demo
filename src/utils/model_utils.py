@@ -2,16 +2,17 @@ import os
 
 import requests
 
-from src.app_layout import MLEX_COMPUTE_URL
+from src.app_layout import DATA_DIR, MLEX_COMPUTE_URL
 
 
-def get_trained_models_list(user, app, similarity=True):
+def get_trained_models_list(user, app, similarity=True, correct_path=False):
     """
     This function queries the MLCoach or DataClinic results
     Args:
         user:               Username
         app:                Tab option (MLCoach vs Data Clinic)
         similarity:         [Bool] Retrieve f_vec vs probabilities
+        correct_path:       [Bool] Correct the path if the file is not found
     Returns:
         trained_models:     List of options
     """
@@ -27,7 +28,11 @@ def get_trained_models_list(user, app, similarity=True):
         if model["job_kwargs"]["kwargs"]["job_type"] == "prediction_model":
             cmd = model["job_kwargs"]["cmd"].split(" ")
             indx = cmd.index("-o")
-            out_path = cmd[indx + 1]
+            out_path = (
+                cmd[indx + 1]
+                if not correct_path
+                else cmd[indx + 1].replace("/app/work/data", DATA_DIR)
+            )
             if os.path.exists(out_path + filename):  # check if the file exists
                 if model["description"]:
                     trained_models.append(
