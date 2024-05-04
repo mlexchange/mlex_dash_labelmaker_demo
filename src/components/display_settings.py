@@ -6,7 +6,9 @@ def display_settings():
     display_settings = html.Div(
         [
             dbc.Label("Number of Thumbnail Columns"),
-            dcc.Slider(1, 6, 1, value=6, id="thumbnail-slider"),
+            dcc.Slider(1, 6, 1, value=6, id="thumbnail-num-cols"),
+            dbc.Label("Number of Thumbnail Rows"),
+            dcc.Slider(1, 6, 1, value=3, id="thumbnail-num-rows"),
             dbc.Button(
                 "Sort",
                 id="button-sort",

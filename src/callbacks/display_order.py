@@ -7,7 +7,6 @@ import numpy as np
 from dash import ALL, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 
-from src.app_layout import NUMBER_OF_ROWS
 from src.query import Query
 
 
@@ -18,10 +17,12 @@ from src.query import Query
     Input("similarity-on-off-indicator", "color"),
     Input("button-hide", "n_clicks"),
     Input("button-sort", "n_clicks"),
+    Input("output-image-upload", "children"),
     State("probability-collapse", "is_open"),
     State("tab-group", "value"),
     State("previous-tab", "data"),
-    State("thumbnail-slider", "value"),
+    State("thumbnail-num-cols", "value"),
+    State("thumbnail-num-rows", "value"),
     State("similarity-model-list", "value"),
     State({"type": "thumbnail-image", "index": ALL}, "n_clicks_timestamp"),
     State({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
@@ -35,10 +36,12 @@ def update_image_order(
     similarity_on_off_color,
     button_hide_n_clicks,
     button_sort_n_clicks,
+    new_content,
     probability_is_open,
     tab_selection,
     previous_tab,
-    thumbnail_slider_value,
+    thumbnail_num_cols,
+    thumbnail_num_rows,
     similarity_model,
     timestamp,
     thumb_n_clicks,
@@ -56,10 +59,12 @@ def update_image_order(
         similarity_on_off_color:    Color of the similarity-based search button
         button_hide_n_clicks:       Hide button
         button_sort_n_clicks:       Sort button
+        new_content:                Display dimensions have changed
         probability_is_open:        Probability tab is open
         tab_selection:              Current tab [Manual, Similarity, Probability]
         previous_tab:               Previous tab
-        thumbnail_slider_value:     Number of thumbnails per row
+        thumbnail_num_cols:         Number of columns in the thumbnail display
+        thumbnail_num_rows:         Number of rows in the thumbnail display
         similarity_model:           Selected similarity-based model
         timestamp:                  Timestamps of selected images in current page - to find similar
                                     images. Currently, one 1 image is selected for this operation
@@ -72,8 +77,8 @@ def update_image_order(
                                     (sort, hide, new data, etc)
     """
     # Calculate the start and end index of the images to be displayed
-    start_indx = NUMBER_OF_ROWS * thumbnail_slider_value * current_page
-    max_indx = min(start_indx + NUMBER_OF_ROWS * thumbnail_slider_value, num_imgs)
+    start_indx = thumbnail_num_cols * thumbnail_num_rows * current_page
+    max_indx = min(start_indx + thumbnail_num_cols * thumbnail_num_rows, num_imgs)
 
     # Check if image order has been previously stored and load accordingly
     if os.path.exists(".current_image_order.hdf5"):
@@ -203,18 +208,20 @@ def go_to_next_page(
     Output("current-page", "value", allow_duplicate=True),
     Input("last-page", "n_clicks"),
     State({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
-    State("thumbnail-slider", "value"),
+    State("thumbnail-num-rows", "value"),
+    State("thumbnail-num-cols", "value"),
     prevent_initial_call=True,
 )
 def go_to_last_page(
     button_last_page,
     num_imgs,
-    thumbnail_slider_value,
+    thumbnail_num_rows,
+    thumbnail_num_cols,
 ):
     """
     Update the current page to the last page
     """
-    current_page = math.ceil(num_imgs / (NUMBER_OF_ROWS * thumbnail_slider_value)) - 1
+    current_page = math.ceil(num_imgs / (thumbnail_num_rows * thumbnail_num_cols)) - 1
     return current_page
 
 
@@ -222,18 +229,20 @@ def go_to_last_page(
     Output("current-page", "value", allow_duplicate=True),
     Input("current-page", "value"),
     State({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
-    State("thumbnail-slider", "value"),
+    State("thumbnail-num-rows", "value"),
+    State("thumbnail-num-cols", "value"),
     prevent_initial_call=True,
 )
 def go_to_users_input(
     current_page,
     num_imgs,
-    thumbnail_slider_value,
+    thumbnail_num_rows,
+    thumbnail_num_cols,
 ):
     """
     Update the current page to user's direct input
     """
-    max_num_pages = math.ceil((num_imgs // thumbnail_slider_value) / NUMBER_OF_ROWS)
+    max_num_pages = math.ceil((num_imgs // thumbnail_num_cols) / thumbnail_num_rows)
     if current_page > max_num_pages:
         current_page = max_num_pages - 1
         return current_page
@@ -247,19 +256,21 @@ def go_to_users_input(
         [Output("next-page", "disabled"), Output("last-page", "disabled")],
         Input("current-page", "value"),
         State({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
-        State("thumbnail-slider", "value"),
+        State("thumbnail-num-cols", "value"),
+        State("thumbnail-num-rows", "value"),
     ],
     prevent_initial_call=True,
 )
 def disable_buttons(
     current_page,
     num_imgs,
-    thumbnail_slider_value,
+    thumbnail_num_cols,
+    thumbnail_num_rows,
 ):
     """
     Disable first and last page buttons based on the current page
     """
-    max_num_pages = math.ceil((num_imgs // thumbnail_slider_value) / NUMBER_OF_ROWS)
+    max_num_pages = math.ceil((num_imgs // thumbnail_num_cols) / thumbnail_num_rows)
     return (
         2 * [current_page == 0],
         2 * [max_num_pages <= current_page + 1],

@@ -7,7 +7,7 @@ from dash import ALL, MATCH, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 
-from src.app_layout import NUMBER_OF_ROWS, logger
+from src.app_layout import cache, logger
 from src.query import Query
 from src.utils.plot_utils import draw_rows, parse_full_screen_content
 
@@ -22,17 +22,18 @@ from src.utils.plot_utils import draw_rows, parse_full_screen_content
     Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State("labels-dict", "data"),
     State("similarity-on-off-indicator", "color"),
-    State("thumbnail-slider", "value"),
+    State("thumbnail-num-cols", "value"),
+    State("thumbnail-num-rows", "value"),
     prevent_initial_call=True,
 )
-# @cache.memoize(timeout=0)
+@cache.memoize(timeout=0)
 def update_output(
     image_order,
     data_project_dict,
-    # log,
     labels_dict,
     similarity_on_off_color,
-    thumbnail_slider_value,
+    thumbnail_num_cols,
+    thumbnail_num_rows,
 ):
     """
     This callback displays images in the front-end
@@ -47,7 +48,8 @@ def update_output(
         find_similar_images:    Find similar images button, n_clicks
         tab_selection:          Current tab [Manual, Similarity, Probability]
         card_id:                Card ID to identify the card index
-        thumbnail_slider_value: Number of images per row
+        thumbnail_num_cols:     Number of thumbnail columns
+        thumbnail_num_rows:     Number of thumbnail rows
     Returns:
         style:                  Image card style
         color:                  Image card color
@@ -55,7 +57,7 @@ def update_output(
         content:                Content to be displayed in image card
         init_clicks:            Initial number of clicks in image card
     """
-    num_imgs_per_page = NUMBER_OF_ROWS * thumbnail_slider_value
+    num_imgs_per_page = thumbnail_num_cols * thumbnail_num_rows
     color = "white"
     none_style = {"display": "none"}
 
@@ -84,7 +86,7 @@ def update_output(
     logger.info(f"Data project done after {time.time()-start}")
 
     colors = [color] * len(contents) + ["white"] * (num_imgs_per_page - len(contents))
-    uris = uris + [""] * (NUMBER_OF_ROWS * thumbnail_slider_value - len(contents))
+    uris = uris + [""] * (num_imgs_per_page - len(contents))
     contents = contents + [""] * (num_imgs_per_page - len(contents))
     styles = [{"margin-bottom": "0px", "margin-top": "10px"}] * len(image_order) + [
         none_style
@@ -120,7 +122,8 @@ def update_output(
     Input("probability-model-list", "value"),
     State("probability-collapse", "is_open"),
     State("tab-group", "value"),
-    State("thumbnail-slider", "value"),
+    State("thumbnail-num-cols", "value"),
+    State("thumbnail-num-rows", "value"),
     prevent_initial_call=True,
 )
 def update_probabilities(
@@ -128,10 +131,11 @@ def update_probabilities(
     probability_model,
     probability_is_open,
     tab_selection,
-    thumbnail_slider_value,
+    thumbnail_num_cols,
+    thumbnail_num_rows,
 ):
     if probability_model and tab_selection == "probability":
-        num_imgs_per_page = NUMBER_OF_ROWS * thumbnail_slider_value
+        num_imgs_per_page = thumbnail_num_cols * thumbnail_num_rows
         df_prob = pd.read_parquet(probability_model)
         probs = df_prob.iloc[image_order]
         probs = [
@@ -158,18 +162,21 @@ def update_probabilities(
 
 @callback(
     Output("output-image-upload", "children"),
-    Input("thumbnail-slider", "value"),
+    Input("thumbnail-num-cols", "value"),
+    Input("thumbnail-num-rows", "value"),
 )
-def update_rows(thumbnail_slider_value):
+def update_rows(thumbnail_num_cols, thumbnail_num_rows):
     """
     This callback prepares the image cards according to the number of rows selected by the user
     Args:
-        thumbnail_slider_value: Number of images per row
+        thumbnail-num-cols:     Number of columns selected by the user
+        thumbnail-num-rows:     Number of rows selected by the user
+
     Returns:
         children:               Images to be displayed in front-end according to the current page
                                 index and # of columns
     """
-    children = draw_rows(NUMBER_OF_ROWS, thumbnail_slider_value)
+    children = draw_rows(thumbnail_num_rows, thumbnail_num_cols)
     return children
 
 

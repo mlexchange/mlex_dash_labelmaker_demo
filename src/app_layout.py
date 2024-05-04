@@ -50,7 +50,6 @@ if TILED_KEY == "":
     TILED_KEY = None
 DATA_DIR = os.getenv("DATA_DIR")
 USER = "admin"
-NUMBER_OF_ROWS = 3
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
