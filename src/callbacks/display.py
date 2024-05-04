@@ -285,9 +285,11 @@ def deselect(
     changed_id = dash.callback_context.triggered[0]["prop_id"]
     keybind_is_valid = True
     if changed_id == "keybind-event-listener.event":
-        keybind_is_valid = keybind_label["key"].isdigit() and int(
-            keybind_label["key"]
-        ) - 1 in range(len(label_button_trigger))
+        keybind_is_valid = (
+            keybind_label["key"].isdigit()
+            and keybind_label["ctrlKey"]
+            and int(keybind_label["key"]) - 1 in range(len(label_button_trigger))
+        )
         if not keybind_is_valid:
             raise PreventUpdate
     if (

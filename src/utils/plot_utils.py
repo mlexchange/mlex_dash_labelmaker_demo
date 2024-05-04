@@ -65,7 +65,7 @@ def create_label_button(label_text, label_color, indx):
                 style={"width": "8%"},
             ),
             dbc.Tooltip(
-                f"Keyboard shortcut: {indx+1}",
+                f"Keyboard shortcut: ctrl+{indx+1}",
                 target={"type": "label-button", "index": indx},
                 placement="top",
             ),
