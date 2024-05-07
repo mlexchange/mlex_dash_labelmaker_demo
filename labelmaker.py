@@ -12,6 +12,7 @@ from src.callbacks.display import (  # noqa: F401;
     full_screen_thumbnail,
     toggle_tabs_collapse,
     update_hide_button_text,
+    update_label_dict_per_page,
     update_output,
     update_probabilities,
     update_rows,

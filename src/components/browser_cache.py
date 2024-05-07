@@ -14,6 +14,10 @@ def browser_cache(mlcoach_url, data_clinic_url):
             dcc.Store(id="color-cycle", data=px.colors.qualitative.Light24),
             dcc.Store(id="mlcoach-url", data=mlcoach_url),
             dcc.Store(id="data-clinic-url", data=data_clinic_url),
+            dcc.Store(
+                id="label-dict-per-page",
+                data={},
+            ),
         ],
     )
     return browser_cache

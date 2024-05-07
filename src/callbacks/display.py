@@ -14,7 +14,6 @@ from src.utils.plot_utils import draw_rows, parse_full_screen_content
 
 @callback(
     Output({"type": "thumbnail-card", "index": ALL}, "style"),
-    Output({"type": "thumbnail-card", "index": ALL}, "color"),
     Output({"type": "thumbnail-name", "index": ALL}, "children"),
     Output({"type": "processed-data-store", "index": ALL}, "data"),
     Output({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
@@ -52,19 +51,16 @@ def update_output(
         thumbnail_num_rows:     Number of thumbnail rows
     Returns:
         style:                  Image card style
-        color:                  Image card color
         filename:               Filename label in image card
         content:                Content to be displayed in image card
         init_clicks:            Initial number of clicks in image card
     """
     num_imgs_per_page = thumbnail_num_cols * thumbnail_num_rows
-    color = "white"
     none_style = {"display": "none"}
 
     if data_project_dict == {}:
         return (
             [none_style] * num_imgs_per_page,
-            [dash.no_update] * num_imgs_per_page,
             [dash.no_update] * num_imgs_per_page,
             [dash.no_update] * num_imgs_per_page,
             [dash.no_update] * num_imgs_per_page,
@@ -77,7 +73,6 @@ def update_output(
             [dash.no_update] * num_imgs_per_page,
             [dash.no_update] * num_imgs_per_page,
             [dash.no_update] * num_imgs_per_page,
-            [dash.no_update] * num_imgs_per_page,
         )
 
     start = time.time()
@@ -85,7 +80,6 @@ def update_output(
     contents, uris = data_project.read_datasets(image_order, resize=True)
     logger.info(f"Data project done after {time.time()-start}")
 
-    colors = [color] * len(contents) + ["white"] * (num_imgs_per_page - len(contents))
     uris = uris + [""] * (num_imgs_per_page - len(contents))
     contents = contents + [""] * (num_imgs_per_page - len(contents))
     styles = [{"margin-bottom": "0px", "margin-top": "10px"}] * len(image_order) + [
@@ -95,7 +89,6 @@ def update_output(
     # Find similar images has been activated
     if similarity_on_off_color == "green":
         init_clicks = 1
-        color = "primary"
         query = Query(
             num_imgs=data_project.datasets[-1].cumulative_data_count, **labels_dict
         )
@@ -108,11 +101,28 @@ def update_output(
     logger.info(f"Display done after {time.time()-start}")
     return (
         styles,
-        colors,
         uris,
         contents,
         init_clicks,
     )
+
+
+@callback(
+    Output("label-dict-per-page", "data"),
+    Input("image-order", "data"),
+    Input("labels-dict", "data"),
+    prevent_initial_call=True,
+)
+def update_label_dict_per_page(image_order, labels_dict):
+    labels_dict_per_page = {
+        "labels_dict": {
+            str(key): labels_dict["labels_dict"][str(key)]
+            for key in image_order
+            if str(key) in labels_dict["labels_dict"]
+        },
+        "labels_list": labels_dict["labels_list"],
+    }
+    return labels_dict_per_page
 
 
 @callback(
@@ -215,7 +225,7 @@ def full_screen_thumbnail(double_click, data_project_dict, log, image_order):
 @callback(
     Output({"type": "thumbnail-card", "index": MATCH}, "color", allow_duplicate=True),
     Input({"type": "thumbnail-image", "index": MATCH}, "n_clicks"),
-    Input("labels-dict", "data"),
+    Input("label-dict-per-page", "data"),
     State("color-cycle", "data"),
     State({"type": "thumbnail-card", "index": MATCH}, "color"),
     State({"type": "thumbnail-card", "index": MATCH}, "id"),
@@ -240,8 +250,7 @@ def select_thumbnail(
     Returns:
         thumbnail_color:            Color of thumbnail card
     """
-    changed_id = dash.callback_context.triggered[0]["prop_id"]
-    if value is None or changed_id == "un-label.n_clicks":
+    if value is None:
         color = current_color
     elif value % 2 == 1:
         color = "primary"
