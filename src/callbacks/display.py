@@ -3,22 +3,24 @@ import time
 
 import dash
 import pandas as pd
-from dash import ALL, MATCH, Input, Output, State, callback
+from dash import ALL, MATCH, Input, Output, State, callback, ctx
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 
 from src.app_layout import cache, logger
 from src.query import Query
+from src.utils.cache_utils import decompress_dict
 from src.utils.plot_utils import draw_rows, parse_full_screen_content
 
 
 @callback(
     Output({"type": "thumbnail-card", "index": ALL}, "style"),
     Output({"type": "thumbnail-name", "index": ALL}, "children"),
-    Output({"type": "processed-data-store", "index": ALL}, "data"),
+    Output({"type": "thumbnail-src", "index": ALL}, "src"),
     Output({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
     Input("image-order", "data"),
     Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
+    Input("log-transform", "on"),
     State("labels-dict", "data"),
     State("similarity-on-off-indicator", "color"),
     State("thumbnail-num-cols", "value"),
@@ -29,6 +31,7 @@ from src.utils.plot_utils import draw_rows, parse_full_screen_content
 def update_output(
     image_order,
     data_project_dict,
+    log,
     labels_dict,
     similarity_on_off_color,
     thumbnail_num_cols,
@@ -57,6 +60,7 @@ def update_output(
     """
     num_imgs_per_page = thumbnail_num_cols * thumbnail_num_rows
     none_style = {"display": "none"}
+    labels_dict = decompress_dict(labels_dict)
 
     if data_project_dict == {}:
         return (
@@ -77,8 +81,8 @@ def update_output(
 
     start = time.time()
     # Load labels and data project
-    contents, uris = data_project.read_datasets(image_order, resize=True)
-    logger.info(f"Data project done after {time.time()-start}")
+    contents, uris = data_project.read_datasets(image_order, resize=True, log=log)
+    logger.debug(f"Data project done after {time.time()-start}")
 
     uris = uris + [""] * (num_imgs_per_page - len(contents))
     contents = contents + [""] * (num_imgs_per_page - len(contents))
@@ -98,7 +102,7 @@ def update_output(
         init_clicks = [0] * len(uris)
 
     init_clicks += [0] * (num_imgs_per_page - len(init_clicks))
-    logger.info(f"Display done after {time.time()-start}")
+    logger.debug(f"Display done after {time.time()-start}")
     return (
         styles,
         uris,
@@ -114,6 +118,7 @@ def update_output(
     prevent_initial_call=True,
 )
 def update_label_dict_per_page(image_order, labels_dict):
+    labels_dict = decompress_dict(labels_dict)
     labels_dict_per_page = {
         "labels_dict": {
             str(key): labels_dict["labels_dict"][str(key)]
@@ -130,8 +135,8 @@ def update_label_dict_per_page(image_order, labels_dict):
     Output({"type": "thumbnail-prob", "index": ALL}, "style"),
     Input("image-order", "data"),
     Input("probability-model-list", "value"),
+    Input("tab-group", "value"),
     State("probability-collapse", "is_open"),
-    State("tab-group", "value"),
     State("thumbnail-num-cols", "value"),
     State("thumbnail-num-rows", "value"),
     prevent_initial_call=True,
@@ -139,13 +144,13 @@ def update_label_dict_per_page(image_order, labels_dict):
 def update_probabilities(
     image_order,
     probability_model,
-    probability_is_open,
     tab_selection,
+    probability_is_open,
     thumbnail_num_cols,
     thumbnail_num_rows,
 ):
+    num_imgs_per_page = thumbnail_num_cols * thumbnail_num_rows
     if probability_model and tab_selection == "probability":
-        num_imgs_per_page = thumbnail_num_cols * thumbnail_num_rows
         df_prob = pd.read_parquet(probability_model)
         probs = df_prob.iloc[image_order]
         probs = [
@@ -167,7 +172,9 @@ def update_probabilities(
             probs,
             prob_style,
         )
-    raise PreventUpdate
+    return [dash.no_update] * num_imgs_per_page, [
+        {"display": "none"}
+    ] * num_imgs_per_page
 
 
 @callback(
@@ -261,7 +268,7 @@ def select_thumbnail(
             if str(image_order[card_index]) in labels_dict["labels_dict"].keys():
                 label = labels_dict["labels_dict"][str(image_order[card_index])]
                 if len(label) > 0:
-                    label_indx = labels_dict["labels_list"].index(label[0])
+                    label_indx = label[0]
                     color = color_cycle[label_indx]
     if color == current_color:
         return dash.no_update
@@ -291,9 +298,9 @@ def deselect(
     Returns:
         Modify the number of clicks for a specific thumbnail card
     """
-    changed_id = dash.callback_context.triggered[0]["prop_id"]
+    changed_id = ctx.triggered_id
     keybind_is_valid = True
-    if changed_id == "keybind-event-listener.event":
+    if changed_id == "keybind-event-listener" and "key" in keybind_label:
         keybind_is_valid = (
             keybind_label["key"].isdigit()
             and keybind_label["ctrlKey"]
