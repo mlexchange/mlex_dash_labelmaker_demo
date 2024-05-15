@@ -1,3 +1,4 @@
+import time
 from datetime import datetime, timezone
 
 import dash
@@ -8,8 +9,9 @@ from dash import ALL, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 
-from src.app_layout import SPLASH_URL
+from src.app_layout import SPLASH_URL, logger
 from src.labels import Labels
+from src.utils.compression_utils import compress_dict, decompress_dict
 from src.utils.plot_utils import create_label_component
 
 
@@ -141,12 +143,14 @@ def label_selected_thumbnails(
         total_labeled:                  Message to indicate how many images have been labeled
         color_cycle:                    Color cycle per label
     """
+    start = time.time()
     changed_id = dash.callback_context.triggered[-1]["prop_id"]
+    labels_dict = decompress_dict(labels_dict)
     labels = Labels(**labels_dict)
     probability_options = dash.no_update
     label_comp = dash.no_update
     # Labeling with keyword shortcuts
-    if changed_id == "keybind-event-listener.event":
+    if changed_id == "keybind-event-listener.event" and "key" in keybind_label:
         if (
             keybind_label["key"].isdigit()
             and keybind_label["ctrlKey"] is True
@@ -220,19 +224,19 @@ def label_selected_thumbnails(
             progress_labels=progress_labels,
             total_num_labeled=total_num_labeled,
         )
+        logger.debug(f"Updating labels after {time.time()-start}")
         return (
             label_comp,
             probability_options,
-            vars(labels),
+            compress_dict(vars(labels)),
             label_perc_value,
             label_perc_label,
             total_labeled,
             color_cycle,
         )
     # Labeling with probability
-    elif changed_id == "probability-label.n_clicks":
-        if probability_model:
-            labels.probability_labeling(probability_model, probability_label, threshold)
+    elif changed_id == "probability-label.n_clicks" and probability_model:
+        labels.probability_labeling(probability_model, probability_label, threshold)
     # Labeling manually
     else:
         # Unlabel an image
@@ -248,10 +252,11 @@ def label_selected_thumbnails(
     label_perc_value, label_perc_label, total_labeled = labels.get_labeling_progress(
         num_imgs
     )
+    logger.debug(f"Updating labels after {time.time()-start}")
     return (
         label_comp,
         probability_options,
-        vars(labels),
+        compress_dict(vars(labels)),
         label_perc_value,
         label_perc_label,
         total_labeled,

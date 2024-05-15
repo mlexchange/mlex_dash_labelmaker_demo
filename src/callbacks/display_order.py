@@ -8,6 +8,7 @@ from dash import ALL, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 
 from src.query import Query
+from src.utils.compression_utils import decompress_dict
 
 
 @callback(
@@ -83,10 +84,13 @@ def update_image_order(
     # Check if image order has been previously stored and load accordingly
     if os.path.exists(".current_image_order.hdf5"):
         with h5py.File(".current_image_order.hdf5", "r") as f:
-            ordered_indx = f["indices"][:]
+            ordered_indx = f["indices"]
+            indices = list(range(start_indx, min(max_indx, ordered_indx.shape[0])))
+            return ordered_indx[indices]
 
     # Check if the similarity-based search is activated
     elif similarity_on_off_color == "green":
+        labels_dict = decompress_dict(labels_dict)
         query = Query(num_imgs=num_imgs, **labels_dict)
 
         # Check if the user has selected an image to find similar images
@@ -110,6 +114,7 @@ def update_image_order(
 
     # Check if the hide button is selected
     elif button_hide_n_clicks and button_hide_n_clicks % 2 == 1:
+        labels_dict = decompress_dict(labels_dict)
         query = Query(num_imgs=num_imgs, **labels_dict)
         ordered_indx = query.hide_labeled()
         with h5py.File(".current_image_order.hdf5", "w") as f:
@@ -119,6 +124,7 @@ def update_image_order(
 
     # Check if the sort button is selected
     elif button_sort_n_clicks and button_sort_n_clicks % 2 == 1:
+        labels_dict = decompress_dict(labels_dict)
         query = Query(num_imgs=num_imgs, **labels_dict)
         ordered_indx = query.sort_labeled()
         with h5py.File(".current_image_order.hdf5", "w") as f:

@@ -9,7 +9,7 @@ from file_manager.data_project import DataProject
 
 from src.app_layout import cache, logger
 from src.query import Query
-from src.utils.cache_utils import decompress_dict
+from src.utils.compression_utils import decompress_dict
 from src.utils.plot_utils import draw_rows, parse_full_screen_content
 
 

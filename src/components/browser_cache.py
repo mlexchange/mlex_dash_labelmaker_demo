@@ -1,12 +1,17 @@
 import plotly.express as px
 from dash import dcc, html
 
+from src.utils.compression_utils import compress_dict
+
 
 def browser_cache(mlcoach_url, data_clinic_url):
     browser_cache = html.Div(
         id="no-display",
         children=[
-            dcc.Store(id="labels-dict", data={"labels_dict": {}, "labels_list": []}),
+            dcc.Store(
+                id="labels-dict",
+                data=compress_dict({"labels_dict": {}, "labels_list": []}),
+            ),
             dcc.Store(id="image-order", data=[]),
             dcc.Store(id="del-label", data=-1),
             dcc.Store(id="dummy1", data=0),

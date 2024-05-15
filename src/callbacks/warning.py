@@ -3,6 +3,7 @@ import numpy as np
 from dash import Input, Output, State, callback
 
 from src.labels import Labels
+from src.utils.compression_utils import decompress_dict
 
 
 @callback(
@@ -46,6 +47,7 @@ def toggle_modal_unlabel_warning(
     changed_id = dash.callback_context.triggered[0]["prop_id"]
     modal_is_open = False
     update_data = True
+    labels_dict = decompress_dict(labels_dict)
     labels = Labels(**labels_dict)
 
     # Check if there are labels to unlabel
