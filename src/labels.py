@@ -107,7 +107,7 @@ class Labels:
             labeled_indices = self._get_labeled_indices()
             indices_to_label = list((set(indices_to_label) - set(labeled_indices)))
         for index in indices_to_label:
-            current_labels = self.labels_dict.get(index, [])
+            current_labels = self.labels_dict.get(str(index), [])
             if current_labels:
                 self.num_imgs_per_label[current_labels[0]] -= 1
             if label is None:
