@@ -1,10 +1,13 @@
 import os
+import time
 
 import dash
-from dash import MATCH, ClientsideFunction, Input, Output, State, dcc
+from dash import Input, Output, State, dcc
 from file_manager.data_project import DataProject
+from flask import request
+from werkzeug.middleware.profiler import ProfilerMiddleware
 
-from src.app_layout import app, long_callback_manager
+from src.app_layout import app, logger, long_callback_manager, server  # noqa: F401
 from src.callbacks.display import (  # noqa: F401;
     deselect,
     display_indicator_off,
@@ -36,18 +39,10 @@ from src.callbacks.manage_labels import (  # noqa: F401
 from src.callbacks.update_models import update_trained_model_list  # noqa: F401
 from src.callbacks.warning import toggle_modal_unlabel_warning  # noqa: F401
 from src.labels import Labels
+from src.utils.compression_utils import decompress_dict
 
 APP_PORT = os.getenv("APP_PORT", 8057)
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
-
-
-app.clientside_callback(
-    ClientsideFunction(namespace="clientside", function_name="transform_image"),
-    Output({"type": "thumbnail-src", "index": MATCH}, "src"),
-    Input("log-transform", "on"),
-    Input({"type": "processed-data-store", "index": MATCH}, "data"),
-    prevent_initial_call=True,
-)
 
 
 app.clientside_callback(
@@ -98,6 +93,7 @@ def save_labels_to_splash(
         storage_modal_open:             Open/closes the confirmation message
         storage_body_modal:             Confirmation message
     """
+    labels_dict = decompress_dict(labels_dict)
     labels = Labels(**labels_dict)
     if sum(labels.num_imgs_per_label.values()) > 0:
         # Load data project
@@ -142,6 +138,7 @@ def save_labels_to_disk(
         storage_modal_open:             Open/closes the confirmation message
         storage_body_modal:             Confirmation message
     """
+    labels_dict = decompress_dict(labels_dict)
     labels = Labels(**labels_dict)
     if sum(labels.num_imgs_per_label.values()) > 0:
         # Load data project
@@ -194,4 +191,25 @@ def toggle_splash_modal(
 
 
 if __name__ == "__main__":
+
+    profiler = os.getenv("PROFILER", None)
+    if profiler == "werkzeug":
+        app.server.config["PROFILE"] = True
+        app.server.wsgi_app = ProfilerMiddleware(
+            app.server.wsgi_app, sort_by=("cumtime", "tottime"), restrictions=[50]
+        )
+
+    elif profiler == "flask":
+
+        @server.before_request
+        def start_timer():
+            request.start_time = time.time()
+
+        @server.after_request
+        def log_request(response):
+            if hasattr(request, "start_time"):
+                duration = time.time() - request.start_time
+                logger.debug(f"Request to {request.path} took {duration:.4f} seconds")
+            return response
+
     app.run_server(host=APP_HOST, port=APP_PORT, debug=True)

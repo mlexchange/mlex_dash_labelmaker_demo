@@ -33,7 +33,10 @@ app = dash.Dash(
     external_stylesheets=external_stylesheets,
     suppress_callback_exceptions=True,
     long_callback_manager=long_callback_manager,
+    server=server,
 )
+
+server = app.server
 
 cache = Cache(app.server, config={"CACHE_TYPE": "filesystem", "CACHE_DIR": ".cache"})
 
