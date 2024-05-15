@@ -48,8 +48,8 @@ class Labels:
         """
         assigned_labels = list(itertools.chain.from_iterable(self.labels_dict.values()))
         num_imgs_per_label = {}
-        for label in self.labels_list:
-            num_imgs_per_label[label] = assigned_labels.count(label)
+        for label_index in range(len(self.labels_list)):
+            num_imgs_per_label[str(label_index)] = assigned_labels.count(label_index)
         return num_imgs_per_label
 
     def update_labels_list(
@@ -64,30 +64,27 @@ class Labels:
         """
         if add_label is not None:
             self.labels_list.append(add_label)
-            self.num_imgs_per_label[add_label] = 0
+            self.num_imgs_per_label[str(len(self.labels_list) - 1)] = 0
         elif remove_label is not None:
+            remove_index = self.labels_list.index(remove_label)
             self.labels_list.remove(remove_label)
-            self.labels_dict = {
-                key: [val for val in values if val != remove_label]
-                for key, values in self.labels_dict.items()
-            }
-            self.num_imgs_per_label.pop(remove_label)
+
+            new_labels_dict = {}
+            for key, values in self.labels_dict.items():
+                new_values_list = []
+                for val in values:
+                    if val != remove_index:
+                        if val > remove_index:
+                            new_values_list.append(val - 1)
+                        else:
+                            new_values_list.append(val)
+                new_labels_dict[str(key)] = new_values_list
+            self.labels_dict = new_labels_dict
+
+            self.num_imgs_per_label.pop(str(remove_index))
         elif rename_label is not None and new_name is not None:
             mod_indx = self.labels_list.index(rename_label)
             self.labels_list[mod_indx] = new_name
-            new_num_imgs_per_label = {}
-            for label in self.labels_list:
-                new_num_imgs_per_label[label] = (
-                    self.num_imgs_per_label[label]
-                    if label != new_name
-                    else self.num_imgs_per_label[rename_label]
-                )
-            self.num_imgs_per_label = new_num_imgs_per_label
-            value_mapping = {rename_label: new_name}
-            self.labels_dict = {
-                key: [value_mapping.get(value, value) for value in values]
-                for key, values in self.labels_dict.items()
-            }
         pass
 
     def _get_labeled_indices(self):
@@ -109,12 +106,13 @@ class Labels:
         for index in indices_to_label:
             current_labels = self.labels_dict.get(str(index), [])
             if current_labels:
-                self.num_imgs_per_label[current_labels[0]] -= 1
+                self.num_imgs_per_label[str(current_labels[0])] -= 1
             if label is None:
                 self.labels_dict[index] = []
             else:
-                self.labels_dict[index] = [label]
-                self.num_imgs_per_label[label] += 1
+                label_index = self.labels_list.index(label)
+                self.labels_dict[index] = [label_index]
+                self.num_imgs_per_label[str(label_index)] += 1
         pass
 
     def probability_labeling(self, probability_model, probability_label, threshold):
@@ -205,7 +203,10 @@ class Labels:
 
         # Define partial function to save one dataset to splash
         partial_save_one_dataset_to_splash = partial(
-            self._save_one_dataset_to_splash, project_id=project_id, event_id=event_id
+            self._save_one_dataset_to_splash,
+            labels_list=self.labels_list,
+            project_id=project_id,
+            event_id=event_id,
         )
 
         indexes = self.labels_dict.keys()
@@ -224,10 +225,12 @@ class Labels:
         return statuses
 
     @staticmethod
-    def _save_one_dataset_to_splash(uri, label, project_id, event_id):
-        if len(label) > 0:
+    def _save_one_dataset_to_splash(
+        uri, label_index, labels_list, project_id, event_id
+    ):
+        if len(label_index) > 0:
+            label = labels_list[label_index[0]]
             # TODO: Add support for multiple labels per image
-            label = label[0]
 
             # Check if dataset already exists in splash
             splash_dataset = requests.get(
@@ -273,7 +276,8 @@ class Labels:
 
             # create a folder per label
             for label_key in self.labels_list:
-                if self.num_imgs_per_label[label_key] > 0:
+                label_index = self.labels_list.index(label_key)
+                if self.num_imgs_per_label[str(label_index)] > 0:
                     label_dir = data_path / Path(label_key)
                     label_dir.mkdir(parents=True, exist_ok=True)
 
@@ -287,12 +291,12 @@ class Labels:
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures = []
-                for index, (_, label) in enumerate(self.labels_dict.items()):
-                    if len(label) > 0:
+                for index, (_, label_index) in enumerate(self.labels_dict.items()):
+                    if len(label_index) > 0:
                         save_image = partial(
                             self._save_image,
                             data_path,
-                            label,
+                            self.labels_list[label_index[0]],
                             imgs[index],
                             uris[index],
                         )
@@ -308,7 +312,7 @@ class Labels:
 
     @staticmethod
     def _save_image(data_path, label, image, uri):
-        label_dir = f"{data_path}/{label[0]}"
+        label_dir = f"{data_path}/{label}"
         base_name = uri.split("/")[-1].split(".")[0]
         filename = Path(f"{base_name}.tif")
         i = 0  # check duplicate uri and save under different name if needed
