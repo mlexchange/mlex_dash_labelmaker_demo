@@ -82,6 +82,12 @@ class Labels:
             self.labels_dict = new_labels_dict
 
             self.num_imgs_per_label.pop(str(remove_index))
+            num_imgs_per_label = self.num_imgs_per_label.items()
+            for key, value in list(num_imgs_per_label):
+                if int(key) > remove_index:
+                    self.num_imgs_per_label[str(int(key) - 1)] = value
+                    self.num_imgs_per_label.pop(key)
+
         elif rename_label is not None and new_name is not None:
             mod_indx = self.labels_list.index(rename_label)
             self.labels_list[mod_indx] = new_name
