@@ -14,6 +14,7 @@ ENV HOME /app/work
 ENV PYTHONPATH "${PYTHONPATH}:/app/work"
 COPY src src
 COPY labelmaker.py labelmaker.py
+COPY gunicorn_config.py gunicorn_config.py
 
 CMD ["bash"]
-CMD python3 labelmaker.py
+CMD gunicorn -c gunicorn_config.py --reload labelmaker:server
