@@ -204,9 +204,11 @@ class Labels:
         retries = Retry(
             total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504]
         )
-        splash_session.mount(
-            "https://", requests.adapters.HTTPAdapter(max_retries=retries)
+        adapter = requests.adapters.HTTPAdapter(
+            max_retries=retries, pool_connections=100, pool_maxsize=100
         )
+        splash_session.mount("http://", adapter)
+        splash_session.mount("https://", adapter)
         # Request new tagging event
         project_id = data_project.project_id
         event_status = splash_session.post(
