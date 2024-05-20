@@ -154,7 +154,7 @@ def update_probabilities(
         df_prob = pd.read_parquet(probability_model)
         probs = df_prob.iloc[image_order]
         probs = [
-            " \n".join([f"{col}: {row[col]}" for col in probs.columns])
+            " \n".join([f"{col}: {row[col]*100:.2f}" for col in probs.columns])
             for _, row in probs.iterrows()
         ]
         if len(probs) < num_imgs_per_page:
