@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import requests
+from requests.adapters import Retry
 
 from src.app_layout import SPLASH_URL
 
@@ -199,9 +200,16 @@ class Labels:
         Returns:
             Request status
         """
+        splash_session = requests.Session()
+        retries = Retry(
+            total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504]
+        )
+        splash_session.mount(
+            "https://", requests.adapters.HTTPAdapter(max_retries=retries)
+        )
         # Request new tagging event
         project_id = data_project.project_id
-        event_status = requests.post(
+        event_status = splash_session.post(
             f"{SPLASH_URL}/events",
             json={"tagger_id": tagger_id, "run_time": str(datetime.utcnow())},
         ).json()
@@ -213,6 +221,7 @@ class Labels:
             labels_list=self.labels_list,
             project_id=project_id,
             event_id=event_id,
+            splash_session=splash_session,
         )
 
         indexes = self.labels_dict.keys()
@@ -232,14 +241,19 @@ class Labels:
 
     @staticmethod
     def _save_one_dataset_to_splash(
-        uri, label_index, labels_list, project_id, event_id
+        uri,
+        label_index,
+        labels_list,
+        project_id,
+        event_id,
+        splash_session,
     ):
         if len(label_index) > 0:
             label = labels_list[label_index[0]]
             # TODO: Add support for multiple labels per image
 
             # Check if dataset already exists in splash
-            splash_dataset = requests.get(
+            splash_dataset = splash_session.get(
                 f"{SPLASH_URL}/datasets",
                 params={"project": project_id, "uris": [uri]},
             ).json()
@@ -249,7 +263,7 @@ class Labels:
                 dataset_uid = splash_dataset[0]["uid"]
                 tag = {"name": str(label), "event_id": event_id}
                 data = {"add_tags": [tag]}
-                response = requests.patch(
+                response = splash_session.patch(
                     f"{SPLASH_URL}/datasets/{dataset_uid}/tags", json=data
                 )
             # If dataset does not exist, create new dataset
@@ -260,7 +274,9 @@ class Labels:
                     "project": project_id,
                 }
                 new_dataset["tags"] = [{"name": str(label), "event_id": event_id}]
-                response = requests.post(f"{SPLASH_URL}/datasets", json=[new_dataset])
+                response = splash_session.post(
+                    f"{SPLASH_URL}/datasets", json=[new_dataset]
+                )
 
             status = None
             if response.status_code != 200:
