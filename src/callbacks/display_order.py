@@ -251,6 +251,7 @@ def go_to_next_page(
     State({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
     State("thumbnail-num-rows", "value"),
     State("thumbnail-num-cols", "value"),
+    State("button-hide", "n_clicks"),
     prevent_initial_call=True,
 )
 def go_to_last_page(
@@ -258,10 +259,16 @@ def go_to_last_page(
     num_imgs,
     thumbnail_num_rows,
     thumbnail_num_cols,
+    button_hide_n_clicks,
 ):
     """
     Update the current page to the last page
     """
+    if button_hide_n_clicks and button_hide_n_clicks % 2 == 1:
+        if os.path.exists(".current_image_order.hdf5"):
+            with h5py.File(".current_image_order.hdf5", "r") as f:
+                ordered_indx = f["indices"]
+                num_imgs = len(ordered_indx)
     current_page = math.ceil(num_imgs / (thumbnail_num_rows * thumbnail_num_cols)) - 1
     return current_page
 
@@ -299,6 +306,7 @@ def go_to_users_input(
         State({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
         State("thumbnail-num-cols", "value"),
         State("thumbnail-num-rows", "value"),
+        State("button-hide", "n_clicks"),
     ],
     prevent_initial_call=True,
 )
@@ -307,10 +315,16 @@ def disable_buttons(
     num_imgs,
     thumbnail_num_cols,
     thumbnail_num_rows,
+    button_hide_n_clicks,
 ):
     """
     Disable first and last page buttons based on the current page
     """
+    if button_hide_n_clicks and button_hide_n_clicks % 2 == 1:
+        if os.path.exists(".current_image_order.hdf5"):
+            with h5py.File(".current_image_order.hdf5", "r") as f:
+                ordered_indx = f["indices"]
+                num_imgs = len(ordered_indx)
     max_num_pages = math.ceil((num_imgs // thumbnail_num_cols) / thumbnail_num_rows)
     return (
         2 * [current_page == 0],
