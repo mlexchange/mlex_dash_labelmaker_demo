@@ -83,10 +83,34 @@ def update_image_order(
 
     # Check if image order has been previously stored and load accordingly
     if os.path.exists(".current_image_order.hdf5"):
-        with h5py.File(".current_image_order.hdf5", "r") as f:
-            ordered_indx = f["indices"]
+        if (
+            button_sort_n_clicks
+            and button_hide_n_clicks
+            and button_hide_n_clicks % 2 == 1
+            and button_sort_n_clicks % 2 == 1
+        ):
+
+            with h5py.File(".current_image_order.hdf5", "r") as f:
+                ordered_indx = f["indices"]
+                current_dataset_order = ordered_indx[:]
+
+            os.remove(".current_image_order.hdf5")
+
+            labels_dict = decompress_dict(labels_dict)
+            query = Query(num_imgs=num_imgs, **labels_dict)
+            ordered_indx = query.sort_labeled(current_dataset_order)
+
+            with h5py.File(".current_image_order.hdf5", "w") as f:
+                ordered_indx = np.array(ordered_indx)
+                f.create_dataset("indices", data=ordered_indx)
+
             indices = list(range(start_indx, min(max_indx, ordered_indx.shape[0])))
             return ordered_indx[indices]
+        else:
+            with h5py.File(".current_image_order.hdf5", "r") as f:
+                ordered_indx = f["indices"]
+                indices = list(range(start_indx, min(max_indx, ordered_indx.shape[0])))
+                return ordered_indx[indices]
 
     # Check if the similarity-based search is activated
     elif similarity_on_off_color == "green":
@@ -112,21 +136,25 @@ def update_image_order(
         else:
             raise PreventUpdate
 
-    # Check if the hide button is selected
-    elif button_hide_n_clicks and button_hide_n_clicks % 2 == 1:
+    # Check if the sort button is selected
+    elif (
+        button_sort_n_clicks
+        and button_sort_n_clicks % 2 == 1
+        and button_hide_n_clicks % 2 == 0
+    ):
         labels_dict = decompress_dict(labels_dict)
         query = Query(num_imgs=num_imgs, **labels_dict)
-        ordered_indx = query.hide_labeled()
+        ordered_indx = query.sort_labeled()
         with h5py.File(".current_image_order.hdf5", "w") as f:
             store_ordered_indx = np.array(ordered_indx)
             f.create_dataset("indices", data=store_ordered_indx)
         ordered_indx = np.array(ordered_indx)
 
-    # Check if the sort button is selected
-    elif button_sort_n_clicks and button_sort_n_clicks % 2 == 1:
+    # Check if the hide button is selected
+    elif button_hide_n_clicks and button_hide_n_clicks % 2 == 1:
         labels_dict = decompress_dict(labels_dict)
         query = Query(num_imgs=num_imgs, **labels_dict)
-        ordered_indx = query.sort_labeled()
+        ordered_indx = query.hide_labeled()
         with h5py.File(".current_image_order.hdf5", "w") as f:
             store_ordered_indx = np.array(ordered_indx)
             f.create_dataset("indices", data=store_ordered_indx)
@@ -151,6 +179,13 @@ def undo_sort_or_hide_labeled_images(
     button_hide_n_clicks,
     button_sort_n_clicks,
 ):
+    if (
+        button_sort_n_clicks
+        and button_hide_n_clicks
+        and button_hide_n_clicks % 2 == 1
+        and button_sort_n_clicks % 2 == 1
+    ):
+        raise PreventUpdate
     if os.path.exists(".current_image_order.hdf5"):
         os.remove(".current_image_order.hdf5")
     return dash.no_update

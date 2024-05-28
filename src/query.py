@@ -16,13 +16,19 @@ class Query(Labels):
         self.num_imgs = num_imgs
         pass
 
-    def sort_labeled(self):
+    def sort_labeled(self, dataset_order=None):
         labeled = {}
         for key, label in self.labels_dict.items():
             if len(label) > 0:
                 labeled.setdefault(label[0], []).append(int(key))
         labeled_indices = list(chain(*labeled.values()))
-        unlabeled_indices = list(set(range(self.num_imgs)) - set(labeled_indices))
+        if dataset_order is not None:
+            dataset_order = set(dataset_order)
+            labeled_indices = set(labeled_indices) & dataset_order
+            unlabeled_indices = list(dataset_order - labeled_indices)
+            labeled_indices = list(labeled_indices)
+        else:
+            unlabeled_indices = list(set(range(self.num_imgs)) - labeled_indices)
         return labeled_indices + unlabeled_indices
 
     def hide_labeled(self):
