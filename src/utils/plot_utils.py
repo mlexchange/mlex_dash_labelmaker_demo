@@ -80,9 +80,6 @@ def create_label_component(
     label_list,
     color_cycle=px.colors.qualitative.Light24,
     mlcoach=False,
-    progress_values=None,
-    progress_labels=None,
-    total_num_labeled=None,
 ):
     """
     This function updates the dash component that contains the label buttons when
@@ -92,19 +89,15 @@ def create_label_component(
         label_list:         Dictionary of label names, e.g., ['label1', 'label2', ...]
         color_cycle:        List of label colors
         mlcoach:            Bool that indicates if the labels should be arranged as a dropdown
-        progress_values:    Current progress values
-        progress_labels:    Current progress labels
-        total_num_labeled:  Current number of labeled images
     Returns:
         dash components with updated label buttons (sorted by label key number)
     """
     comp_list = []
     progress = []
     label_list = list(label_list)
-    if not progress_values:
-        progress_values = [0] * len(label_list)
-        progress_labels = ["0"] * len(label_list)
-        total_num_labeled = "Labeled 0 out of 0 images."
+    progress_values = [0] * len(label_list)
+    progress_labels = ["0"] * len(label_list)
+    total_num_labeled = "Labeled 0 out of 0 images."
     if not mlcoach:
         for i in range(len(label_list)):
             comp_row = create_label_button(label_list[i], color_cycle[i], i)
