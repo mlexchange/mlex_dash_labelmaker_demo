@@ -6,7 +6,7 @@ def store_options():
     store_options = html.Div(
         [
             dbc.Button(
-                "Load Labels from Splash-ML",
+                "Load Labels from Server",
                 id="button-load-splash",
                 outline="True",
                 color="success",
@@ -34,7 +34,7 @@ def store_options():
                 is_open=False,
             ),
             dbc.Button(
-                "Save Labels to Splash-ML",
+                "Save Labels to Server",
                 id="button-save-splash",
                 outline="True",
                 color="primary",
@@ -75,20 +75,22 @@ def store_options():
                 style={"width": "100%"},
             ),
             dcc.Download(id="download-out"),
-            dcc.Loading(
-                id="loading-storage",
-                type="default",
-                children=[
-                    dbc.Modal(
-                        [
-                            dbc.ModalBody(id="storage-body-modal"),
-                            dbc.ModalFooter(dbc.Button("OK", id="close-storage-modal")),
-                        ],
-                        id="storage-modal",
-                        is_open=False,
-                        scrollable=True,
-                    )
+            dbc.Modal(
+                [
+                    dbc.ModalBody(id="storage-body-modal"),
+                    dbc.ModalFooter(dbc.Button("OK", id="close-storage-modal")),
                 ],
+                id="storage-modal",
+                is_open=False,
+                scrollable=True,
+            ),
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(dbc.ModalTitle(id="store-progress-title")),
+                    dbc.ModalBody(dbc.Progress(id="store-progress")),
+                ],
+                id="modal-store-progress",
+                is_open=False,
             ),
         ]
     )

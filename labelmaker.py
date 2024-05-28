@@ -32,14 +32,24 @@ from src.callbacks.display_order import (  # noqa: F401
 )
 from src.callbacks.help import toggle_help_modal  # noqa: F401
 from src.callbacks.manage_labels import (  # noqa: F401
+    add_new_label,
+    delete_label,
     label_selected_thumbnails,
+    label_selected_thumbnails_key_binds,
+    label_selected_thumbnails_new_dataset,
+    label_selected_thumbnails_probability,
     load_from_splash_modal,
+    load_labels_from_probabilities,
+    modify_label,
     toggle_color_picker_modal,
+    unlabel_selected_thumbnails,
+    update_labeling_progress,
 )
 from src.callbacks.update_models import update_trained_model_list  # noqa: F401
 from src.callbacks.warning import toggle_modal_unlabel_warning  # noqa: F401
 from src.labels import Labels
-from src.utils.compression_utils import decompress_dict
+from src.utils.compression_utils import compress_dict, decompress_dict
+from src.utils.plot_utils import create_label_component
 
 APP_PORT = os.getenv("APP_PORT", 8057)
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
@@ -74,8 +84,14 @@ app.clientside_callback(
     State("tagger-id", "value"),
     manager=long_callback_manager,
     prevent_initial_call=True,
+    running=[
+        (Output("modal-store-progress", "is_open"), True, False),
+        (Output("store-progress-title", "children"), "Storing labels to server...", ""),
+    ],
+    progress=[Output("store-progress", "value")],
 )
 def save_labels_to_splash(
+    set_progress,
     button_confirm_splash_n_clicks,
     data_project_dict,
     labels_dict,
@@ -99,7 +115,7 @@ def save_labels_to_splash(
         # Load data project
         data_project = DataProject.from_dict(data_project_dict)
 
-        status = labels.save_to_splash(tagger_id, data_project)
+        status = labels.save_to_splash(tagger_id, data_project, set_progress)
         # Remove None elements
         status = list(filter(None, status))
         if len(status) == 0:
@@ -112,6 +128,43 @@ def save_labels_to_splash(
 
 
 @app.long_callback(
+    Output("label-buttons", "children", allow_duplicate=True),
+    Output("labels-dict", "data", allow_duplicate=True),
+    Input("confirm-load-splash", "n_clicks"),
+    State("labels-dict", "data"),
+    State("event-id", "value"),
+    State("color-cycle", "data"),
+    State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
+    prevent_initial_call=True,
+    running=[
+        (Output("modal-store-progress", "is_open"), True, False),
+        (
+            Output("store-progress-title", "children"),
+            "Loading labels from server...",
+            "",
+        ),
+    ],
+    progress=[Output("store-progress", "value")],
+)
+def load_labels_from_splash(
+    set_progress,
+    load_splash_n_clicks,
+    labels_dict,
+    event_id,
+    color_cycle,
+    data_project_dict,
+):
+    start = time.time()
+    labels_dict = decompress_dict(labels_dict)
+    labels = Labels(**labels_dict)
+    data_project = DataProject.from_dict(data_project_dict)
+    labels.load_splash_labels(data_project, event_id, set_progress)
+    label_comp = create_label_component(labels.labels_list, color_cycle)
+    logger.debug(f"Updating labels after {time.time()-start}")
+    return label_comp, compress_dict(vars(labels))
+
+
+@app.long_callback(
     Output("download-out", "data"),
     Output("storage-modal", "is_open", allow_duplicate=True),
     Output("storage-body-modal", "children", allow_duplicate=True),
@@ -120,8 +173,18 @@ def save_labels_to_splash(
     State("labels-dict", "data"),
     manager=long_callback_manager,
     prevent_initial_call=True,
+    running=[
+        (Output("modal-store-progress", "is_open"), True, False),
+        (
+            Output("store-progress-title", "children"),
+            "Preparing labels for download...",
+            "",
+        ),
+    ],
+    progress=[Output("store-progress", "value")],
 )
 def save_labels_to_disk(
+    set_progress,
     button_save_disk_n_clicks,
     data_project_dict,
     labels_dict,
@@ -142,7 +205,9 @@ def save_labels_to_disk(
     labels = Labels(**labels_dict)
     if sum(labels.num_imgs_per_label.values()) > 0:
         # Load data project
-        data_project = DataProject.from_dict(data_project_dict)
+        data_project = DataProject.from_dict(
+            data_project_dict, set_progress=set_progress
+        )
 
         path_save = labels.save_to_directory(data_project)
         response = "Download will start shortly"

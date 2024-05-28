@@ -1,9 +1,9 @@
-import concurrent.futures
 import itertools
 import logging
 import os
 import shutil
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from functools import partial
 from pathlib import Path
@@ -170,17 +170,19 @@ class Labels:
             )
         return status.json()
 
-    def load_splash_labels(self, data_project, event_id):
+    def load_splash_labels(self, data_project, event_id, set_progress):
         """
         Query labels from splash-ml
         Args:
             project_id:     Data project_id
             event_id:      [str] Event id
+            set_progress:   [dbc.Progress] Progress bar
         """
         project_id = data_project.project_id
         datasets = self._get_splash_dataset(project_id)
         self.init_labels()  # resets dict and label before loading data
-        for dataset in datasets:
+        len_dataset = len(datasets)
+        for indx, dataset in enumerate(datasets):
             for tag in dataset["tags"]:
                 if tag["event_id"] == event_id:
                     label = tag["name"]
@@ -188,15 +190,17 @@ class Labels:
                         self.update_labels_list(add_label=label)
                     index = data_project.get_index(dataset["uri"])
                     self.assign_labels(label, [index])
+            set_progress(indx / len_dataset * 100)
         pass
 
-    def save_to_splash(self, tagger_id, data_project):
+    def save_to_splash(self, tagger_id, data_project, set_progress):
         """
         Save labels to splash-ml.
         Args:
             tagger_id:      [str] Tagger id
             datasets:       [list of dict] Data Project
             project_id:     Data project_id
+            set_progress:   [dbc.Progress] Progress bar
         Returns:
             Request status
         """
@@ -231,14 +235,18 @@ class Labels:
         uri_list = data_project.read_datasets(indexes, just_uri=True)
 
         # Save all datasets to splash
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            statuses = list(
-                executor.map(
-                    partial_save_one_dataset_to_splash,
-                    uri_list,
-                    self.labels_dict.values(),
-                )
-            )
+        with ThreadPoolExecutor() as executor:
+            # Start all the tasks
+            futures = {
+                executor.submit(partial_save_one_dataset_to_splash, uri, labels)
+                for uri, labels in zip(uri_list, self.labels_dict.values())
+            }
+
+            statuses = []
+            for i, future in enumerate(as_completed(futures), 1):
+                status = future.result()
+                statuses.append(status)
+                set_progress(i / len(futures) * 100)
         return statuses
 
     @staticmethod
@@ -288,7 +296,7 @@ class Labels:
         else:
             return None
 
-    def save_to_directory(self, data_project):
+    def save_to_directory(self, data_project, set_progress):
         """
         Zips images with labels to be downloaded
         """
@@ -313,7 +321,7 @@ class Labels:
                 resize=False,
             )
 
-            with concurrent.futures.ThreadPoolExecutor() as executor:
+            with ThreadPoolExecutor() as executor:
                 futures = []
                 for index, (_, label_index) in enumerate(self.labels_dict.items()):
                     if len(label_index) > 0:
@@ -327,8 +335,9 @@ class Labels:
                         # Submit the function to the executor
                         futures.append(executor.submit(save_image))
 
-                # Wait for all futures to complete
-                concurrent.futures.wait(futures)
+                # Print the progress
+                for i, future in enumerate(as_completed(futures), 1):
+                    set_progress(i / len(futures) * 100)
 
             archive_path = os.path.join(tmp_dir, "results")
             shutil.make_archive(archive_path, "zip", data_path)
@@ -363,6 +372,6 @@ class Labels:
         )
         progress_labels = list(map(str, num_imgs_per_label))
         total_num_labeled = (
-            f"Labeled {np.sum(num_imgs_per_label)} out of {total_num_images}"
+            f"Labeled {int(np.sum(num_imgs_per_label))} out of {total_num_images}"
         )
         return progress_values, progress_labels, total_num_labeled
