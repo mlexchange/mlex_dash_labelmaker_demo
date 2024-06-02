@@ -7,7 +7,13 @@ from file_manager.data_project import DataProject
 from flask import request
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
-from src.app_layout import app, logger, long_callback_manager, server  # noqa: F401
+from src.app_layout import (  # noqa: F401
+    TILED_KEY,
+    app,
+    logger,
+    long_callback_manager,
+    server,
+)
 from src.callbacks.display import (  # noqa: F401;
     deselect,
     display_indicator_off,
@@ -113,7 +119,7 @@ def save_labels_to_splash(
     labels = Labels(**labels_dict)
     if sum(labels.num_imgs_per_label.values()) > 0:
         # Load data project
-        data_project = DataProject.from_dict(data_project_dict)
+        data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
 
         status = labels.save_to_splash(tagger_id, data_project, set_progress)
         # Remove None elements
@@ -157,7 +163,7 @@ def load_labels_from_splash(
     start = time.time()
     labels_dict = decompress_dict(labels_dict)
     labels = Labels(**labels_dict)
-    data_project = DataProject.from_dict(data_project_dict)
+    data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
     labels.load_splash_labels(data_project, event_id, set_progress)
     label_comp = create_label_component(labels.labels_list, color_cycle)
     logger.debug(f"Updating labels after {time.time()-start}")
@@ -168,7 +174,7 @@ def load_labels_from_splash(
     Output("download-out", "data"),
     Output("storage-modal", "is_open", allow_duplicate=True),
     Output("storage-body-modal", "children", allow_duplicate=True),
-    Input("button-save-disk", "n_clicks"),
+    Input("button-save-zip", "n_clicks"),
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State("labels-dict", "data"),
     manager=long_callback_manager,
@@ -183,16 +189,16 @@ def load_labels_from_splash(
     ],
     progress=[Output("store-progress", "value")],
 )
-def save_labels_to_disk(
+def save_labels_as_zip(
     set_progress,
-    button_save_disk_n_clicks,
+    button_save_zip_n_clicks,
     data_project_dict,
     labels_dict,
 ):
     """
-    This callback saves the labels to disk or to splash-ml
+    This callback saves the labels to disk
     Args:
-        button_save_disk_n_clicks:      Button to save to disk
+        button_save_zip_n_clicks:       Button to save to disk as zip
         data_project_dict:              Data project information
         labels_dict:                    Dictionary of labeled images (docker path), as follows:
                                         {filename1: [label1, label2], ...}
@@ -206,12 +212,62 @@ def save_labels_to_disk(
     if sum(labels.num_imgs_per_label.values()) > 0:
         # Load data project
         data_project = DataProject.from_dict(
-            data_project_dict, set_progress=set_progress
+            data_project_dict, set_progress=set_progress, api_key=TILED_KEY
         )
 
         path_save = labels.save_to_directory(data_project)
         response = "Download will start shortly"
         return (dcc.send_file(f"{path_save}.zip", filename="files.zip"), True, response)
+
+    return dash.no_update, True, "No labels to save"
+
+
+@app.long_callback(
+    Output("download-out", "data", allow_duplicate=True),
+    Output("storage-modal", "is_open", allow_duplicate=True),
+    Output("storage-body-modal", "children", allow_duplicate=True),
+    Input("button-save-table", "n_clicks"),
+    State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
+    State("labels-dict", "data"),
+    manager=long_callback_manager,
+    prevent_initial_call=True,
+    running=[
+        (Output("modal-store-progress", "is_open"), True, False),
+        (
+            Output("store-progress-title", "children"),
+            "Preparing labels for download...",
+            "",
+        ),
+    ],
+    progress=[Output("store-progress", "value")],
+)
+def save_labels_as_table(
+    set_progress,
+    button_save_table_n_clicks,
+    data_project_dict,
+    labels_dict,
+):
+    """
+    This callback saves the labels to disk
+    Args:
+        button_save_table_n_clicks:     Button to save to disk as table
+        data_project_dict:              Data project information
+        labels_dict:                    Dictionary of labeled images (docker path), as follows:
+                                        {filename1: [label1, label2], ...}
+    Returns:
+        download_out:                   Download output
+        storage_modal_open:             Open/closes the confirmation message
+        storage_body_modal:             Confirmation message
+    """
+    labels_dict = decompress_dict(labels_dict)
+    labels = Labels(**labels_dict)
+    if sum(labels.num_imgs_per_label.values()) > 0:
+        # Load data project
+        data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
+
+        path_save = labels.save_to_table(data_project, set_progress)
+        response = "Download will start shortly"
+        return (dcc.send_file(path_save, filename="labels.csv"), True, response)
 
     return dash.no_update, True, "No labels to save"
 
