@@ -7,7 +7,7 @@ from dash import ALL, MATCH, Input, Output, State, callback, ctx
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 
-from src.app_layout import cache, logger
+from src.app_layout import TILED_KEY, cache, logger
 from src.query import Query
 from src.utils.compression_utils import decompress_dict
 from src.utils.plot_utils import draw_rows, parse_full_screen_content
@@ -70,7 +70,7 @@ def update_output(
             [dash.no_update] * num_imgs_per_page,
         )
 
-    data_project = DataProject.from_dict(data_project_dict)
+    data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
     if len(data_project.datasets) == 0:
         return (
             [none_style] * num_imgs_per_page,
@@ -221,7 +221,7 @@ def full_screen_thumbnail(double_click, data_project_dict, log, image_order):
     """
     if 1 not in double_click:
         raise PreventUpdate
-    data_project = DataProject.from_dict(data_project_dict)
+    data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
     img_contents, img_uri = data_project.read_datasets(
         [image_order[double_click.index(1)]], resize=False, log=log
     )
