@@ -296,6 +296,35 @@ class Labels:
         else:
             return None
 
+    def save_to_table(self, data_project, set_progress):
+        """
+        Save labels to a table
+        Args:
+            data_project:   Data project
+            set_progress:   [dbc.Progress] Progress bar
+        Returns:
+            Table with labels
+        """
+        labels_table = pd.DataFrame(columns=["uri", "label"])
+        num_labeled = len(self.labels_dict)
+        for index, labels in self.labels_dict.items():
+            if len(labels) > 0:
+                label = self.labels_list[labels[0]]
+                uri = data_project.read_datasets([int(index)], just_uri=True)[0]
+                new_row = pd.DataFrame({"uri": [uri], "label": [label]})
+                labels_table = pd.concat([labels_table, new_row], ignore_index=True)
+            set_progress(len(labels_table) / num_labeled * 100)
+
+        # Create a temporary file
+        temp_file = tempfile.NamedTemporaryFile(delete=False)
+        temp_file_name = temp_file.name
+        temp_file.close()
+
+        # Save the DataFrame to the temporary file as CSV
+        labels_table.to_csv(temp_file_name, index=False)
+
+        return temp_file_name
+
     def save_to_directory(self, data_project, set_progress):
         """
         Zips images with labels to be downloaded
