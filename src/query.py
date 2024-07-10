@@ -28,7 +28,7 @@ class Query(Labels):
             unlabeled_indices = list(dataset_order - labeled_indices)
             labeled_indices = list(labeled_indices)
         else:
-            unlabeled_indices = list(set(range(self.num_imgs)) - labeled_indices)
+            unlabeled_indices = list(set(range(self.num_imgs)) - set(labeled_indices))
         return labeled_indices + unlabeled_indices
 
     def hide_labeled(self):
