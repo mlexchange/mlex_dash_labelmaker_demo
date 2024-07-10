@@ -7,8 +7,162 @@ if (typeof window.dash_clientside.clientside === 'undefined') {
 }
 
 
+// const ndarray = require('ndarray');
+// const sharp = require('sharp');
+
+// function arrayToImage(array, width, height) {
+//     // Convert the array to a Buffer
+//     let buffer = Buffer.from(array);
+
+//     // Calculate the new dimensions
+//     let aspectRatio = width / height;
+//     let newWidth, newHeight;
+//     if (width > height) {
+//         newWidth = 200;
+//         newHeight = Math.round(newWidth / aspectRatio);
+//     } else {
+//         newHeight = 200;
+//         newWidth = Math.round(newHeight * aspectRatio);
+//     }
+
+//     // Convert the Buffer to an image
+//     let image = sharp(buffer, {
+//         raw: {
+//             width: width,
+//             height: height,
+//             channels: 1, // 1 for grayscale
+//         },
+//     })
+//     .resize(newWidth, newHeight) // Resize to new dimensions
+//     .png() // Convert to PNG format
+//     .toBuffer(); // Convert to Buffer
+
+//     // Convert the image to base64 format
+//     let base64Image = image.toString('base64');
+
+//     // Return the base64 image
+//     return 'data:image/png;base64,' + base64Image;
+// }
+
+// const mathjs = require('mathjs');
+
+// function processImage(data, logToggle) {
+//     // Flatten the 2D array
+//     let flattenedData = [].concat(...data);
+//     let image = ndarray(flattenedData);
+
+//     // Mask negative and NaN values
+//     let mask = image.data.map(value => isNaN(value) || value < 0 ? 1 : 0);
+//     let x = image.data.map((value, index) => mask[index] ? 0 : value);
+
+//     // Apply log
+//     if (logToggle)
+//         x = x.map(value => mathjs.log(value + 0.000000000001));
+
+//     // Normalize according to percentiles 1-99
+//     x.sort((a, b) => a - b);
+//     let low = x[Math.floor(x.length * 0.01)];
+//     let high = x[Math.floor(x.length * 0.99)];
+//     image = x.map(value => 250.0 * Math.max(0, Math.min(1, (value - low) / (high - low))));
+
+//     // Apply mask
+//     mask = mask.map(value => (value - 1.0) * (-1.0));
+//     image = image.map((value, index) => value * mask[index]);
+
+//     // Convert to Uint8Array
+//     image = Uint8Array.from(image);
+
+//     return image;
+// }
+
+
 window.dash_clientside.clientside.transform_image = function(logToggle, data) {
     src = data;
+    // If src is a 2D array, process it with processImage
+    // if (Array.isArray(src) && Array.isArray(src[0]) && !(src instanceof Uint8Array)) {
+    //     // TODO: Check if src is a 2D array
+    //     console.log("Processing 3D array");
+    //     let height = data[0].length;
+    //     let width = data[0][0].length;
+
+    //     // Flatten the 2D array
+    //     let flattenedData = data.flat(Infinity);
+
+    //     // Mask negative and NaN values
+    //     let mask = flattenedData.map(value => isNaN(value) || value < 0 ? 1 : 0);
+    //     let x = flattenedData.map((value, index) => mask[index] ? 0 : value);
+
+    //     // Apply log
+    //     if (logToggle)
+    //         x = x.map(value => Math.log(value + 0.000000000001));
+
+    //     // Normalize according to percentiles 1-99
+    //     let sorted = [...x].filter(value => value !== 0).sort((a, b) => a - b);
+    //     let low = sorted[Math.floor(sorted.length * 0.01)];
+    //     let high = sorted[Math.floor(sorted.length * 0.99)];
+
+    //     // Normalize the original array
+    //     x = x.map(value => 255.0 * Math.max(0, Math.min(1, (value - low) / (high - low))));
+
+    //     // Apply mask
+    //     mask = mask.map(value => (value - 1.0) * (-1.0));
+    //     x = x.map((value, index) => value * mask[index]);
+
+    //     // Convert to Uint8Array
+    //     let buffer = new Uint8Array(x);
+
+    //     // Calculate the new dimensions
+    //     let aspectRatio = width / height;
+    //     let newWidth, newHeight;
+    //     if (width > height) {
+    //         newWidth = 200;
+    //         newHeight = Math.round(newWidth / aspectRatio);
+    //     } else {
+    //         newHeight = 200;
+    //         newWidth = Math.round(newHeight * aspectRatio);
+    //     }
+
+    //     // Create a canvas and get its 2D rendering context
+    //     let canvas = document.createElement('canvas');
+    //     let ctx = canvas.getContext('2d');
+
+    //     // Set the canvas dimensions
+    //     canvas.width = width;
+    //     canvas.height = height;
+
+    //     // Convert grayscale buffer to RGBA buffer
+    //     let rgbaBuffer = new Uint8Array(buffer.length * 4);
+    //     for (let i = 0; i < buffer.length; i++) {
+    //         rgbaBuffer[i * 4] = buffer[i];     // Red
+    //         rgbaBuffer[i * 4 + 1] = buffer[i]; // Green
+    //         rgbaBuffer[i * 4 + 2] = buffer[i]; // Blue
+    //         rgbaBuffer[i * 4 + 3] = 255;       // Alpha
+    //     }
+
+    //     let clampedRgbaBuffer = new Uint8ClampedArray(rgbaBuffer.buffer);
+    //     let imageData = new ImageData(clampedRgbaBuffer, width, height);
+
+    //     // Draw the ImageData object onto the canvas
+    //     ctx.putImageData(imageData, 0, 0);
+
+    //     // Create a new canvas to hold the resized image
+    //     let tempCanvas = document.createElement('canvas');
+    //     let tempCtx = tempCanvas.getContext('2d');
+
+    //     // Set the dimensions of the new canvas
+    //     tempCanvas.width = newWidth;
+    //     tempCanvas.height = newHeight;
+
+    //     // Draw the original canvas onto the new canvas with the new dimensions
+    //     tempCtx.drawImage(canvas, 0, 0, newWidth, newHeight);
+
+    //     // Replace the original canvas with the new one
+    //     canvas = tempCanvas;
+    //     ctx = tempCtx;
+
+    //     return Promise.resolve(canvas.toDataURL()); // Convert the canvas back to a base64 URL
+    // }
+
     // If logToggle is false or src is not provided, return the original src
     if (!logToggle || !src) {
         console.log("Returning original image without transformation.");
@@ -49,7 +203,7 @@ window.dash_clientside.clientside.transform_image = function(logToggle, data) {
                 floatData[i] = (floatData[i] - min) / (max - min) * 255;       // Red
                 floatData[i + 1] = (floatData[i + 1] - min) / (max - min) * 255; // Green
                 floatData[i + 2] = (floatData[i + 2] - min) / (max - min) * 255; // Blue
-                floatData[i + 3] = data[i + 3]; // Alpha channel remains unchanged
+                floatData[i + 3] = 255; // Alpha channel remains unchanged
             }
 
             // Convert floatData back to Uint8ClampedArray for imageData
