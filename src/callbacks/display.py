@@ -20,7 +20,8 @@ from src.utils.plot_utils import draw_rows, parse_full_screen_content
     Output({"type": "thumbnail-image", "index": ALL}, "n_clicks"),
     Input("image-order", "data"),
     Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
-    Input("log-transform", "on"),
+    Input("log-transform", "value"),
+    Input("min-max-percentile", "value"),
     State("labels-dict", "data"),
     State("similarity-on-off-indicator", "color"),
     State("thumbnail-num-cols", "value"),
@@ -32,6 +33,7 @@ def update_output(
     image_order,
     data_project_dict,
     log,
+    percentiles,
     labels_dict,
     similarity_on_off_color,
     thumbnail_num_cols,
@@ -44,6 +46,7 @@ def update_output(
                                 new data, etc)
         current_page:           Index of the current page
         log:                    Log toggle
+        percentiles:            Min-Max Percentile
         labels_dict:            Dictionary with labeling information, e.g.
                                 {filename1: [label1,label2], ...}
         data_project_dict:      Data project information
@@ -58,6 +61,8 @@ def update_output(
         content:                Content to be displayed in image card
         init_clicks:            Initial number of clicks in image card
     """
+    if percentiles is None:
+        percentiles = [0, 100]
     num_imgs_per_page = thumbnail_num_cols * thumbnail_num_rows
     none_style = {"display": "none"}
     labels_dict = decompress_dict(labels_dict)
@@ -81,7 +86,9 @@ def update_output(
 
     start = time.time()
     # Load labels and data project
-    contents, uris = data_project.read_datasets(image_order, resize=True, log=log)
+    contents, uris = data_project.read_datasets(
+        image_order, resize=True, log=log, percentiles=percentiles
+    )
     logger.debug(f"Data project done after {time.time()-start}")
 
     uris = uris + [""] * (num_imgs_per_page - len(contents))
@@ -203,17 +210,22 @@ def update_rows(thumbnail_num_cols, thumbnail_num_rows):
     Output({"type": "double-click-entry", "index": ALL}, "n_events"),
     Input({"type": "double-click-entry", "index": ALL}, "n_events"),
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
-    State("log-transform", "on"),
+    State("log-transform", "value"),
+    State("min-max-percentile", "value"),
     State("image-order", "data"),
     prevent_initial_call=True,
 )
-def full_screen_thumbnail(double_click, data_project_dict, log, image_order):
+def full_screen_thumbnail(
+    double_click, data_project_dict, log, percentiles, image_order
+):
     """
     This callback opens the modal pop-up window with the full size image that was double-clicked
     Args:
         double_click:               List of number of times that every card has been double-clicked
         data_project_dict:          Data project information
         log:                        Log toggle
+        percentiles:                Min-Max Percentile
+        image_order:                Order of the images according to the selected action (sort,hide)
     Returns:
         contents:                   Contents for pop-up window
         open_modal:                 Open/close modal
@@ -221,9 +233,14 @@ def full_screen_thumbnail(double_click, data_project_dict, log, image_order):
     """
     if 1 not in double_click:
         raise PreventUpdate
+    if percentiles is None:
+        percentiles = [0, 100]
     data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
     img_contents, img_uri = data_project.read_datasets(
-        [image_order[double_click.index(1)]], resize=False, log=log
+        [image_order[double_click.index(1)]],
+        resize=False,
+        log=log,
+        percentiles=percentiles,
     )
     contents = parse_full_screen_content(img_contents, img_uri)
     return [contents], [True], [0] * len(double_click)
@@ -273,6 +290,30 @@ def select_thumbnail(
     if color == current_color:
         return dash.no_update
     return color
+
+
+@callback(
+    Output({"type": "thumbnail-card", "index": MATCH}, "color", allow_duplicate=True),
+    Output(
+        {"type": "thumbnail-image", "index": MATCH}, "n_clicks", allow_duplicate=True
+    ),
+    Input("keybind-event-listener", "event"),
+    prevent_initial_call=True,
+)
+def select_all_keybind(keybind_label):
+    """
+    This callback selects all the thumbnail cards using the keybind
+    Args:
+        keybind_label:          Keyword entry
+    Returns:
+        Modify the color of the thumbnail card
+    """
+    keybind_is_valid = True
+    if "key" in keybind_label:
+        keybind_is_valid = keybind_label["key"] == "a" and keybind_label["ctrlKey"]
+        if not keybind_is_valid:
+            raise PreventUpdate
+    return "primary", 1
 
 
 @callback(
