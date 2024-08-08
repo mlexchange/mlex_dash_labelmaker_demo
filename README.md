@@ -3,7 +3,7 @@ Image labeling application with a Dash UI.
 
 ## Install
 
-### Install the labeling pipeline (Labelmaker + Data Clinic + MLCoach + Latent Space Explorer)
+### Install the labeling pipeline (Labelmaker + Data Clinic + MLCoach)
 
 1. Start the compute and content services in the [MLExchange platform](https://github.com/mlexchange/mlex). Before moving to the next step, please make sure that the computing API and the content registry are up and running. For more information, please refer to their respective
 README files.
