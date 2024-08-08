@@ -4,34 +4,27 @@ Image labeling application with a Dash UI.
 ## Install
 
 ### Install the labeling pipeline (Labelmaker + Data Clinic + MLCoach + Latent Space Explorer)
-1. Clone this repository in your local device
 
-2. Inside the `mlex_labelmaker` folder, create an environmental file named `.env` as below:
+1. Start the compute and content services in the [MLExchange platform](https://github.com/mlexchange/mlex). Before moving to the next step, please make sure that the computing API and the content registry are up and running. For more information, please refer to their respective
+README files.
 
-	```
-	# Directory setup
-	DATA_DIR=/path/to/data
+2. Start [splash-ml](https://github.com/als-computing/splash-ml)
 
-	# Apps URLs
-	MLCOACH_URL=http://localhost:8062
-	DATA_CLINIC_URL=http://localhost:8072
-	LATENT_SPACE_EXPLORER_URL=http://localhost:8092
+3. Start [Data Clinic](https://github.com/mlexchange/mlex_data_clinic) and [MLCoach](https://github.com/mlexchange/mlex_mlcoach)
 
-	# Services URLs
-	SPLASH_URL=http://splash:80/api/v0
-	MLEX_COMPUTE_URL=http://job-service:8080/api/v0
-	MLEX_CONTENT_URL=http://content-api:8000/api/v0
+3. Create a new Python environment and install dependencies:
+```
+conda create -n new_env python==3.11
+conda activate new_env
+pip install .
+```
 
-	# Default Tiled setup
-	DEFAULT_TILED_URI=
-	DEFAULT_TILED_QUERY=
+4. Create a `.env` file using `.env.example` as reference. Update this file accordingly.
 
-	# Mongo env
-	MONGO_DB_USERNAME=local_test
-	MONGO_DB_PASSWORD=<your-password>
-	```
-
-3. Run `docker compose up`
+5. Start example app:
+```
+python labelmaker.py
+```
 
 ## Ingest data with MLExchange File Manager
 
@@ -79,7 +72,7 @@ For further details on the operation of Data Clinic, please refer to its [docume
 
 
 ## Copyright
-MLExchange Copyright (c) 2023, The Regents of the University of California,
+MLExchange Copyright (c) 2024, The Regents of the University of California,
 through Lawrence Berkeley National Laboratory (subject to receipt of
 any required approvals from the U.S. Dept. of Energy). All rights reserved.
 
