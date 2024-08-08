@@ -1,26 +1,30 @@
-# Dash LabelMaker
+# Label Maker
 Image labeling application with a Dash UI.
 
 ## Install
 
 ### Install the labeling pipeline (Labelmaker + Data Clinic + MLCoach + Latent Space Explorer)
-1. First [install the MLExchange platform](https://github.com/mlexchange/mlex).
-	
-2. Clone this repository in your local device.
 
-3. Inside the `mlex_dash_labelmaker_demo` folder, create an environmental file named `.env` as below:
+1. Start the compute and content services in the [MLExchange platform](https://github.com/mlexchange/mlex). Before moving to the next step, please make sure that the computing API and the content registry are up and running. For more information, please refer to their respective
+README files.
 
-	```
-	MONGO_DB_URI=your_mongo_db_uri
-	DEFAULT_TILED_URI=your_default_tiled_uri	#optional
-	TILED_KEY=your_tiled_key					#optional
-	```
+2. Start [splash-ml](https://github.com/als-computing/splash-ml)
 
-4. To make existing machine learning algorithms available in Data Clinic and MLCoach, make sure to upload the model description, (e.g. [image classification](https://github.com/mlexchange/mlex_image_classification/blob/main/description/Tensorflow-NN_v0.0.3.json) and [autoencoders](https://github.com/mlexchange/mlex_pytorch_autoencoders/blob/main/description/pytorch_autoencoder_v0.0.3.json)) to the content registry.
+3. Start [Data Clinic](https://github.com/mlexchange/mlex_data_clinic) and [MLCoach](https://github.com/mlexchange/mlex_mlcoach)
 
-5. Run `./install`. Then go to `http://localhost:8057` in web browser and follow the instructions on each tab.
+3. Create a new Python environment and install dependencies:
+```
+conda create -n new_env python==3.11
+conda activate new_env
+pip install .
+```
 
-6. To uninstall the labelmaker pipeline, run `./uninstall`.
+4. Create a `.env` file using `.env.example` as reference. Update this file accordingly.
+
+5. Start example app:
+```
+python labelmaker.py
+```
 
 ## Ingest data with MLExchange File Manager
 
@@ -36,22 +40,22 @@ More information available at [File Manager](https://github.com/mlexchange/mlex_
 ## Labeling instructions:
 
 ### Label manually
-Assigning a new label:  
-1. Select all the images to be labeled  
-2. Choose label to be assigned  
+Assigning a new label:
+1. Select all the images to be labeled
+2. Choose label to be assigned
 
-Removing an assigned label (un-label):  
-1. Select all the images to be unlabeled  
+Removing an assigned label (un-label):
+1. Select all the images to be unlabeled
 2. Click the "un-label" button
 
-### Label from MLCoach  
-Choose MLCoach tab on the right sidebar. This options allows users to label images by using a trained MLCoach model and a given probability threshold. 
+### Label from MLCoach
+Choose MLCoach tab on the right sidebar. This options allows users to label images by using a trained MLCoach model and a given probability threshold.
 
-To label images:  
+To label images:
 
-1. Choose an MLCoach model from the dropdown. The probability of each label will be shown under each image according to 
+1. Choose an MLCoach model from the dropdown. The probability of each label will be shown under each image according to
 the selected model.
-2. Click on the label-name (e.g. "Label 1") and set a probability threshold.  
+2. Click on the label-name (e.g. "Label 1") and set a probability threshold.
 3. Click "Label with Threshold" button.
 
 The images will be automatically labeled based on the threshold. After which, users can manually un-label and re-label
@@ -68,7 +72,7 @@ For further details on the operation of Data Clinic, please refer to its [docume
 
 
 ## Copyright
-MLExchange Copyright (c) 2023, The Regents of the University of California,
+MLExchange Copyright (c) 2024, The Regents of the University of California,
 through Lawrence Berkeley National Laboratory (subject to receipt of
 any required approvals from the U.S. Dept. of Energy). All rights reserved.
 
@@ -99,16 +103,3 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
-
-
-
-
-
-
-
-
-
-
-
-
-
