@@ -107,7 +107,7 @@ def update_image_order(
             indices = list(range(start_indx, min(max_indx, ordered_indx.shape[0])))
             return ordered_indx[indices]
         else:
-            with h5py.File(".current_image_order.hdf5", "r") as f:
+            with h5py.File(".current_image_order.hdf5", "r+") as f:
                 ordered_indx = f["indices"]
                 indices = list(range(start_indx, min(max_indx, ordered_indx.shape[0])))
                 return ordered_indx[indices]
