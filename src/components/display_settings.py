@@ -15,6 +15,7 @@ def display_settings():
                 outline="True",
                 color="primary",
                 size="sm",
+                n_clicks=0,
                 style={"width": "100%", "margin-top": "20px", "margin-bottom": "4px"},
             ),
             dbc.Tooltip(
@@ -28,6 +29,7 @@ def display_settings():
                 outline="True",
                 color="primary",
                 size="sm",
+                n_clicks=0,
                 style={"width": "100%", "margin-bottom": "4px"},
             ),
             dbc.Tooltip(
