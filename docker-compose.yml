@@ -4,10 +4,9 @@ x-environment: &commonEnvironment
     DIR_MOUNT: "${DATA_DIR}"
     DATA_DIR: "/app/work/data"
     PROJECT_ID: "-1"
-    MLCOACH_URL: ${MLCOACH_URL}
-    DATA_CLINIC_URL: ${DATA_CLINIC_URL}
-    LATENT_SPACE_EXPLORER_URL: ${LATENT_SPACE_EXPLORER_URL}
-    SPLASH_URL: ${SPLASH_URL}
+    MLCOACH_URL: "http://localhost:8062"
+    DATA_CLINIC_URL: "http://localhost:8072"
+    SPLASH_URL: http://splash:80/api/v0
     MLEX_COMPUTE_URL: ${MLEX_COMPUTE_URL}
     MLEX_CONTENT_URL: ${MLEX_CONTENT_URL}
     HOST_NICKNAME: "local"
@@ -19,10 +18,10 @@ x-environment: &commonEnvironment
 services:
 
   # MongoDB
-  mongodb_tmp:
+  splash_db:
     image: mongo:4.4
-    container_name: "mongodb_tmp"
-    working_dir: /database/
+    container_name: "splash_db"
+    working_dir: /data/db
     volumes:
       - "${PWD}/database:/data/db"
     environment:
@@ -33,11 +32,11 @@ services:
 
   splash:
     image: ghcr.io/als-computing/splash-ml:master
-    container_name: "splash_tmp"
+    container_name: "splash"
     environment:
        APP_MODULE: "tagging.api:app"
        LOGLEVEL: DEBUG
-       MONGO_DB_URI: mongodb://${MONGO_DB_USERNAME}:${MONGO_DB_PASSWORD}@mongodb_tmp:27017/tagging?authSource=admin
+       MONGO_DB_URI: mongodb://${MONGO_DB_USERNAME}:${MONGO_DB_PASSWORD}@splash_db:27017
        MAX_WORKERS: 8
     ports:
       - "127.0.0.1:8085:80"
@@ -51,7 +50,7 @@ services:
 
   labelmaker:
     container_name: "labelmaker"
-    image: ghcr.io/mlexchange/dash_labelmaker_demo:main
+    image: ghcr.io/mlexchange/mlex_labelmaker:main
     environment:
       *commonEnvironment
     volumes:
