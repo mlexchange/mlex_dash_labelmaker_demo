@@ -1,116 +1,61 @@
-# Dash LabelMaker
-Simple labeling application with a Dash UI. This is our first release.
+# Label Maker
+Image labeling application with a Dash UI.
 
 ## Install
 
-### Install the labeling pipeline (Labelmaker + Data Clinic + MLCoach)
-1. First [install the MLExchange platform](https://github.com/mlexchange/mlex).
-	
-2. Clone the following repositories:
+### Install the labeling pipeline (Labelmaker + Data Clinic + MLCoach + Latent Space Explorer)
 
-	* [mlex\_data\_clinic](https://github.com/mlexchange/mlex_data_clinic)
-	* [mlex\_mlcoach](https://github.com/mlexchange/mlex_mlcoach)
-	* [splash\_ml](https://github.com/als-computing/splash-ml)
+1. Start the compute and content services in the [MLExchange platform](https://github.com/mlexchange/mlex). Before moving to the next step, please make sure that the computing API and the content registry are up and running. For more information, please refer to their respective
+README files.
 
-	These repositories should be in the same directory, as shown below:
-	
-	```
-	project_directory
-	│
-	│   mlex_data_clinic
-	│   mlex_mlcoach
-	|   mlex_dash_labelmaker_demo
-	│   splash_ml
-	
-	```
+2. Start [splash-ml](https://github.com/als-computing/splash-ml)
 
-3. Inside the `mlex_dash_labelmaker_demo` folder, create an environmental file named `.env` as below:
+3. Start [Data Clinic](https://github.com/mlexchange/mlex_data_clinic) and [MLCoach](https://github.com/mlexchange/mlex_mlcoach)
 
-	```
-	MONGO_DB_USERNAME=your_username
-	MONGO_DB_PASSWORD=your_password
-	# uncomment the line below to use Tiled data streaming service (deprecated atm) 
-	# TILED_KEY=your_tiled_key
-	```
-
-4. Run `./install`. Then go to `http://localhost:8057` in web browser and follow the instructions on each tab.
-5. To uninstall the labelmaker pipeline, run `./uninstall`.
-
-
-
----
-### Running as a standalone application (Labelmaker only)
-To start this labeling service, go to the source code folder and execute the following:
+3. Create a new Python environment and install dependencies:
 ```
-docker compose up --build
-```
-Go to `http://localhost:8057` in web browser.
-
-Please note that starting the service in this way will not provide connectivity to Data Clinic and MLCoach.
-
-## Ingest data with MLExchange file manager
-
-### Dataset Description
-Currently, the file manager supports directory based data definition, similar to the following example:
-
-```
-data_directory
-│
-│   image001.jpeg
-│   image002.jpeg
-│   ...
-
+conda create -n new_env python==3.11
+conda activate new_env
+pip install .
 ```
 
-The supported image formats are: TIFF, TIF, JPG, JPEG, and PNG.
+4. Create a `.env` file using `.env.example` as reference. Update this file accordingly.
 
-### Instructions
-Put your dataset inside the **data folder** or use **MLExchange data connector** to transfer data to this folder (future release). 
-This folder is mounted to the working directory in the container, and it is your **home data dir (HOME)**. 
-Then go to the webpage and click on **Open File Manager** to lauch MLExchange file manager. It offers several options for users to ingest/manipualte data.   
+5. Start example app:
+```
+python labelmaker.py
+```
 
-1. Upload data from **Drag and Drop** to home data dir. 
-Upload either a single file or a zip file (files) through drag and drop.
-User can then browse the newly added files/folder in the path table and move them to a new directory inside HOME.  
+## Ingest data with MLExchange File Manager
 
-2. Browse files or directories in the **HOME** and import the selected files:   
-After selecting which files or directories and filtering the display by format, click on **Import Selected Files or Directories** button on the right side. 
-When importing a directory, you can import **only** files of a specific format by using the rightmost dropdown menu.  
+The MLExchange File Manager supports data access through:
 
-3. Move data into a new directory:  
-Input the destination directory (relative to root path) and select the files/folder from **File Table**. Then click on **Move** button. 
-The selected files/dirs will be (recursively) moved into the new directory and the original dirs will be automatically deleted. 
-If no input, files/dirs will be moved to **HOME**.
-**Please note that folders of the same name (from different dirs) will be merged**.  
+1. Loading data from file system: You can access image data located at the ```data``` folder in the main directory. Currently, the supported formats are: PNG, JPG/JPEG, and TIF/TIFF.
 
-4. Deleting files or directories:   
-The selected file paths can be deleted by clicking **Delete the Selected** button. User must click on **Import** button again to ingest the newly selected files/paths 
+2. Loading data from [Tiled](https://blueskyproject.io/tiled/): Alternatively, you can access data through Tiled by providing a ```tiled_server_uri``` in the frontend of your application and the ```TILED_KEY``` associated with this server as an environment variable.
 
-
-## View paths in different environments
-The File Manager allows users to view file paths either in local paths (mounted to docker) or docker paths. Users can choose which path by toggling the swith below the **Browse** button.
+More information available at [File Manager](https://github.com/mlexchange/mlex_file_manager).
 
 
 ## Labeling instructions:
 
 ### Label manually
-Assigning a new label:  
-1. Select all the images to be labeled  
-2. Choose label to be assigned  
+Assigning a new label:
+1. Select all the images to be labeled
+2. Choose label to be assigned
 
-Removing an assigned label (un-label):  
-1. Select all the images to be unlabeled  
+Removing an assigned label (un-label):
+1. Select all the images to be unlabeled
 2. Click the "un-label" button
 
-### Label from MLCoach  
-Choose MLCoach tab on the right sidebar. This options allows users to label images by using a trained MLCoach model and
-a given probability threshold. 
+### Label from MLCoach
+Choose MLCoach tab on the right sidebar. This options allows users to label images by using a trained MLCoach model and a given probability threshold.
 
-To label images:  
+To label images:
 
-1. Choose an MLCoach model from the dropdown. The probability of each label will be shown under each image according to 
+1. Choose an MLCoach model from the dropdown. The probability of each label will be shown under each image according to
 the selected model.
-2. Click on the label-name (e.g. "Label 1") and set a probability threshold.  
+2. Click on the label-name (e.g. "Label 1") and set a probability threshold.
 3. Click "Label with Threshold" button.
 
 The images will be automatically labeled based on the threshold. After which, users can manually un-label and re-label
@@ -119,17 +64,15 @@ following **Label Manually** procedures.
 For further details on the operation of MLCoach, please refer to its [documentation](https://github.com/mlexchange/mlex_mlcoach).
 
 ### Label from Data Clinic
-Choose Data Clinic tab on the right sidebar. This tab allows users to tag the selected images and their top N most 
-similar images under the same label(s) by using a trained Data Clinic model.
+Choose Data Clinic tab on the right sidebar. This tab allows users to tag similar images under the same label by using a trained Data Clinic model.
 
-Please follow the instructions in the app sidebar. Likewise, users can also manually un-label and re-label following
-**Label Manually** procedures afterwards.
+Please follow the instructions in the app sidebar. Likewise, users can also manually un-label and re-label following **Label Manually** procedures afterwards.
 
 For further details on the operation of Data Clinic, please refer to its [documentation](https://github.com/mlexchange/mlex_data_clinic).
 
 
 ## Copyright
-MLExchange Copyright (c) 2021, The Regents of the University of California,
+MLExchange Copyright (c) 2024, The Regents of the University of California,
 through Lawrence Berkeley National Laboratory (subject to receipt of
 any required approvals from the U.S. Dept. of Energy). All rights reserved.
 
@@ -160,16 +103,3 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
-
-
-
-
-
-
-
-
-
-
-
-
-
